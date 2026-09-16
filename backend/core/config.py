@@ -1,0 +1,84 @@
+"""Application settings, loaded from the environment."""
+
+from __future__ import annotations
+
+import ssl
+from functools import lru_cache
+from pathlib import Path
+from typing import Any, Literal
+from urllib.parse import parse_qsl, urlsplit, urlunsplit
+
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+ROOT = Path(__file__).resolve().parents[2]
+
+# libpq understands these; asyncpg raises TypeError on them. Neon puts both in
+# the string it hands you, so they are stripped and SSL is passed separately.
+_LIBPQ_ONLY = {"sslmode", "channel_binding", "options", "target_session_attrs"}
+
+
+def _to_asyncpg(url: str) -> str:
+    """Rewrite a stock Postgres URL into one the asyncpg driver accepts."""
+    if not url:
+        return url
+
+    parts = urlsplit(url)
+    scheme = parts.scheme
+    if scheme in {"postgres", "postgresql"}:
+        scheme = "postgresql+asyncpg"
+
+    query = "&".join(
+        f"{key}={value}"
+        for key, value in parse_qsl(parts.query)
+        if key.lower() not in _LIBPQ_ONLY
+    )
+    return urlunsplit((scheme, parts.netloc, parts.path, query, parts.fragment))
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=ROOT / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    environment: Literal["development", "preview", "production", "test"] = "development"
+    version: str = "0.1.0"
+
+    database_url: str = Field(default="")
+    database_direct_url: str = Field(default="")
+
+    @field_validator("database_url", "database_direct_url")
+    @classmethod
+    def _normalise(cls, value: str) -> str:
+        return _to_asyncpg(value)
+
+    @property
+    def alembic_url(self) -> str:
+        """Migrations use the direct endpoint. A transaction pooler cannot hold
+        the session-level locks that DDL needs."""
+        return self.database_direct_url or self.database_url
+
+    @property
+    def connect_args(self) -> dict[str, Any]:
+        args: dict[str, Any] = {}
+
+        if "neon.tech" in self.database_url or self.environment != "development":
+            args["ssl"] = ssl.create_default_context()
+
+        # PgBouncer in transaction mode does not guarantee the same backend
+        # across statements, which breaks asyncpg's prepared statement cache.
+        if "-pooler." in self.database_url:
+            args["statement_cache_size"] = 0
+
+        return args
+
+    @property
+    def is_pooled(self) -> bool:
+        return "-pooler." in self.database_url
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()

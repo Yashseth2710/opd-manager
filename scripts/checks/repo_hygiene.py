@@ -21,8 +21,19 @@ SELF_EXCLUDED = {
 }
 
 BINARY_SUFFIXES = {
-    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".pdf",
-    ".woff", ".woff2", ".ttf", ".otf", ".zip", ".gz",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".ico",
+    ".pdf",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".zip",
+    ".gz",
 }
 
 FORBIDDEN_PATHS = [
@@ -58,7 +69,10 @@ SECRET_PATTERNS = [
     (re.compile(r"\bvercel_blob_rw_[A-Za-z0-9_]{20,}"), "Blob token"),
     (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"), "private key"),
     (
-        re.compile(r"""(?:secret|password|passwd|token|api_?key)\s*[=:]\s*["'][^"'\s]{12,}["']""", re.I),
+        re.compile(
+            r"""(?:secret|password|passwd|token|api_?key)\s*[=:]\s*["'][^"'\s]{12,}["']""",
+            re.I,
+        ),
         "hard-coded credential",
     ),
 ]
@@ -74,11 +88,14 @@ TIRED_WORDS = re.compile(
 
 PROSE_SUFFIXES = {".md", ".mdx"}
 
+# Test fixtures need things shaped like credentials. The marker exempts the
+# line it sits on and the two that follow, so it can head a wrapped literal.
+ALLOW_MARKER = "pragma: allowlist secret"
+ALLOW_SPAN = 3
+
 
 def tracked_files() -> list[str]:
-    out = subprocess.run(
-        ["git", "ls-files"], capture_output=True, text=True, check=True
-    ).stdout
+    out = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout
     return [line for line in out.splitlines() if line]
 
 
@@ -109,16 +126,21 @@ def main() -> int:
         if content is None:
             continue
 
-        for line_no, line in enumerate(content.splitlines(), start=1):
+        lines = content.splitlines()
+        exempt: set[int] = set()
+        for index, line in enumerate(lines):
+            if ALLOW_MARKER in line:
+                exempt.update(range(index, index + ALLOW_SPAN))
+
+        for line_no, line in enumerate(lines, start=1):
             for pattern, reason in TOOLING_MENTIONS:
                 match = pattern.search(line)
                 if match:
-                    failures.append(
-                        f"{path}:{line_no}: {reason} -- {match.group(0)!r}"
-                    )
-            for pattern, reason in SECRET_PATTERNS:
-                if pattern.search(line):
-                    failures.append(f"{path}:{line_no}: looks like a {reason}")
+                    failures.append(f"{path}:{line_no}: {reason} -- {match.group(0)!r}")
+            if line_no - 1 not in exempt:
+                for pattern, reason in SECRET_PATTERNS:
+                    if pattern.search(line):
+                        failures.append(f"{path}:{line_no}: looks like a {reason}")
 
             if Path(path).suffix.lower() in PROSE_SUFFIXES:
                 match = TIRED_WORDS.search(line)

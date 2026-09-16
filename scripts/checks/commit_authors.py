@@ -65,7 +65,9 @@ def main() -> int:
         if author_email.lower() not in ALLOWED_EMAILS:
             failures.append(f"{short}: author email {author_email!r} is not recognised")
         if committer_name != EXPECTED_NAME:
-            failures.append(f"{short}: committer is {committer_name!r}, expected {EXPECTED_NAME!r}")
+            failures.append(
+                f"{short}: committer is {committer_name!r}, expected {EXPECTED_NAME!r}"
+            )
         if committer_email.lower() not in ALLOWED_EMAILS:
             failures.append(f"{short}: committer email {committer_email!r} is not recognised")
 
