@@ -1,6 +1,6 @@
 # Data model
 
-PostgreSQL 16 on Neon. SQLAlchemy 2.x models, Alembic migrations. Every schema change goes through a migration — no exceptions, including in development.
+PostgreSQL 18 on Neon. SQLAlchemy 2.x models, Alembic migrations. Every schema change goes through a migration — no exceptions, including in development.
 
 ## Conventions
 
