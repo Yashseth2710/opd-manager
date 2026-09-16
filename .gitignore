@@ -1,7 +1,3 @@
-# Agent tooling
-CLAUDE.md
-.claude/
-
 # Node
 node_modules/
 .pnp

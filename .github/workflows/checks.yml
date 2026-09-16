@@ -1,0 +1,167 @@
+name: Checks
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Matches the Vercel Python runtime. Building against a different version
+  # is how a deploy breaks after the tests pass.
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Nothing private or borrowed in the tree
+        run: python scripts/checks/repo_hygiene.py
+
+      - name: Documentation links resolve
+        run: python scripts/checks/docs_links.py
+
+  authorship:
+    name: Commit authorship
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Every commit is mine and unattributed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python scripts/checks/commit_authors.py
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is there a frontend yet
+        id: detect
+        run: |
+          if [ -f package.json ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No package.json yet, nothing to build."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.detect.outputs.present == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install
+        if: steps.detect.outputs.present == 'true'
+        run: npm ci
+
+      - name: Lint
+        if: steps.detect.outputs.present == 'true'
+        run: npm run lint
+
+      - name: Types
+        if: steps.detect.outputs.present == 'true'
+        run: npm run typecheck
+
+      - name: Tests
+        if: steps.detect.outputs.present == 'true'
+        run: npm test --if-present
+
+      - name: Build
+        if: steps.detect.outputs.present == 'true'
+        run: npm run build
+
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: opd
+          POSTGRES_PASSWORD: opd
+          POSTGRES_DB: opd_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is there a backend yet
+        id: detect
+        run: |
+          if [ -f requirements.txt ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No requirements.txt yet, nothing to test."
+          fi
+
+      - uses: actions/setup-python@v5
+        if: steps.detect.outputs.present == 'true'
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Lint
+        if: steps.detect.outputs.present == 'true'
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Types
+        if: steps.detect.outputs.present == 'true'
+        run: mypy backend
+
+      - name: Migrations apply cleanly
+        if: steps.detect.outputs.present == 'true'
+        env:
+          DATABASE_URL: postgresql+asyncpg://opd:opd@localhost:5432/opd_test
+        run: alembic upgrade head
+
+      - name: Tests
+        if: steps.detect.outputs.present == 'true'
+        env:
+          DATABASE_URL: postgresql+asyncpg://opd:opd@localhost:5432/opd_test
+          REDIS_URL: ""
+          AUTH_SECRET: test-secret-not-used-anywhere-real
+        run: pytest -q
