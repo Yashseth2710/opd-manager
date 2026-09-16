@@ -74,6 +74,26 @@
   --rail: var(--color-ink-900);
   --rail-text: #c9d6e4;
 
+  /*
+    Names the component library expects, pointed at the roles above so it
+    inherits this palette instead of shipping its own.
+  */
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text);
+  --primary-foreground: var(--primary-fg);
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--accent-fg);
+  --destructive: var(--color-state-noshow);
+  --destructive-foreground: #ffffff;
+  --input: var(--border-strong);
+  --ring: var(--focus-ring);
+
   color-scheme: light;
 }
 
@@ -96,6 +116,15 @@
     --focus-ring: #f0b156;
     --rail: #0b1016;
     --rail-text: #9daebd;
+
+        --color-state-scheduled: #8ba3bd;
+    --color-state-confirmed: #5fa3cc;
+    --color-state-waiting: #f0b156;
+    --color-state-consulting: #4ba3b4;
+    --color-state-completed: #56ae74;
+    --color-state-cancelled: #7b8c9b;
+    --color-state-noshow: #d2615a;
+    --color-state-urgent: #c04a42;
 
     color-scheme: dark;
   }
@@ -120,6 +149,15 @@
   --rail: #0b1016;
   --rail-text: #9daebd;
 
+    --color-state-scheduled: #8ba3bd;
+  --color-state-confirmed: #5fa3cc;
+  --color-state-waiting: #f0b156;
+  --color-state-consulting: #4ba3b4;
+  --color-state-completed: #56ae74;
+  --color-state-cancelled: #7b8c9b;
+  --color-state-noshow: #d2615a;
+  --color-state-urgent: #c04a42;
+
   color-scheme: dark;
 }
 
@@ -140,6 +178,23 @@
   --color-accent-wash: var(--accent-wash);
   --color-rail: var(--rail);
   --color-rail-text: var(--rail-text);
+
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-border: var(--border);
 }
 
 @layer base {
