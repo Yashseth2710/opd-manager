@@ -29,43 +29,62 @@ One Vercel project. The Next.js app is the deployment root; the Python API ships
 
 ```
 opd-manager/
-├── app/                     Next.js App Router
-│   ├── (auth)/              login, register, password reset
-│   ├── (app)/               authenticated shell
-│   └── (platform)/          super admin
-├── components/
-│   ├── ui/                  shadcn primitives
-│   └── <feature>/           feature components
-├── lib/                     api client, formatters, utils
-├── hooks/
-├── schemas/                 Zod schemas, shared with forms
-├── types/
+├── app/                        Next.js App Router
+│   ├── (auth)/                 login, register, password reset
+│   ├── (app)/                  the authenticated shell
+│   │   ├── dashboard/          patients/      appointments/
+│   │   ├── queue/              consultations/ prescriptions/
+│   │   ├── billing/            reports/       doctors/
+│   │   └── staff/              notifications/ settings/
+│   ├── (platform)/admin/       platform administration
+│   ├── onboarding/             first-run clinic setup
+│   ├── layout.tsx              providers.tsx   globals.css
 │
-├── api/
-│   └── index.py             Vercel entrypoint, re-exports the ASGI app
+├── components/
+│   ├── ui/                     library primitives, restyled to our tokens
+│   ├── layout/                 rail, topbar, breadcrumbs, command palette
+│   ├── common/                 empty states, skeletons, confirmations
+│   └── <feature>/              dashboard, patients, appointments, queue,
+│                               consultations, billing
+├── services/                   one module per resource; owns query keys
+├── lib/                        api client, utils, format/
+├── hooks/    schemas/    types/
+│
+├── api/index.py                Vercel entrypoint, re-exports the ASGI app
 │
 ├── backend/
-│   ├── core/                config, security, permissions, exceptions
-│   ├── db/                  session, base, mixins
-│   ├── models/              SQLAlchemy models
-│   ├── schemas/             Pydantic request/response models
-│   ├── repositories/        data access, tenant-scoped
-│   ├── services/            business logic
-│   ├── api/v1/              routers
-│   ├── middleware/
-│   └── utils/
+│   ├── core/                   config, security, permissions, exceptions
+│   ├── db/                     session, base, mixins
+│   ├── models/                 SQLAlchemy models
+│   ├── schemas/                Pydantic request and response models
+│   ├── repositories/           queries, tenant-scoped
+│   ├── services/               business rules
+│   ├── api/v1/                 routers
+│   ├── middleware/    utils/
+│   └── main.py
 │
 ├── alembic/versions/
-├── tests/                   pytest
-├── e2e/                     Playwright
-├── scripts/                 seed, maintenance
+├── tests/                      api/  services/
+├── e2e/                        Playwright
+├── scripts/checks/             the guards CI runs
 ├── docs/
-├── vercel.json
-├── requirements.txt
-└── package.json
+└── vercel.json   requirements.txt   package.json   pyproject.toml
 ```
 
-The frontend and backend live in one repository because they ship as one deployment and share a single set of environment variables. They do not share code.
+The frontend and backend live in one repository because they ship as one
+deployment and share a single set of environment variables. They do not share
+code.
+
+**Where a new file goes.** A screen is a route folder under `(app)`. Anything it
+renders that is specific to that feature is a component in the matching
+`components/<feature>/` folder; anything two features both need moves to
+`components/common/`. Talking to the API is a function in `services/`, never a
+`fetch` inside a component. On the backend, a route parses and delegates, a
+service decides, a repository queries.
+
+Directories carry a `.gitkeep` describing what belongs in them until they hold
+real files. Git cannot track an empty folder, and a structure nobody can see is
+a structure nobody follows.
 
 ### How FastAPI runs on Vercel
 

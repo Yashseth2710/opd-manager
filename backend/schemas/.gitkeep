@@ -1,0 +1,1 @@
+Pydantic request and response models. Nothing crosses a boundary as a raw dict.

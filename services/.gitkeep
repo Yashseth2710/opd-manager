@@ -1,0 +1,1 @@
+One module per resource. Wraps lib/api and owns the query keys. No React in here.
