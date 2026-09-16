@@ -12,7 +12,12 @@ import subprocess
 import sys
 
 EXPECTED_NAME = "Yash Seth"
-ALLOWED_EMAILS = {"yashseth2710@users.noreply.github.com"}
+# Both forms of the same private address. The second is what GitHub uses for
+# anything committed through the web interface once email privacy is on.
+ALLOWED_EMAILS = {
+    "yashseth2710@users.noreply.github.com",
+    "133786228+yashseth2710@users.noreply.github.com",
+}
 
 BANNED_TRAILERS = ("co-authored-by", "generated with", "signed-off-by: claude")
 SEPARATOR = "\x1e"
@@ -57,11 +62,11 @@ def main() -> int:
 
         if author_name != EXPECTED_NAME:
             failures.append(f"{short}: author is {author_name!r}, expected {EXPECTED_NAME!r}")
-        if author_email not in ALLOWED_EMAILS:
+        if author_email.lower() not in ALLOWED_EMAILS:
             failures.append(f"{short}: author email {author_email!r} is not recognised")
         if committer_name != EXPECTED_NAME:
             failures.append(f"{short}: committer is {committer_name!r}, expected {EXPECTED_NAME!r}")
-        if committer_email not in ALLOWED_EMAILS:
+        if committer_email.lower() not in ALLOWED_EMAILS:
             failures.append(f"{short}: committer email {committer_email!r} is not recognised")
 
         lowered = body.lower()
