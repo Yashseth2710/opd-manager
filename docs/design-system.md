@@ -15,6 +15,10 @@ We are not building that. Concretely:
 - Not every surface is a card with the same radius and shadow
 - Density varies by purpose: a patient table is dense, a consultation form is not
 - Colour carries meaning; it is not decoration sprinkled evenly
+- No arrow glued to the end of button text
+- No meta strings joined with middle dots
+- No tinted near-black standing in for black
+- Motion answers an action; sections do not fade-and-slide up on scroll
 
 ## Palette
 
@@ -47,29 +51,31 @@ Marigold   50  #FEF8EC
 
 ### Neutrals
 
-Warm stone, not cool grey. Cool greys next to navy read as cheap and screen-like; warm neutrals make long sessions easier.
+Cool paper, tuned to sit under the ink rather than beside it.
+
+Warm cream was the first instinct and it is the wrong one here. A cream page with a warm clay accent is the single most recognisable palette in generated design right now, and it also fights the navy. A cool, faintly blue paper reads as clean and clinical, makes the marigold hotter by contrast, and leaves the warmth to do its job in one place instead of everywhere.
 
 ```
-Stone      50  #FAF8F5    app background (light)
-          100  #F2EFEA
-          200  #E5E0D8
-          300  #CFC8BC
-          400  #A39A8B
-          500  #7A7263
-          600  #5A5347
-          700  #403A31
-          800  #2A251F
-          900  #16130F
+Paper      50  #F7F9FA    app background (light)
+          100  #EDF1F4
+          200  #DDE4EA    borders
+          300  #C2CDD6
+          400  #94A3B0    muted text, cancelled states
+          500  #6B7A87
+          600  #4E5A66
+          700  #38424C
+          800  #232B33
+          900  #141A1F
 
 Dark mode surfaces
-          bg   #11151A
-          raised #171D24
-          border #242C36
+          bg     #0F141A
+          raised #161D25
+          border #232C36
 ```
 
 ### Status
 
-Every clinical and operational state gets one colour, used consistently everywhere it appears. These are chosen to stay distinguishable under the common forms of colour blindness, and they are never the only signal — each pairs with an icon and a label.
+Every clinical and operational state gets one colour, used consistently everywhere it appears. Chosen to stay distinguishable under the common forms of colour blindness, and never the only signal — each pairs with an icon and a label.
 
 ```
 Scheduled     Ink 400      #6B83A0    booked, nothing happening yet
@@ -77,12 +83,12 @@ Confirmed     Sky          #3C7DA6    patient acknowledged
 Waiting       Marigold 400 #E9A23B    checked in, in the queue
 Consulting    Teal         #2F7D8C    with the doctor now
 Completed     Green        #3E8E5A    done
-Cancelled     Stone 400    #A39A8B    deliberately muted, it is a non-event
-No-show       Clay         #C1503F    the one that costs the clinic money
-Urgent        Clay 600     #A13B2C    priority queue entries
+Cancelled     Paper 400    #94A3B0    deliberately muted, it is a non-event
+No-show       Crimson      #A32E2B    the one that costs the clinic money
+Urgent        Crimson 600  #86231F    priority queue entries
 ```
 
-Clay rather than pure red. Red is reserved for destructive confirmation — deleting, voiding, suspending — so it keeps its force.
+Crimson rather than terracotta. Terracotta next to a pale warm ground is the house style of every generated dashboard, and a deep cool-leaning red carries more weight for a state that means lost revenue. Pure red stays reserved for destructive confirmation — voiding an invoice, suspending a clinic — so it keeps its force.
 
 ### Semantic tokens
 
@@ -120,9 +126,13 @@ Heading   24px / 1.25  600    section headings
 Subhead   18px / 1.35  600    card titles
 Body      15px / 1.55  400    default
 Small     13px / 1.5   400    supporting text, table cells
-Caption   12px / 1.4   500    labels, uppercase with tracking
+Label     13px / 1.4   500    form labels and table headers, sentence case
 Token     40px / 1     600    mono, the queue number
 ```
+
+No uppercase tracked-out label anywhere. A small-caps eyebrow floating above every heading is the most reliable sign of a layout nobody made a decision about, and it costs legibility for nothing. Hierarchy comes from size, weight and colour.
+
+Line length stays under 80 characters in anything a person reads as prose — consultation notes, empty states, patient history.
 
 Base is 15px rather than 16px. In a dense operational tool it buys a meaningful amount of information per screen without hurting readability — and everything scales cleanly to 200% zoom.
 
@@ -177,7 +187,9 @@ Mobile gets a bottom navigation bar with the four things a phone is used for —
 
 ## Screens that carry the product
 
-Three screens decide whether this feels designed or assembled. They get disproportionate attention.
+The boldness gets spent in one place: **the queue board**. It is the screen that gets projected on a waiting room wall, the one thing in a clinic that patients look at rather than staff, and the only screen here with any reason to be seen from four metres away. It carries the identity. Everything else stays disciplined and quiet so that it can.
+
+Two more screens decide whether the product feels designed rather than assembled, and they earn care without competing for attention.
 
 **The queue** is the one that gets projected on a wall. Large mono tokens, a single clearly-marked "now consulting" row, status by colour and icon, and enough contrast to read from across a room. Almost no chrome.
 
