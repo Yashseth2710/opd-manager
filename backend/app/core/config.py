@@ -87,10 +87,18 @@ class Settings(BaseSettings):
         return self.database_direct_url or self.database_url
 
     @property
+    def is_local_database(self) -> bool:
+        host = urlsplit(self.database_url).hostname or ""
+        return host in {"localhost", "127.0.0.1", "::1", ""}
+
+    @property
     def connect_args(self) -> dict[str, Any]:
         args: dict[str, Any] = {}
 
-        if "neon.tech" in self.database_url or self.environment != "development":
+        # Anything reached over a network gets TLS. Deciding this from the
+        # environment name instead would demand SSL of a Postgres running
+        # beside the tests, which refuses the upgrade and fails the run.
+        if not self.is_local_database:
             args["ssl"] = ssl.create_default_context()
 
         # PgBouncer in transaction mode does not guarantee the same backend
