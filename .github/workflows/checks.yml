@@ -216,13 +216,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      # Asked through the same client the application uses, so what passes
+      # here is the path a sign-in actually takes rather than something that
+      # happens to answer on the same port.
       - name: Wait for the session store
+        working-directory: backend
         run: |
-          for _ in $(seq 1 30); do
-            curl -sf -H "Authorization: Bearer only-for-continuous-integration"               -d '["PING"]' http://localhost:8079 && break
-            sleep 2
-          done
-          curl -sf -H "Authorization: Bearer only-for-continuous-integration"             -d '["PING"]' http://localhost:8079
+          python - <<'CHECK'
+          import sys, time
+          import httpx
+          from app.core.config import get_settings
+
+          settings = get_settings()
+          last = None
+          for _ in range(30):
+              try:
+                  answer = httpx.post(
+                      settings.upstash_redis_rest_url,
+                      json=["PING"],
+                      headers={"Authorization": f"Bearer {settings.upstash_redis_rest_token}"},
+                      timeout=5,
+                  )
+                  answer.raise_for_status()
+                  print("session store says", answer.json())
+                  sys.exit(0)
+              except Exception as problem:
+                  last = problem
+                  time.sleep(2)
+          sys.exit(f"session store never answered: {last}")
+          CHECK
 
       - name: Build the schema
         working-directory: backend
@@ -253,7 +275,7 @@ jobs:
       - name: What the API said, if anything failed
         if: failure()
         working-directory: backend
-        run: tail -n 200 api.log
+        run: tail -n 200 api.log || echo "the API never got as far as writing a log"
 
       - uses: actions/upload-artifact@v4
         if: failure()
