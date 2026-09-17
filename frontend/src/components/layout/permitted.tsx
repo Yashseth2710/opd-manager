@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
 import Link from "next/link";
+import { SessionEnded } from "@/components/auth/session-ended";
 import { currentSession } from "@/lib/auth";
 
 /**
@@ -35,17 +36,7 @@ export function Permitted({
   }
 
   if (isError || !data) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center px-6 text-center">
-        <p className="text-[15px] text-[var(--text-muted)]">
-          Your session has ended.{" "}
-          <a href="/login" className="underline underline-offset-2">
-            Sign in again
-          </a>
-          .
-        </p>
-      </div>
-    );
+    return <SessionEnded />;
   }
 
   if (!data.permissions.includes(permission)) {

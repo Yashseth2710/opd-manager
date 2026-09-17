@@ -14,6 +14,7 @@ import {
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { SessionEnded } from "@/components/auth/session-ended";
 import { SignOutButton } from "@/components/auth/sign-out";
 import { currentSession, type Session } from "@/lib/auth";
 
@@ -57,17 +58,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   if (isError || !data) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6 text-center">
-        <p className="text-[15px] text-[var(--text-muted)]">
-          Your session has ended.{" "}
-          <a href="/login" className="underline underline-offset-2">
-            Sign in again
-          </a>
-          .
-        </p>
-      </div>
-    );
+    return <SessionEnded />;
   }
 
   const allowed = DESTINATIONS.filter(

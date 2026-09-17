@@ -46,7 +46,15 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  if (signedIn && SIGNED_OUT_ONLY.some((path) => pathname.startsWith(path))) {
+  // The marker is set for the refresh token's full week, but the session
+  // behind it can end at any point inside that week. Somebody arriving at
+  // the sign-in page with a dead session and a live marker would be sent to
+  // the dashboard, which would send them back here — a loop with no way out
+  // of it by clicking. Asking for the sign-in page outright is taken at its
+  // word, and the page signs them out properly if the marker was stale.
+  const insisting = request.nextUrl.searchParams.has("ended");
+
+  if (signedIn && !insisting && SIGNED_OUT_ONLY.some((path) => pathname.startsWith(path))) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
