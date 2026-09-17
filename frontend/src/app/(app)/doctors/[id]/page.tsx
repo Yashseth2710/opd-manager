@@ -142,10 +142,15 @@ function Header({
 
   const presence = useMutation({
     mutationFn: () => (practising ? deactivateDoctor(record.id) : restoreDoctor(record.id)),
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: ["doctor", record.id] });
+    onSuccess: async () => {
+      // Waited for: the buttons, the hours and the free times all redraw
+      // from these, and the screen should not show the old answer while
+      // the new one is on its way.
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ["doctor", record.id] }),
+        queries.invalidateQueries({ queryKey: ["availability", record.id] }),
+      ]);
       void queries.invalidateQueries({ queryKey: ["doctors"] });
-      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
     },
   });
 
@@ -331,11 +336,14 @@ function EditForm({ record, onDone }: { record: Doctor; onDone: () => void }) {
     onSettled: () => {
       inFlight.current = false;
     },
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: ["doctor", record.id] });
+    onSuccess: async () => {
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ["doctor", record.id] }),
+        queries.invalidateQueries({ queryKey: ["availability", record.id] }),
+      ]);
+      // Other screens, and nobody is looking at them yet.
       void queries.invalidateQueries({ queryKey: ["doctors"] });
       void queries.invalidateQueries({ queryKey: ["specialities"] });
-      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
       onDone();
     },
     onError: (error) => {

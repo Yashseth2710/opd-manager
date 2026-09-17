@@ -43,13 +43,15 @@ export function Allergies({
 
   const add = useMutation({
     mutationFn: () => recordAllergy(patientId, { substance, reaction, severity }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Waited for, so the list below has the new allergy on it by the time
+      // the form closes rather than a moment later.
+      await refresh();
       setSubstance("");
       setReaction("");
       setSeverity("moderate");
       setAdding(false);
       setProblem(null);
-      void refresh();
     },
     onError: (error) =>
       setProblem(
@@ -61,7 +63,7 @@ export function Allergies({
 
   const drop = useMutation({
     mutationFn: (id: string) => removeAllergy(patientId, id),
-    onSuccess: () => void refresh(),
+    onSuccess: () => refresh(),
   });
 
   const worst = allergies.some((allergy) => allergy.severity === "severe");

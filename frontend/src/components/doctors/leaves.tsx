@@ -36,10 +36,13 @@ export function Leaves({
   const [problem, setProblem] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  const refresh = () => {
-    void queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
-    void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
-  };
+  // Awaited by its callers, so a saved day off is on the list and out of the
+  // free times before the form closes.
+  const refresh = () =>
+    Promise.all([
+      queries.invalidateQueries({ queryKey: ["doctor", doctorId] }),
+      queries.invalidateQueries({ queryKey: ["availability", doctorId] }),
+    ]);
 
   const record = useMutation({
     mutationFn: () =>
@@ -53,8 +56,8 @@ export function Leaves({
     onSettled: () => {
       inFlight.current = false;
     },
-    onSuccess: () => {
-      refresh();
+    onSuccess: async () => {
+      await refresh();
       setDraft(BLANK);
       setAdding(false);
     },

@@ -192,3 +192,30 @@ test("a doctor stood down cannot have their hours changed from the screen", asyn
   await expect(page.getByRole("button", { name: "Set hours" })).toBeHidden();
   await expect(page.getByRole("button", { name: "Add" })).toBeHidden();
 });
+
+test("a slow save keeps saying so rather than putting the old week back", async ({ page }) => {
+  // The failure this pins: the editor used to close the moment the save
+  // returned, while the hours on the screen behind it were still the ones
+  // fetched before it. On a slow line that reads as "your week did not
+  // save", and the natural response is to type it again.
+  const id = page.url().split("/").pop();
+  await page.route(`**/api/v1/doctors/${id}`, async (route) => {
+    if (route.request().method() === "GET") {
+      await new Promise((settle) => setTimeout(settle, 4000));
+    }
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: "Set hours" }).click();
+  await addBlock(page, "Monday");
+  await page.getByLabel("Monday start").fill("09:00");
+  await page.getByLabel("Monday end").fill("13:00");
+  await page.getByRole("button", { name: "Save hours" }).click();
+
+  // While the fresh week is still on its way.
+  await expect(page.getByRole("button", { name: "Saving" })).toBeVisible();
+  await expect(page.getByText("No hours set yet")).toBeHidden();
+
+  await expect(page.getByText("9:00 am – 1:00 pm")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit hours" })).toBeVisible();
+});

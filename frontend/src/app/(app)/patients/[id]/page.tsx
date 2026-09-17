@@ -153,8 +153,11 @@ function Header({
 
   const presence = useMutation({
     mutationFn: () => (archived ? restorePatient(record.id) : archivePatient(record.id)),
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: ["patient", record.id] });
+    onSuccess: async () => {
+      // Waited for: the buttons and the badge redraw from this record, and
+      // the screen should not show the old answer while the new one is on
+      // its way.
+      await queries.invalidateQueries({ queryKey: ["patient", record.id] });
       void queries.invalidateQueries({ queryKey: ["patients"] });
     },
   });
@@ -383,8 +386,9 @@ function EditForm({ record, onDone }: { record: Patient; onDone: () => void }) {
     onSettled: () => {
       inFlight.current = false;
     },
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: ["patient", record.id] });
+    onSuccess: async () => {
+      await queries.invalidateQueries({ queryKey: ["patient", record.id] });
+      // Another screen, and nobody is looking at it yet.
       void queries.invalidateQueries({ queryKey: ["patients"] });
       onDone();
     },

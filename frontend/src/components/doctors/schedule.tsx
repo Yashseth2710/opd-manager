@@ -90,10 +90,18 @@ export function Schedule({
     onSettled: () => {
       inFlight.current = false;
     },
-    onSuccess: () => {
-      void queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
+    onSuccess: async () => {
+      // Waited for, not fired off. Both the hours below and the free times
+      // beside them are read from these queries, so closing the editor
+      // before they land puts the old week back on screen with nothing
+      // saying it is still working. The button keeps saying "Saving" until
+      // what was saved is what is shown.
+      await Promise.all([
+        queries.invalidateQueries({ queryKey: ["doctor", doctorId] }),
+        queries.invalidateQueries({ queryKey: ["availability", doctorId] }),
+      ]);
+      // Another screen, and nobody is looking at it yet.
       void queries.invalidateQueries({ queryKey: ["doctors"] });
-      void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
       setEditing(false);
     },
     onError: (error) => {
