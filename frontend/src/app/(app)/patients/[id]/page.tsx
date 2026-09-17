@@ -171,8 +171,8 @@ function Header({
           {initials(record.full_name)}
         </span>
         <div className="min-w-0">
-          <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[26px] leading-tight font-semibold tracking-tight text-balance">
-            {record.full_name}
+          <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[26px] leading-tight font-semibold tracking-tight break-words text-balance">
+            <span className="min-w-0 break-words">{record.full_name}</span>
             {archived && (
               <span className="rounded-full bg-[var(--surface-sunken)] px-2.5 py-0.5 text-[13px] font-normal text-[var(--text-muted)]">
                 archived

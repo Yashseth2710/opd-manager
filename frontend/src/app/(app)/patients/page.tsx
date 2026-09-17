@@ -337,7 +337,7 @@ function Empty({
 }) {
   return (
     <div className="rounded-[var(--radius-panel)] border border-dashed border-[var(--border-strong)] px-6 py-14 text-center">
-      <p className="text-[17px] font-semibold tracking-tight text-balance">{heading}</p>
+      <h2 className="text-[17px] font-semibold tracking-tight text-balance">{heading}</h2>
       <p className="mx-auto mt-1.5 max-w-[46ch] text-[15px] leading-relaxed text-[var(--text-muted)]">
         {body}
       </p>
