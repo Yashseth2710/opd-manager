@@ -6,7 +6,9 @@ import re
 import uuid
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid6 import uuid7
 
 from app.core.permissions import CATALOGUE, DEFAULT_ROLES
 from app.models import Organization, Permission, Role, RolePermission, User, UserRole
@@ -88,18 +90,28 @@ async def ensure_permission_catalogue(session: AsyncSession) -> dict[str, uuid.U
     Called on the path that creates a clinic so a fresh database is usable
     without a separate seeding step, and so adding a permission in code does
     not need a data migration.
+
+    Offered whole and let the database drop what it already has, rather than
+    read first and insert the difference. Two clinics signing up at the same
+    moment on a fresh deployment both find the catalogue empty, both try to
+    write it, and one of them used to lose the race and get a 500 — with a
+    half-made clinic rolled back behind it. It is also one round trip rather
+    than one per permission, which a cold database notices.
     """
+    await session.execute(
+        insert(Permission)
+        .values(
+            [
+                {"id": uuid7(), "code": code, "description": description}
+                for code, description in CATALOGUE.items()
+            ]
+        )
+        .on_conflict_do_nothing(index_elements=[Permission.code])
+    )
+    await session.flush()
+
     result = await session.execute(select(Permission.code, Permission.id))
-    existing = {code: pid for code, pid in result.all()}
-
-    missing = [code for code in CATALOGUE if code not in existing]
-    for code in missing:
-        permission = Permission(code=code, description=CATALOGUE[code])
-        session.add(permission)
-        await session.flush()
-        existing[code] = permission.id
-
-    return existing
+    return {code: pid for code, pid in result.all()}
 
 
 async def seed_roles(session: AsyncSession, organization_id: uuid.UUID) -> dict[str, Role]:

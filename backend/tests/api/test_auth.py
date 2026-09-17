@@ -8,11 +8,16 @@ the fact that two different situations produce the same body.
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import delete, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.permissions import CATALOGUE
+from app.models import Permission
 from tests.conftest import GOOD_PASSWORD, FakeRedis, Outbox, registration, unique_email
 
 AUTH = "/api/v1/auth"
@@ -99,6 +104,40 @@ class TestRegistration:
         shared = unique_email("anita")
         await register(client, clinic_name="Lakeview Clinic", email=shared)
         await register(client, clinic_name="Northgate Clinic", email=shared)
+
+    async def test_clinics_signing_up_at_the_same_moment_all_get_in(
+        self, client: AsyncClient, session: AsyncSession
+    ) -> None:
+        """The first sign-ups on a fresh deployment race each other.
+
+        Each one seeds the permission catalogue on its way through, and the
+        old version read the table and inserted the difference, so whichever
+        lost the race hit a duplicate key and got a 500 with a half-made
+        clinic rolled back behind it. Offering the catalogue whole and
+        letting the database drop what it already has makes the order they
+        arrive in stop mattering.
+        """
+        await session.execute(delete(Permission))
+        await session.commit()
+
+        made = await asyncio.gather(
+            *(
+                client.post(
+                    f"{AUTH}/register",
+                    json=registration(
+                        clinic_name=f"Racing Clinic {n}", email=unique_email(f"racer{n}")
+                    ),
+                )
+                for n in range(4)
+            )
+        )
+
+        assert [response.status_code for response in made] == [201, 201, 201, 201], [
+            response.text for response in made if response.status_code != 201
+        ]
+
+        held = await session.execute(select(func.count()).select_from(Permission))
+        assert held.scalar_one() == len(CATALOGUE)
 
 
 class TestSignIn:
