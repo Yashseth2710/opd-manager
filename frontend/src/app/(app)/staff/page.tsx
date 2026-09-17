@@ -41,10 +41,14 @@ function StaffScreen() {
   });
   const roles = useQuery({ queryKey: ["roles"], queryFn: getRoles, retry: false });
 
-  const refresh = () => {
-    void queries.invalidateQueries({ queryKey: ["staff"] });
-    void queries.invalidateQueries({ queryKey: ["invitations"] });
-  };
+  // Awaited by whoever calls it. Both lists below are drawn from these
+  // queries, so a suspended member goes on looking active, and a sent
+  // invitation goes on being absent, for as long as this takes.
+  const refresh = () =>
+    Promise.all([
+      queries.invalidateQueries({ queryKey: ["staff"] }),
+      queries.invalidateQueries({ queryKey: ["invitations"] }),
+    ]);
 
   if (staff.isPending) {
     return (
@@ -74,9 +78,9 @@ function StaffScreen() {
         <InviteForm
           roles={roles.data ?? []}
           onClose={() => setInviting(false)}
-          onSent={() => {
+          onSent={async () => {
+            await refresh();
             setInviting(false);
-            refresh();
           }}
         />
       )}
@@ -116,7 +120,7 @@ function MemberRow({
 }: {
   member: StaffMember;
   roles: Role[];
-  onChanged: () => void;
+  onChanged: () => Promise<unknown>;
 }) {
   const [problem, setProblem] = useState<string | null>(null);
   const suspended = member.status !== "active";
@@ -126,18 +130,18 @@ function MemberRow({
 
   const role = useMutation({
     mutationFn: (slug: string) => changeRole(member.id, slug),
-    onSuccess: () => {
+    onSuccess: async () => {
       setProblem(null);
-      onChanged();
+      await onChanged();
     },
     onError: fail,
   });
 
   const presence = useMutation({
     mutationFn: () => (suspended ? restoreMember(member.id) : suspendMember(member.id)),
-    onSuccess: () => {
+    onSuccess: async () => {
       setProblem(null);
-      onChanged();
+      await onChanged();
     },
     onError: fail,
   });
@@ -205,7 +209,7 @@ function InvitationRow({
   onChanged,
 }: {
   invitation: Invitation;
-  onChanged: () => void;
+  onChanged: () => Promise<unknown>;
 }) {
   const revoke = useMutation({
     mutationFn: () => revokeInvitation(invitation.id),
@@ -241,7 +245,7 @@ function InviteForm({
 }: {
   roles: Role[];
   onClose: () => void;
-  onSent: () => void;
+  onSent: () => Promise<unknown>;
 }) {
   const [form, setForm] = useState({
     first_name: "",
