@@ -177,7 +177,7 @@ jobs:
       # serverless function cannot hold a connection open. This puts that
       # interface in front of the Redis above so the runner needs no account.
       redis-http:
-        image: hiett/serverless-redis-http:latest
+        image: hiett/serverless-redis-http:0.0.10
         env:
           SRH_MODE: env
           SRH_TOKEN: only-for-continuous-integration
