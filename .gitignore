@@ -42,9 +42,10 @@ coverage.xml
 !.env.local.example
 
 # Testing
-/playwright-report/
-/test-results/
-/blob-report/
+playwright-report/
+**/e2e/.auth/
+test-results/
+blob-report/
 .playwright/
 /coverage
 

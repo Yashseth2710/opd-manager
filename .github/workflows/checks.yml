@@ -143,3 +143,124 @@ jobs:
 
       - name: Tests
         run: pytest -q
+
+  browser:
+    name: Browser
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: opd
+          POSTGRES_PASSWORD: opd
+          POSTGRES_DB: opd_browser
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Sessions and rate limits speak Upstash's REST interface, because a
+      # serverless function cannot hold a connection open. This puts that
+      # interface in front of the Redis above so the runner needs no account.
+      redis-http:
+        image: hiett/serverless-redis-http:latest
+        env:
+          SRH_MODE: env
+          SRH_TOKEN: only-for-continuous-integration
+          SRH_CONNECTION_STRING: redis://redis:6379
+        ports:
+          - 8079:80
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://opd:opd@localhost:5432/opd_browser
+      DATABASE_DIRECT_URL: postgresql+asyncpg://opd:opd@localhost:5432/opd_browser
+      JWT_SECRET: only-for-continuous-integration-never-deployed
+      ENVIRONMENT: development
+      UPSTASH_REDIS_REST_URL: http://localhost:8079
+      UPSTASH_REDIS_REST_TOKEN: only-for-continuous-integration
+      APP_URL: http://localhost:3000
+      CI: "true"
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install the API
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for the session store
+        run: |
+          for _ in $(seq 1 30); do
+            curl -sf -H "Authorization: Bearer only-for-continuous-integration"               -d '["PING"]' http://localhost:8079 && break
+            sleep 2
+          done
+          curl -sf -H "Authorization: Bearer only-for-continuous-integration"             -d '["PING"]' http://localhost:8079
+
+      - name: Build the schema
+        working-directory: backend
+        run: alembic upgrade head
+
+      - name: Start the API
+        working-directory: backend
+        run: |
+          nohup python -m uvicorn app.main:app --port 8000 > api.log 2>&1 &
+          for _ in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8000/api/v1/health && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:8000/api/v1/health
+
+      - name: Install the web app
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install the browser
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Tests
+        working-directory: frontend
+        run: npm run e2e
+
+      - name: What the API said, if anything failed
+        if: failure()
+        working-directory: backend
+        run: tail -n 200 api.log
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-report
+          path: |
+            frontend/playwright-report/
+            frontend/test-results/
+          retention-days: 7
+

@@ -2,3 +2,8 @@
 node_modules
 next-env.d.ts
 package-lock.json
+
+# Written by a test run, not by hand.
+e2e/.auth
+test-results
+playwright-report

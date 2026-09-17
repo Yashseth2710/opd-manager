@@ -62,11 +62,20 @@ application stays usable.
 
 ### Tests
 
-The suite drops every table it touches, so it refuses to run unless
+The API suite drops every table it touches, so it refuses to run unless
 `ENVIRONMENT=test` and it is pointed at a database kept for the purpose.
 
 ```
 cd backend && pytest
+```
+
+The browser suite drives the running application, so it needs both halves up
+and an API with no email provider configured — it sets up its own clinics, and
+a confirmation step it cannot read would stop it at the first screen.
+
+```
+cd frontend && npx playwright install chromium   # once
+npm run e2e
 ```
 
 ## Status
