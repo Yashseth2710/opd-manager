@@ -202,7 +202,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
-          cache-dependency-path: backend/requirements.txt
+          cache-dependency-path: backend/requirements-dev.txt
 
       - uses: actions/setup-node@v5
         with:
@@ -210,11 +210,13 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      # The dev list, because it carries the server that runs the app.
+      # On Vercel the application is a serverless function and needs none.
       - name: Install the API
         working-directory: backend
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
 
       # Asked through the same client the application uses, so what passes
       # here is the path a sign-in actually takes rather than something that

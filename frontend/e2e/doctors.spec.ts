@@ -217,3 +217,14 @@ test.describe("a clinic that has not added anyone yet", () => {
     await expect(page).toHaveURL(/\/doctors\/new$/);
   });
 });
+
+test.describe("nobody signed in", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("is sent to sign in, and told where they were headed", async ({ page }) => {
+    await page.goto("/doctors/new");
+
+    await expect(page).toHaveURL(/\/login\?next=%2Fdoctors%2Fnew$/);
+    await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
+  });
+});
