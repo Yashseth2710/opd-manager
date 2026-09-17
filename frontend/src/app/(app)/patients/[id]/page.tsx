@@ -149,17 +149,23 @@ function Header({
   mayArchive: boolean;
 }) {
   const queries = useQueryClient();
+  const [problem, setProblem] = useState<string | null>(null);
   const archived = record.status === "archived";
 
   const presence = useMutation({
     mutationFn: () => (archived ? restorePatient(record.id) : archivePatient(record.id)),
     onSuccess: async () => {
+      setProblem(null);
       // Waited for: the buttons and the badge redraw from this record, and
       // the screen should not show the old answer while the new one is on
       // its way.
       await queries.invalidateQueries({ queryKey: ["patient", record.id] });
       void queries.invalidateQueries({ queryKey: ["patients"] });
     },
+    onError: (error) =>
+      setProblem(
+        error instanceof Error ? error.message : "That did not go through. Try again.",
+      ),
   });
 
   const line = [record.age, record.gender, record.blood_group].filter(Boolean).join(" · ");
@@ -216,6 +222,12 @@ function Header({
             </button>
           )}
         </div>
+      )}
+
+      {problem && (
+        <p role="alert" className="w-full text-[13px] text-[var(--color-state-noshow)]">
+          {problem}
+        </p>
       )}
     </header>
   );

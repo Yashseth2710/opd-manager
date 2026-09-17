@@ -91,16 +91,16 @@ export function Schedule({
       inFlight.current = false;
     },
     onSuccess: async () => {
-      // Waited for, not fired off. Both the hours below and the free times
-      // beside them are read from these queries, so closing the editor
-      // before they land puts the old week back on screen with nothing
-      // saying it is still working. The button keeps saying "Saving" until
-      // what was saved is what is shown.
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["doctor", doctorId] }),
-        queries.invalidateQueries({ queryKey: ["availability", doctorId] }),
-      ]);
-      // Another screen, and nobody is looking at it yet.
+      // Waited for, not fired off: the hours below are read from the record,
+      // so closing the editor before it lands puts the old week back on
+      // screen with nothing saying it is still working. The button keeps
+      // saying "Saving" until what was saved is what is shown.
+      //
+      // Only the record, though. The free times have their own place to
+      // show that they are loading, and waiting on them as well would let
+      // one slow panel hold up a change that has already happened.
+      await queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
+      void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
       void queries.invalidateQueries({ queryKey: ["doctors"] });
       setEditing(false);
     },

@@ -36,13 +36,14 @@ export function Leaves({
   const [problem, setProblem] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  // Awaited by its callers, so a saved day off is on the list and out of the
-  // free times before the form closes.
-  const refresh = () =>
-    Promise.all([
-      queries.invalidateQueries({ queryKey: ["doctor", doctorId] }),
-      queries.invalidateQueries({ queryKey: ["availability", doctorId] }),
-    ]);
+  // Awaited by its callers, so a saved day off is on the list below before
+  // the form closes. The free times refresh in their own time: they show
+  // their own skeleton, and waiting on them would let one slow panel hold
+  // up a change that has already happened.
+  const refresh = () => {
+    void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
+    return queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
+  };
 
   const record = useMutation({
     mutationFn: () =>

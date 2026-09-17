@@ -138,20 +138,26 @@ function Header({
   mayManage: boolean;
 }) {
   const queries = useQueryClient();
+  const [problem, setProblem] = useState<string | null>(null);
   const practising = record.status === "active";
 
   const presence = useMutation({
     mutationFn: () => (practising ? deactivateDoctor(record.id) : restoreDoctor(record.id)),
     onSuccess: async () => {
-      // Waited for: the buttons, the hours and the free times all redraw
-      // from these, and the screen should not show the old answer while
-      // the new one is on its way.
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["doctor", record.id] }),
-        queries.invalidateQueries({ queryKey: ["availability", record.id] }),
-      ]);
+      setProblem(null);
+      // Only the record is waited for. The badge and the buttons are drawn
+      // from it, so it has to be here before the screen changes. The free
+      // times have their own place to show that they are loading, and
+      // holding the whole screen for them means one slow panel can keep a
+      // change that already happened off the screen entirely.
+      await queries.invalidateQueries({ queryKey: ["doctor", record.id] });
+      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
       void queries.invalidateQueries({ queryKey: ["doctors"] });
     },
+    onError: (error) =>
+      setProblem(
+        error instanceof Error ? error.message : "That did not go through. Try again.",
+      ),
   });
 
   const line = [record.speciality, record.qualifications, record.room && `Room ${record.room}`]
@@ -206,6 +212,12 @@ function Header({
             {presence.isPending ? "…" : practising ? "Stand down" : "Bring back"}
           </button>
         </div>
+      )}
+
+      {problem && (
+        <p role="alert" className="w-full text-[13px] text-[var(--color-state-noshow)]">
+          {problem}
+        </p>
       )}
     </header>
   );
@@ -337,11 +349,10 @@ function EditForm({ record, onDone }: { record: Doctor; onDone: () => void }) {
       inFlight.current = false;
     },
     onSuccess: async () => {
-      await Promise.all([
-        queries.invalidateQueries({ queryKey: ["doctor", record.id] }),
-        queries.invalidateQueries({ queryKey: ["availability", record.id] }),
-      ]);
-      // Other screens, and nobody is looking at them yet.
+      // The details behind the form are drawn from the record, so that one
+      // is waited for. The rest can land in their own time.
+      await queries.invalidateQueries({ queryKey: ["doctor", record.id] });
+      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
       void queries.invalidateQueries({ queryKey: ["doctors"] });
       void queries.invalidateQueries({ queryKey: ["specialities"] });
       onDone();
