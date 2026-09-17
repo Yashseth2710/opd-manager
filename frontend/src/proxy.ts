@@ -18,6 +18,12 @@ export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const signedIn = request.cookies.has(SESSION_MARKER);
 
+  // The front door is not a page of its own. Someone opening the app either
+  // has a clinic to get back to or needs to sign in.
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL(signedIn ? "/dashboard" : "/login", request.url));
+  }
+
   if (!signedIn && SIGNED_IN_ONLY.some((path) => pathname.startsWith(path))) {
     const login = new URL("/login", request.url);
     // Remember where they were headed so the sign-in lands them there.

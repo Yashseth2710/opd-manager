@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { Activity, Database, RefreshCw, ServerCog } from "lucide-react";
+import Link from "next/link";
 import { ApiFailure, request } from "@/lib/api";
 
 type Health = {
@@ -110,7 +111,10 @@ export default function Page() {
       </section>
 
       <p className="text-sm text-[var(--text-subtle)]">
-        Nothing here is patient data. Everything in this build is synthetic.
+        Nothing here is patient data. Everything in this build is synthetic.{" "}
+        <Link href="/login" className="underline underline-offset-2 hover:text-[var(--text)]">
+          Go to the app
+        </Link>
       </p>
     </main>
   );
