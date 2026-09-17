@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   CalendarDays,
   LayoutDashboard,
   ListOrdered,
@@ -31,7 +32,7 @@ type Destination = {
 
 const DESTINATIONS: Destination[] = [
   { href: "/dashboard", label: "Today", icon: LayoutDashboard },
-  { label: "Patients", icon: UserRound, permission: "patient:read" },
+  { href: "/patients", label: "Patients", icon: UserRound, permission: "patient:read" },
   { label: "Appointments", icon: CalendarDays, permission: "appointment:read" },
   { label: "Queue", icon: ListOrdered, permission: "queue:checkin" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
@@ -162,15 +163,27 @@ export function Page({
   title,
   blurb,
   action,
+  back,
   children,
 }: {
   title: string;
   blurb?: string;
   action?: React.ReactNode;
+  /** Sits above the heading, where somebody looks for the way out. */
+  back?: { href: Route; label: string };
   children: React.ReactNode;
 }) {
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-10 lg:py-14">
+      {back && (
+        <Link
+          href={back.href}
+          className="mb-6 inline-flex items-center gap-1.5 text-[14px] text-[var(--text-muted)] transition-colors hover:text-[var(--text)]"
+        >
+          <ArrowLeft className="size-3.5" />
+          {back.label}
+        </Link>
+      )}
       <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-[26px] leading-tight font-semibold tracking-tight text-balance">

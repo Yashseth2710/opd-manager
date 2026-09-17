@@ -100,7 +100,9 @@ Incremented with a single `UPDATE ... RETURNING`, which is atomic and row-locked
 
 ### patients
 
-`patient_number` (`PT-000001`), `first_name`, `last_name`, `preferred_name`, `phone`, `alternate_phone`, `email`, `date_of_birth`, `gender`, `blood_group`, `address` (JSONB), `emergency_contact` (JSONB), `notes`, `status` (`active` / `archived`).
+`patient_number` (`PT-000001`), `first_name`, `last_name`, `preferred_name`, `phone`, `alternate_phone`, `email`, `date_of_birth`, `gender`, `blood_group`, `address` (JSONB), `emergency_contact` (JSONB), `notes`, `status` (`active` / `archived`), `archived_at`, `registered_by`.
+
+Phone numbers are stored as digits with an optional country prefix. Two records that differ only in punctuation are two records as far as duplicate detection is concerned.
 
 Age is derived from `date_of_birth`, never stored — a stored age is wrong within a year.
 
@@ -112,6 +114,12 @@ GIN    trigram index on name for fuzzy search
 ```
 
 Duplicate detection runs on write and is advisory: exact phone match, exact email match, or fuzzy name plus matching date of birth. It surfaces candidates and never merges automatically. Merging patient records is a destructive clinical operation and is deliberately out of the initial build.
+
+### patient_allergies
+
+`patient_id`, `substance`, `reaction`, `severity` (`mild` / `moderate` / `severe`), `recorded_by`.
+
+Held against the person rather than a visit, because an allergy is a standing fact and the moment it matters is the moment nobody has time to read back through old notes. One substance per patient; recording it twice is refused rather than silently duplicated.
 
 ### appointments
 

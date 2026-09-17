@@ -7,6 +7,11 @@ export type ApiError = {
   message: string;
   fields?: Record<string, string>;
   choices?: ClinicChoice[];
+  /**
+   * Existing records the API wants a decision about before it acts. Left
+   * untyped here: this module knows about envelopes, not about patients.
+   */
+  candidates?: unknown[];
   retry_after_seconds?: number;
 };
 
@@ -15,6 +20,7 @@ export class ApiFailure extends Error {
   readonly status: number;
   readonly fields?: Record<string, string>;
   readonly choices?: ClinicChoice[];
+  readonly candidates?: unknown[];
   readonly retryAfterSeconds?: number;
 
   constructor(status: number, error: ApiError) {
@@ -24,6 +30,7 @@ export class ApiFailure extends Error {
     this.status = status;
     this.fields = error.fields;
     this.choices = error.choices;
+    this.candidates = error.candidates;
     this.retryAfterSeconds = error.retry_after_seconds;
   }
 }

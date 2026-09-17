@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, func
+from sqlalchemy import Connection, DateTime, ForeignKey, MetaData, event, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, declared_attr, mapped_column
 from uuid6 import uuid7
@@ -13,6 +13,21 @@ from uuid6 import uuid7
 
 class Base(DeclarativeBase):
     pass
+
+
+# The schema leans on two extensions: pg_trgm for the trigram index behind
+# patient search, btree_gist for the constraint that stops a doctor being
+# booked twice for one slot. Migrations create them, and so must a metadata
+# build, which is how the suite raises its schema.
+EXTENSIONS = ("pg_trgm", "btree_gist")
+
+
+@event.listens_for(Base.metadata, "before_create")
+def _create_extensions(_: MetaData, connection: Connection, **__: object) -> None:
+    if connection.dialect.name != "postgresql":
+        return
+    for extension in EXTENSIONS:
+        connection.execute(text(f"CREATE EXTENSION IF NOT EXISTS {extension}"))
 
 
 class TimestampMixin:

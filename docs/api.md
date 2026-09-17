@@ -141,6 +141,8 @@ patients      GET    /patients
               PATCH  /patients/{id}
               POST   /patients/{id}/archive
               POST   /patients/{id}/restore
+              POST   /patients/{id}/allergies
+              DELETE /patients/{id}/allergies/{allergy_id}
               GET    /patients/{id}/timeline
               GET    /patients/{id}/documents
               POST   /patients/{id}/documents
@@ -227,7 +229,9 @@ Standard query parameters across every collection:
 ?page=1&per_page=25&sort=-created_at&q=sharma&status=active
 ```
 
-`per_page` defaults to 25 and is capped at 100. `sort` takes a field name with an optional `-` for descending, validated against an allowlist so it cannot be used to probe the schema. Filters are endpoint-specific and documented in the OpenAPI schema.
+`per_page` defaults to 25 and is capped at 100. The response carries `total` and `pages` alongside the page itself, so a client can render "26–50 of 312" without a second request. `sort` takes a field name with an optional `-` for descending, validated against an allowlist so it cannot be used to probe the schema. Filters are endpoint-specific and documented in the OpenAPI schema.
+
+`/patients` is the exception that takes no `sort`. Its order is decided by whether there is a search term: results come back closest-match first, and an unsearched list comes back most recently registered first. A `sort` that overrode either would only ever make the list less useful.
 
 Search is debounced at 300ms client-side and always executed server-side. No endpoint returns an unbounded collection.
 

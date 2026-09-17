@@ -105,10 +105,13 @@ async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
         extra["fields"] = exc.fields
     if isinstance(exc, AccountLocked | RateLimited):
         extra["retry_after_seconds"] = exc.retry_after_seconds
-    # Carried by anything that needs the caller to choose before retrying.
-    choices = getattr(exc, "choices", None)
-    if choices:
-        extra["choices"] = choices
+    # Carried by anything that needs the caller to choose before retrying:
+    # which clinic they meant, or whether the record they are about to create
+    # is the person already on one of these rows.
+    for carried in ("choices", "candidates"):
+        value = getattr(exc, carried, None)
+        if value:
+            extra[carried] = value
 
     response = _error(exc.status, exc.code, exc.message, **extra)
     if isinstance(exc, AccountLocked | RateLimited):

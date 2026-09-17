@@ -52,12 +52,13 @@ Run each half in its own terminal:
 ```
 
 The web app proxies `/api/v1` to the API in development, so open
-`http://localhost:3000` and the status page will tell you whether the database
-is answering.
+`http://localhost:3000` and register a clinic. `/status` reports whether the
+database and cache are answering.
 
-Email is optional. With `RESEND_API_KEY` left blank, password reset and
-confirmation links are written to the API's log instead of being sent, and new
-accounts are created already confirmed so the application stays usable.
+Email is optional. With `BREVO_API_KEY` and `RESEND_API_KEY` both left blank,
+password reset, confirmation and invitation links are written to the API's log
+instead of being sent, and new accounts are created already confirmed so the
+application stays usable.
 
 ### Tests
 
