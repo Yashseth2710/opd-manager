@@ -83,7 +83,9 @@ class TestRegistration:
 
     @pytest.mark.parametrize(
         "password",
-        ["short", "password123", "123456789"],
+        # Too short, then three that clear the length but are the first
+        # things a credential-stuffing list tries.
+        ["1234567", "12345678", "password123", "qwerty123"],
     )
     async def test_weak_passwords_are_refused(self, client: AsyncClient, password: str) -> None:
         response = await client.post(f"{AUTH}/register", json=registration(password=password))

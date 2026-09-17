@@ -62,6 +62,10 @@ class Settings(BaseSettings):
     # Where the links in outgoing email point.
     app_url: str = "http://localhost:3000"
 
+    # Brevo verifies a single sender address rather than a whole domain, so
+    # mail reaches any recipient without owning one. Resend needs a verified
+    # domain but is the better choice once there is one.
+    brevo_api_key: str = Field(default="")
     resend_api_key: str = Field(default="")
     mail_from: str = "OPD Manager <onboarding@resend.dev>"
 
@@ -69,7 +73,16 @@ class Settings(BaseSettings):
     def email_configured(self) -> bool:
         """With no provider the application says so rather than reporting a
         delivery that never happened."""
-        return bool(self.resend_api_key)
+        return bool(self.brevo_api_key or self.resend_api_key)
+
+    @property
+    def mail_sender(self) -> tuple[str, str]:
+        """Splits `Name <address>` into the two fields providers ask for."""
+        raw = self.mail_from.strip()
+        if "<" in raw and raw.endswith(">"):
+            name, _, address = raw.partition("<")
+            return name.strip() or "OPD Manager", address[:-1].strip()
+        return "OPD Manager", raw
 
     @property
     def redis_configured(self) -> bool:

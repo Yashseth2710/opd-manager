@@ -6,7 +6,7 @@ Both are enforced on the server. The frontend hides what a user cannot do as a c
 
 ## Authentication
 
-**Passwords** — Argon2id, per-password salt, parameters tuned so hashing costs roughly 250ms on the deployment target. Minimum 10 characters, checked against a list of common passwords. No composition rules; length beats forced punctuation.
+**Passwords** — Argon2id, per-password salt, parameters tuned so hashing costs roughly 250ms on the deployment target. Minimum 8 characters, checked against a list of common passwords. No composition rules; length beats forced punctuation.
 
 **Tokens** — a 15-minute JWT access token and a 7-day opaque refresh token, both in `httpOnly`, `Secure`, `SameSite=Lax` cookies. JavaScript cannot read either, so an XSS bug does not hand over a session.
 
@@ -15,6 +15,8 @@ Both are enforced on the server. The frontend hides what a user cannot do as a c
 **Lockout** — after 5 failed attempts an account locks for 15 minutes, counted per account and per IP. Login responses are identical for an unknown email and a wrong password, and both take the same time.
 
 **Reset tokens** — single-use, 30-minute expiry, stored hashed. Requesting a reset for an address that does not exist returns the same response as one that does.
+
+**Email** — the provider sits behind one interface and is chosen by whichever key is configured. With none set, links are written to the server log and accounts are created already confirmed, so the application stays usable rather than reporting deliveries that never happened. The response to a reset request is identical in every case and never carries the link: returning it would tell the caller which addresses have accounts.
 
 ## Authorisation
 

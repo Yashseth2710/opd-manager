@@ -26,26 +26,52 @@ _hasher = PasswordHasher(
     salt_len=16,
 )
 
-MIN_PASSWORD_LENGTH = 10
+MIN_PASSWORD_LENGTH = 8
 
 # The passwords that turn up first in every credential-stuffing list. Length
 # is the real defence, so there are no composition rules to go with this.
+# The eight and nine character entries matter most: they are the ones a
+# person reaches for the moment the minimum allows them.
 _COMMON_PASSWORDS = frozenset(
     {
+        "12345678",
+        "123456789",
+        "qwerty123",
+        "abc12345",
+        "iloveyou",
+        "sunshine",
+        "princess",
+        "football",
+        "baseball",
+        "welcome1",
+        "welcome123",
+        "admin123",
+        "letmein1",
+        "trustno1",
+        "dragon12",
+        "monkey12",
+        "starwars",
+        "superman",
+        "computer",
+        "whatever",
+        "passw0rd",
+        "p@ssword",
+        "clinic123",
+        "doctor123",
+        "hospital",
+        "india123",
         "password",
         "password1",
         "password12",
         "password123",
         "password1234",
         "passw0rd123",
-        "123456789",
         "1234567890",
         "12345678910",
         "qwertyuiop",
         "qwerty12345",
         "1q2w3e4r5t",
         "letmein123",
-        "welcome123",
         "admin12345",
         "administrator",
         "iloveyou123",

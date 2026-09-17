@@ -128,7 +128,7 @@ export default function RegisterPage() {
           value={password}
           onChange={setPassword}
           error={fields.password}
-          hint="At least 10 characters. A phrase you can remember beats a short scramble."
+          hint="At least 8 characters. A phrase you can remember beats a short scramble."
           autoComplete="new-password"
           required
         />

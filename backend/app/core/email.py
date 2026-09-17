@@ -107,9 +107,12 @@ class ConsoleSender:
 
 
 class ResendSender:
-    """Sends for real. Until a domain is verified the provider only delivers
-    to the account holder's own address, so links to anyone else are dropped
-    upstream; that is a provider setting, not something this code can fix."""
+    """Delivers anywhere, once a sending domain has been verified.
+
+    Until then the provider only accepts the account holder's own address and
+    drops everything else upstream. That is a provider setting, not something
+    this code can work around.
+    """
 
     name = "resend"
 
@@ -136,9 +139,54 @@ class ResendSender:
         return Delivery(sent=True, provider=self.name)
 
 
+class BrevoSender:
+    """Delivers anywhere once a single sender address has been confirmed.
+
+    Verifying one address rather than a whole domain is why this is here: it
+    means reset links reach real recipients without owning a domain.
+    """
+
+    name = "brevo"
+
+    async def send(self, message: Message) -> Delivery:
+        settings = get_settings()
+        name, address = settings.mail_sender
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
+                response = await client.post(
+                    "https://api.brevo.com/v3/smtp/email",
+                    headers={
+                        "api-key": settings.brevo_api_key,
+                        "accept": "application/json",
+                    },
+                    json={
+                        "sender": {"name": name, "email": address},
+                        "to": [{"email": message.to}],
+                        "subject": message.subject,
+                        "htmlContent": render(message),
+                    },
+                )
+                response.raise_for_status()
+        except httpx.HTTPError:
+            # Never the address and never the link: one identifies a person,
+            # the other is a working credential.
+            logger.error("email provider rejected a message: %s", message.subject)
+            return Delivery(sent=False, provider=self.name)
+        return Delivery(sent=True, provider=self.name)
+
+
 def sender() -> Sender:
+    """Whichever provider is configured, or the console when none is.
+
+    Brevo wins when both are set, because an installation only bothers with
+    a second provider while it is moving to one.
+    """
     settings = get_settings()
-    return ResendSender() if settings.email_configured else ConsoleSender()
+    if settings.brevo_api_key:
+        return BrevoSender()
+    if settings.resend_api_key:
+        return ResendSender()
+    return ConsoleSender()
 
 
 async def send(message: Message) -> Delivery:

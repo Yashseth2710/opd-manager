@@ -107,7 +107,7 @@ function ResetForm() {
           value={password}
           onChange={setPassword}
           error={fieldError}
-          hint="At least 10 characters."
+          hint="At least 8 characters."
           autoComplete="new-password"
           autoFocus
           required
