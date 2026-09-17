@@ -169,6 +169,20 @@ test("standing a doctor down takes them off the list and keeps their record", as
   await expect(page.getByRole("button", { name: "Edit" })).toBeVisible();
 });
 
+test("a page past the end says so rather than claiming the clinic is empty", async ({
+  page,
+  tag,
+}) => {
+  await addDoctor(page, { last_name: `Paged${tag}` });
+  await page.goto("/doctors?page=99");
+
+  await expect(page.getByRole("heading", { name: "Nothing on page 99" })).toBeVisible();
+  await page.getByRole("button", { name: "Back to the first page" }).click();
+
+  await expect(page).toHaveURL(/\/doctors(\?.*)?$/);
+  await expect(page.getByRole("link", { name: new RegExp(`Paged${tag}`) })).toBeVisible();
+});
+
 test("an id that belongs to nobody shows a page rather than a spinner", async ({ page }) => {
   await page.goto("/doctors/00000000-0000-7000-8000-000000000000");
 

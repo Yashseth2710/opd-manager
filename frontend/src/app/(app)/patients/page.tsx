@@ -186,7 +186,15 @@ function Register() {
           body="Something went wrong reaching the server. Try again in a moment."
         />
       ) : patients.data.items.length === 0 ? (
-        query ? (
+        // A page past the end is a dead end otherwise: an empty register
+        // telling a clinic of three hundred that nobody is registered.
+        page > lastPage && total > 0 ? (
+          <Empty
+            heading={`Nothing on page ${page}`}
+            body={`This register stops at page ${lastPage}.`}
+            action={{ label: "Back to the first page", onClick: () => move({ page: null }) }}
+          />
+        ) : query ? (
           <Empty
             heading={`Nobody matches “${query}”`}
             body="Try part of a name, the last few digits of a phone number, or a patient number."
@@ -333,7 +341,8 @@ function Empty({
 }: {
   heading: string;
   body: string;
-  action?: { href: string; label: string };
+  /** Somewhere to go, or something to undo. */
+  action?: { label: string; href?: string; onClick?: () => void };
 }) {
   return (
     <div className="rounded-[var(--radius-panel)] border border-dashed border-[var(--border-strong)] px-6 py-14 text-center">
@@ -341,14 +350,22 @@ function Empty({
       <p className="mx-auto mt-1.5 max-w-[46ch] text-[15px] leading-relaxed text-[var(--text-muted)]">
         {body}
       </p>
-      {action && (
+      {action?.href ? (
         <Link
           href={action.href as Route}
           className="mt-5 inline-flex rounded-[var(--radius-field)] bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-[var(--color-ink-900)] transition hover:brightness-[1.06]"
         >
           {action.label}
         </Link>
-      )}
+      ) : action?.onClick ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="mt-5 inline-flex rounded-[var(--radius-field)] bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-[var(--color-ink-900)] transition hover:brightness-[1.06]"
+        >
+          {action.label}
+        </button>
+      ) : null}
     </div>
   );
 }

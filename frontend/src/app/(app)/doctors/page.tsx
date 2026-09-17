@@ -210,7 +210,15 @@ function Panel() {
           body="Something went wrong reaching the server. Try again in a moment."
         />
       ) : doctors.data.items.length === 0 ? (
-        query || speciality ? (
+        // A page past the end is a dead end otherwise: an empty list telling
+        // a clinic of sixty that it has no doctors, and no way back.
+        page > lastPage && total > 0 ? (
+          <Empty
+            heading={`Nothing on page ${page}`}
+            body={`This list stops at page ${lastPage}.`}
+            action={{ label: "Back to the first page", onClick: () => move({ page: null }) }}
+          />
+        ) : query || speciality ? (
           <Empty
             heading={`Nobody matches ${query ? `“${query}”` : speciality}`}
             body="Try part of a surname, a speciality, or a room number."
@@ -378,7 +386,8 @@ function Empty({
 }: {
   heading: string;
   body: string;
-  action?: { href: string; label: string };
+  /** Somewhere to go, or something to undo. */
+  action?: { label: string; href?: string; onClick?: () => void };
 }) {
   return (
     <div className="rounded-[var(--radius-panel)] border border-dashed border-[var(--border-strong)] px-6 py-14 text-center">
@@ -387,14 +396,22 @@ function Empty({
       <p className="mx-auto mt-1.5 max-w-[46ch] text-[15px] leading-relaxed text-[var(--text-muted)]">
         {body}
       </p>
-      {action && (
+      {action?.href ? (
         <Link
           href={action.href as Route}
           className="mt-5 inline-flex rounded-[var(--radius-field)] bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-[var(--color-ink-900)] transition hover:brightness-[1.06]"
         >
           {action.label}
         </Link>
-      )}
+      ) : action?.onClick ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          className="mt-5 inline-flex rounded-[var(--radius-field)] bg-[var(--accent)] px-4 py-2 text-[14px] font-semibold text-[var(--color-ink-900)] transition hover:brightness-[1.06]"
+        >
+          {action.label}
+        </button>
+      ) : null}
     </div>
   );
 }
