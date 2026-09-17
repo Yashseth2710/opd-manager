@@ -65,7 +65,10 @@ class PatientWrite(_Trimmed):
     """The fields a person fills in, on both registration and editing."""
 
     first_name: str = Field(min_length=1, max_length=80)
-    last_name: str = Field(default="", max_length=80)
+    # Nullable, and stored as blank. Plenty of people have one name, and the
+    # form sends an empty surname as null like every other field it clears;
+    # refusing that turned "only a name is required" into a lie.
+    last_name: str | None = Field(default="", max_length=80)
     preferred_name: str | None = Field(default=None, max_length=80)
     phone: str | None = Field(default=None, max_length=32)
     alternate_phone: str | None = Field(default=None, max_length=32)
@@ -76,6 +79,11 @@ class PatientWrite(_Trimmed):
     address: PatientAddress | None = None
     emergency_contact: EmergencyContact | None = None
     notes: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("last_name")
+    @classmethod
+    def _blank_rather_than_missing(cls, value: str | None) -> str:
+        return value or ""
 
     @field_validator("phone", "alternate_phone")
     @classmethod
@@ -100,6 +108,8 @@ class PatientUpdate(_Trimmed):
     record turns an edit of one phone number into a chance to wipe the rest."""
 
     first_name: str | None = Field(default=None, min_length=1, max_length=80)
+    # Clearing a surname means blank, not absent: the column is not nullable,
+    # and a null here would reach the database as one.
     last_name: str | None = Field(default=None, max_length=80)
     preferred_name: str | None = Field(default=None, max_length=80)
     phone: str | None = Field(default=None, max_length=32)
@@ -111,6 +121,13 @@ class PatientUpdate(_Trimmed):
     address: PatientAddress | None = None
     emergency_contact: EmergencyContact | None = None
     notes: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("last_name")
+    @classmethod
+    def _blank_rather_than_null(cls, value: str | None) -> str | None:
+        # None only survives when the field was never sent at all, which is
+        # what exclude_unset reads as "leave this alone".
+        return value
 
     @field_validator("phone", "alternate_phone")
     @classmethod
@@ -125,7 +142,7 @@ class PatientUpdate(_Trimmed):
 
 class DuplicateCheck(_Trimmed):
     first_name: str = Field(default="", max_length=80)
-    last_name: str = Field(default="", max_length=80)
+    last_name: str | None = Field(default="", max_length=80)
     phone: str | None = Field(default=None, max_length=32)
     email: EmailStr | None = None
     date_of_birth: dt.date | None = None

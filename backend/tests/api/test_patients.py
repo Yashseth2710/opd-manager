@@ -139,6 +139,33 @@ class TestValidation:
 
         assert response.status_code == 422
 
+    async def test_somebody_with_only_one_name_is_accepted(self, client: AsyncClient) -> None:
+        """Plenty of people have one name, and the form clears an empty
+        surname to null the way it clears every other field. Refusing that
+        turned "only a name is required" into a lie."""
+        await sign_up(client)
+
+        for body in (
+            {"first_name": "Lakshmi", "last_name": None},
+            {"first_name": "Lakshmi"},
+            {"first_name": "Lakshmi", "last_name": ""},
+        ):
+            response = await client.post(
+                f"{API}/patients", json={**body, "confirm_duplicate": True}
+            )
+            assert response.status_code == 201, response.text
+            assert response.json()["data"]["full_name"] == "Lakshmi"
+
+    async def test_a_surname_can_be_cleared_without_breaking_the_column(
+        self, client: AsyncClient
+    ) -> None:
+        await sign_up(client)
+        patient = await register(client)
+
+        response = await client.patch(f"{API}/patients/{patient['id']}", json={"last_name": ""})
+        assert response.status_code == 200
+        assert response.json()["data"]["full_name"] == "Aarti"
+
     async def test_a_patient_with_no_phone_or_birthday_is_still_valid(
         self, client: AsyncClient
     ) -> None:

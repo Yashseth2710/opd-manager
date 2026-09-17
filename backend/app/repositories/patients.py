@@ -165,7 +165,7 @@ class PatientRepository(TenantScopedRepository[Patient]):
         self,
         *,
         first_name: str = "",
-        last_name: str = "",
+        last_name: str | None = "",
         phone: str | None = None,
         email: str | None = None,
         date_of_birth: dt.date | None = None,
@@ -186,7 +186,7 @@ class PatientRepository(TenantScopedRepository[Patient]):
         if email:
             signals.append(func.lower(Patient.email) == email.lower())
 
-        name = f"{first_name} {last_name}".strip().lower()
+        name = f"{first_name} {last_name or ''}".strip().lower()
         if name and date_of_birth is not None:
             signals.append(
                 and_(
