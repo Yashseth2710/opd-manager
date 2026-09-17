@@ -21,6 +21,7 @@ const SIGNED_IN_ONLY = [
   "/settings",
   "/staff",
   "/patients",
+  "/doctors",
   "/appointments",
   "/queue",
 ];
