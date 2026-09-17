@@ -1,0 +1,11 @@
+fastapi==0.120.4
+pydantic[email]==2.12.3
+pydantic-settings==2.11.0
+sqlalchemy==2.0.44
+asyncpg==0.31.0
+alembic==1.16.5
+python-dotenv==1.1.1
+argon2-cffi==25.1.0
+pyjwt==2.10.1
+httpx==0.28.1
+uuid6==2024.7.10

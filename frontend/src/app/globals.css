@@ -1,0 +1,243 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-ink-50: #f2f5f8;
+  --color-ink-100: #dce5ee;
+  --color-ink-200: #c7d3e0;
+  --color-ink-300: #9dafc4;
+  --color-ink-400: #6b83a0;
+  --color-ink-500: #456080;
+  --color-ink-600: #2e4763;
+  --color-ink-700: #1f3450;
+  --color-ink-800: #15304a;
+  --color-ink-900: #0e2135;
+  --color-ink-950: #080f1a;
+
+  --color-marigold-50: #fef8ec;
+  --color-marigold-100: #fcebc8;
+  --color-marigold-200: #f8d690;
+  --color-marigold-300: #f2bc58;
+  --color-marigold-400: #e9a23b;
+  --color-marigold-500: #d4842a;
+  --color-marigold-600: #b0651c;
+  --color-marigold-700: #8a4c18;
+
+  --color-paper-50: #f7f9fa;
+  --color-paper-100: #edf1f4;
+  --color-paper-200: #dde4ea;
+  --color-paper-300: #c2cdd6;
+  --color-paper-400: #94a3b0;
+  --color-paper-500: #6b7a87;
+  --color-paper-600: #4e5a66;
+  --color-paper-700: #38424c;
+  --color-paper-800: #232b33;
+  --color-paper-900: #141a1f;
+
+  --color-state-scheduled: #6b83a0;
+  --color-state-confirmed: #3c7da6;
+  --color-state-waiting: #e9a23b;
+  --color-state-consulting: #2f7d8c;
+  --color-state-completed: #3e8e5a;
+  --color-state-cancelled: #94a3b0;
+  --color-state-noshow: #a32e2b;
+  --color-state-urgent: #86231f;
+
+  --radius-field: 6px;
+  --radius-panel: 10px;
+
+  --ease-out-quint: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+  Roles, not raw values. Components reference these so a theme change is a
+  token swap rather than a second stylesheet.
+*/
+:root {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--color-paper-100);
+  --background: var(--color-paper-50);
+  --border: var(--color-paper-200);
+  --border-strong: var(--color-paper-300);
+  --text: var(--color-ink-900);
+  --text-muted: var(--color-paper-600);
+  --text-subtle: var(--color-paper-500);
+  --primary: var(--color-ink-700);
+  --primary-fg: #ffffff;
+  --accent: var(--color-marigold-400);
+  --accent-fg: var(--color-ink-900);
+  --accent-wash: var(--color-marigold-100);
+  --focus-ring: var(--color-marigold-500);
+  --rail: var(--color-ink-900);
+  --rail-text: #c9d6e4;
+
+  /*
+    Names the component library expects, pointed at the roles above so it
+    inherits this palette instead of shipping its own.
+  */
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface-raised);
+  --popover-foreground: var(--text);
+  --primary-foreground: var(--primary-fg);
+  --secondary: var(--surface-sunken);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-sunken);
+  --muted-foreground: var(--text-muted);
+  --accent-foreground: var(--accent-fg);
+  --destructive: var(--color-state-noshow);
+  --destructive-foreground: #ffffff;
+  --input: var(--border-strong);
+  --ring: var(--focus-ring);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --surface: #161d25;
+    --surface-raised: #1c242d;
+    --surface-sunken: #131920;
+    --background: #0f141a;
+    --border: #232c36;
+    --border-strong: #313d4a;
+    --text: #e8eef4;
+    --text-muted: #9daebd;
+    --text-subtle: #7b8c9b;
+    --primary: #3d628f;
+    --primary-fg: #ffffff;
+    --accent: #f0b156;
+    --accent-fg: var(--color-ink-950);
+    --accent-wash: rgb(233 162 59 / 0.13);
+    --focus-ring: #f0b156;
+    --rail: #1a232e;
+    --rail-text: #aebecd;
+
+    --color-state-scheduled: #8ba3bd;
+    --color-state-confirmed: #5fa3cc;
+    --color-state-waiting: #f0b156;
+    --color-state-consulting: #4ba3b4;
+    --color-state-completed: #56ae74;
+    --color-state-cancelled: #7b8c9b;
+    --color-state-noshow: #d2615a;
+    --color-state-urgent: #c04a42;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --surface: #161d25;
+  --surface-raised: #1c242d;
+  --surface-sunken: #131920;
+  --background: #0f141a;
+  --border: #232c36;
+  --border-strong: #313d4a;
+  --text: #e8eef4;
+  --text-muted: #9daebd;
+  --text-subtle: #7b8c9b;
+  --primary: #3d628f;
+  --primary-fg: #ffffff;
+  --accent: #f0b156;
+  --accent-fg: var(--color-ink-950);
+  --accent-wash: rgb(233 162 59 / 0.13);
+  --focus-ring: #f0b156;
+  --rail: #1a232e;
+  --rail-text: #aebecd;
+
+  --color-state-scheduled: #8ba3bd;
+  --color-state-confirmed: #5fa3cc;
+  --color-state-waiting: #f0b156;
+  --color-state-consulting: #4ba3b4;
+  --color-state-completed: #56ae74;
+  --color-state-cancelled: #7b8c9b;
+  --color-state-noshow: #d2615a;
+  --color-state-urgent: #c04a42;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-background: var(--background);
+  --color-border-subtle: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-primary: var(--primary);
+  --color-primary-fg: var(--primary-fg);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-wash: var(--accent-wash);
+  --color-rail: var(--rail);
+  --color-rail-text: var(--rail-text);
+
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-border: var(--border);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    /*
+      15px rather than 16. In a dense operational tool it buys a useful amount
+      of information per screen and still scales cleanly to 200%.
+    */
+    font-size: 15px;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Tokens, money and vitals line up in columns and are read down. */
+  .tabular,
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

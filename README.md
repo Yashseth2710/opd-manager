@@ -29,7 +29,44 @@ Registration → Appointment → Check-in → Queue → Consultation
 
 **Data** — Neon PostgreSQL, Upstash Redis, Vercel Blob
 
-**Hosting** — Vercel, deployed as a single project
+**Hosting** — Vercel, one project serving both halves
+
+## Getting started
+
+The database and cache are hosted, so there is nothing to install and run
+locally besides the two applications. You will need Python 3.12, Node 22 or
+newer, a [Neon](https://neon.tech) Postgres branch and an
+[Upstash](https://upstash.com) Redis database, both on the free tier.
+
+```
+cp backend/.env.example backend/.env      # then fill in the four connection values
+cd backend && pip install -r requirements-dev.txt && alembic upgrade head
+cd ../frontend && npm install
+```
+
+Run each half in its own terminal:
+
+```
+./start-backend.ps1     # http://127.0.0.1:8000
+./start-frontend.ps1    # http://localhost:3000
+```
+
+The web app proxies `/api/v1` to the API in development, so open
+`http://localhost:3000` and the status page will tell you whether the database
+is answering.
+
+Email is optional. With `RESEND_API_KEY` left blank, password reset and
+confirmation links are written to the API's log instead of being sent, and new
+accounts are created already confirmed so the application stays usable.
+
+### Tests
+
+The suite drops every table it touches, so it refuses to run unless
+`ENVIRONMENT=test` and it is pointed at a database kept for the purpose.
+
+```
+cd backend && pytest
+```
 
 ## Status
 

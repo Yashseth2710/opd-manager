@@ -29,47 +29,56 @@ One Vercel project. The Next.js app is the deployment root; the Python API ships
 
 ```
 opd-manager/
-├── app/                        Next.js App Router
-│   ├── (auth)/                 login, register, password reset
-│   ├── (app)/                  the authenticated shell
-│   │   ├── dashboard/          patients/      appointments/
-│   │   ├── queue/              consultations/ prescriptions/
-│   │   ├── billing/            reports/       doctors/
-│   │   └── staff/              notifications/ settings/
-│   ├── (platform)/admin/       platform administration
-│   ├── onboarding/             first-run clinic setup
-│   ├── layout.tsx              providers.tsx   globals.css
-│
-├── components/
-│   ├── ui/                     library primitives, restyled to our tokens
-│   ├── layout/                 rail, topbar, breadcrumbs, command palette
-│   ├── common/                 empty states, skeletons, confirmations
-│   └── <feature>/              dashboard, patients, appointments, queue,
-│                               consultations, billing
-├── services/                   one module per resource; owns query keys
-├── lib/                        api client, utils, format/
-├── hooks/    schemas/    types/
-│
-├── api/index.py                Vercel entrypoint, re-exports the ASGI app
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── (auth)/         login, register, password reset, verify
+│   │   │   ├── (app)/          the authenticated shell
+│   │   │   │   ├── dashboard/  patients/      appointments/
+│   │   │   │   ├── queue/      consultations/ prescriptions/
+│   │   │   │   ├── billing/    reports/       doctors/
+│   │   │   │   └── staff/      notifications/ settings/
+│   │   │   ├── (platform)/admin/   platform administration
+│   │   │   ├── onboarding/     first-run clinic setup
+│   │   │   └── layout.tsx      providers.tsx   globals.css
+│   │   ├── components/
+│   │   │   ├── ui/             library primitives, restyled to our tokens
+│   │   │   ├── auth/           forms and the pieces they share
+│   │   │   ├── layout/         rail, topbar, breadcrumbs, command palette
+│   │   │   ├── common/         empty states, skeletons, confirmations
+│   │   │   └── <feature>/      dashboard, patients, appointments, queue
+│   │   ├── services/           one module per resource; owns query keys
+│   │   ├── lib/                api client, auth calls, utils, format/
+│   │   ├── hooks/   schemas/   types/
+│   │   └── proxy.ts            redirects by session, not authorisation
+│   └── package.json   next.config.ts   tsconfig.json
 │
 ├── backend/
-│   ├── core/                   config, security, permissions, exceptions
-│   ├── db/                     session, base, mixins
-│   ├── models/                 SQLAlchemy models
-│   ├── schemas/                Pydantic request and response models
-│   ├── repositories/           queries, tenant-scoped
-│   ├── services/               business rules
-│   ├── api/v1/                 routers
-│   ├── middleware/    utils/
-│   └── main.py
+│   ├── app/
+│   │   ├── core/               config, security, permissions, exceptions,
+│   │   │                       email, redis, rate limits
+│   │   ├── db/                 session, base, mixins
+│   │   ├── models/             SQLAlchemy models
+│   │   ├── schemas/            Pydantic request and response models
+│   │   ├── repositories/       queries, tenant-scoped
+│   │   ├── services/           business rules
+│   │   ├── api/
+│   │   │   ├── deps.py         caller resolution and permission gates
+│   │   │   └── v1/endpoints/   one module per resource
+│   │   ├── middleware/   utils/
+│   │   └── main.py
+│   ├── alembic/versions/
+│   ├── tests/                  api/  services/
+│   └── requirements.txt   pyproject.toml   alembic.ini
 │
-├── alembic/versions/
-├── tests/                      api/  services/
-├── e2e/                        Playwright
 ├── scripts/checks/             the guards CI runs
 ├── docs/
-└── vercel.json   requirements.txt   package.json   pyproject.toml
+└── vercel.json
 ```
+
+Each half owns its own manifests and is installed and run on its own. Vercel
+builds them as two services from one repository, and routes `/api/*` to the
+Python service and everything else to Next.
 
 The frontend and backend live in one repository because they ship as one
 deployment and share a single set of environment variables. They do not share
