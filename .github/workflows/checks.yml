@@ -274,10 +274,13 @@ jobs:
         working-directory: frontend
         run: npm run e2e
 
+      # The tail, for reading in the job. The whole thing goes up as an
+      # artifact, because a single traceback is longer than any tail worth
+      # printing and the line that explains it is usually above the cut.
       - name: What the API said, if anything failed
         if: failure()
         working-directory: backend
-        run: tail -n 200 api.log || echo "the API never got as far as writing a log"
+        run: tail -n 400 api.log || echo "the API never got as far as writing a log"
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -286,5 +289,6 @@ jobs:
           path: |
             frontend/playwright-report/
             frontend/test-results/
+            backend/api.log
           retention-days: 7
 
