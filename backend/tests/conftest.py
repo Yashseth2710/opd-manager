@@ -155,6 +155,14 @@ def _refuse_to_run_against_anything_real() -> None:
         )
     if "-pooler." in settings.database_url:
         raise RuntimeError("Point the suite at the direct endpoint, not the pooler.")
+    if settings.email_configured:
+        # Otherwise the suite inherits whatever provider the developer has
+        # set up, registration starts demanding confirmation, and a dozen
+        # unrelated tests fail in ways that point nowhere near the cause.
+        raise RuntimeError(
+            "Blank BREVO_API_KEY and RESEND_API_KEY for the suite. Tests that "
+            "need a provider configured say so for themselves."
+        )
 
 
 @pytest_asyncio.fixture(scope="session")

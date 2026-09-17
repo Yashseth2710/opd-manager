@@ -403,3 +403,75 @@ class TestRecovery:
         assert fourth.status_code == 429
         assert fourth.json()["error"]["code"] == "RATE_LIMITED"
         assert "Retry-After" in fourth.headers
+
+
+class TestVerificationGate:
+    """What changes once a provider is configured.
+
+    The suite runs without one, so these pin the other half of that switch:
+    registration stops signing people straight in, and sign-in waits for the
+    address to be confirmed.
+    """
+
+    @pytest.fixture
+    def with_email(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from app.core import config as config_module
+        from app.services import auth as auth_service
+
+        settings = config_module.Settings(brevo_api_key="k")  # pragma: allowlist secret
+        monkeypatch.setattr(auth_service, "get_settings", lambda: settings)
+
+    async def test_registration_waits_for_confirmation(
+        self, client: AsyncClient, with_email: None, outbox: Outbox
+    ) -> None:
+        email = unique_email()
+        response = await client.post(f"{AUTH}/register", json=registration(email=email))
+
+        assert response.status_code == 201
+        body = response.json()["data"]
+        assert body["session"] is None
+        assert body["verification_required"] is True
+        # No session started, so nothing to carry.
+        assert "opd_access" not in response.cookies
+        # Sent to the address that registered, not one the request chose.
+        assert outbox.recipients == [email]
+
+    async def test_sign_in_is_refused_until_the_address_is_confirmed(
+        self, client: AsyncClient, with_email: None, outbox: Outbox
+    ) -> None:
+        email = unique_email()
+        await client.post(f"{AUTH}/register", json=registration(email=email))
+
+        refused = await client.post(
+            f"{AUTH}/login", json={"email": email, "password": GOOD_PASSWORD}
+        )
+        assert refused.status_code == 403
+        assert refused.json()["error"]["code"] == "EMAIL_NOT_VERIFIED"
+
+    async def test_confirming_the_address_lets_them_in(
+        self, client: AsyncClient, with_email: None, outbox: Outbox
+    ) -> None:
+        email = unique_email()
+        await client.post(f"{AUTH}/register", json=registration(email=email))
+
+        confirmed = await client.post(
+            f"{AUTH}/verify-email", json={"token": outbox.latest_token()}
+        )
+        assert confirmed.status_code == 200
+
+        allowed = await client.post(
+            f"{AUTH}/login", json={"email": email, "password": GOOD_PASSWORD}
+        )
+        assert allowed.status_code == 200
+
+    async def test_a_confirmation_link_works_only_once(
+        self, client: AsyncClient, with_email: None, outbox: Outbox
+    ) -> None:
+        await client.post(f"{AUTH}/register", json=registration())
+        token = outbox.latest_token()
+
+        first = await client.post(f"{AUTH}/verify-email", json={"token": token})
+        assert first.status_code == 200
+
+        again = await client.post(f"{AUTH}/verify-email", json={"token": token})
+        assert again.json()["error"]["code"] == "TOKEN_INVALID"
