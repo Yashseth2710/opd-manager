@@ -13,12 +13,13 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import Caller, client_ip, current_caller, current_tenant, db_session, requires
+from app.api.v1.endpoints.auth import session_payload, set_session_cookies
 from app.core.config import get_settings
 from app.core.exceptions import NotFound, SessionExpired
 from app.models import Organization
 from app.repositories.staff import InvitationRepository, StaffRepository
 from app.repositories.users import UserRepository
-from app.schemas.auth import AcknowledgedOut
+from app.schemas.auth import AcknowledgedOut, SessionOut
 from app.schemas.clinic import (
     AcceptInvitation,
     ChangeRoleRequest,
@@ -32,6 +33,7 @@ from app.schemas.clinic import (
     RoleOut,
     StaffMemberOut,
 )
+from app.services import auth as auth_service
 from app.services import clinic as service
 
 router = APIRouter(tags=["clinic"])
@@ -270,16 +272,23 @@ async def accept_invitation(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(db_session),
-) -> AcknowledgedOut:
-    """Turns an invitation into an account.
+) -> SessionOut:
+    """Turns an invitation into an account, and signs them in.
 
     The clinic and role come from the invitation, never from the request, so
     a link cannot be redeemed into a role nobody granted.
+
+    They are signed in straight away for the same reason registering signs
+    somebody in: they have just proved they read mail at that address and
+    chosen a password. Sending them to a sign-in form to type both again
+    would be asking them to prove it twice.
     """
-    await service.accept(
+    user = await service.accept(
         session, token=body.token, password=body.password, client_ip=client_ip(request)
     )
-    return AcknowledgedOut()
+    signed_in = await auth_service.start_session(session, user)
+    set_session_cookies(response, signed_in)
+    return session_payload(signed_in)
 
 
 @router.get("/clinic/needs-setup")

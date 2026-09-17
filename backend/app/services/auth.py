@@ -93,7 +93,7 @@ class Registration:
     choices: list[dict[str, str]] = field(default_factory=list)
 
 
-async def _start_session(session: AsyncSession, user: User) -> SignedIn:
+async def start_session(session: AsyncSession, user: User) -> SignedIn:
     users = UserRepository(session)
     role, permissions = await users.permissions_for(user)
 
@@ -200,7 +200,7 @@ async def register(
             email_delivered=await _send_verification(user),
         )
 
-    return Registration(session=await _start_session(session, user))
+    return Registration(session=await start_session(session, user))
 
 
 async def _mirror_lockout(session: AsyncSession, candidates: list[User], used: int) -> None:
@@ -304,7 +304,7 @@ async def sign_in(
 
     await rate_limit.clear("login", client_ip)
     await sessions.clear_failures(email)
-    return await _start_session(session, user)
+    return await start_session(session, user)
 
 
 async def request_password_reset(session: AsyncSession, *, email: str) -> None:

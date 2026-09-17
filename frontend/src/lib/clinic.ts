@@ -1,4 +1,5 @@
 import { post, request } from "@/lib/api";
+import type { Session } from "@/lib/auth";
 
 export type Address = {
   line1: string;
@@ -116,7 +117,7 @@ export const previewInvitation = (token: string) =>
   request<InvitationPreview>(`/invitations/${encodeURIComponent(token)}`);
 
 export const acceptInvitation = (token: string, password: string) =>
-  post<{ acknowledged: boolean }>("/invitations/accept", { token, password });
+  post<Session>("/invitations/accept", { token, password });
 
 /** A clinic's own currency, written the way its staff would expect to read it. */
 export function money(amount: string, currency: string, locale = "en-IN"): string {

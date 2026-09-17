@@ -153,7 +153,7 @@ class TestPermissions:
         joiner = await invite_and_accept(client, role="receptionist", outbox=outbox)
 
         await client.post(f"{AUTH}/logout")
-        await client.post(f"{AUTH}/login", json={"email": joiner, "password": GOOD_PASSWORD})
+        await sign_in(client, joiner)
 
         # Reading the clinic is fine: a receptionist needs its name.
         assert (await client.get(f"{API}/clinic")).status_code == 200
@@ -184,7 +184,13 @@ class TestPermissions:
 async def invite_and_accept(
     client: AsyncClient, *, role: str, outbox: Outbox, email: str | None = None
 ) -> str:
-    """Invites somebody and redeems the link, returning their address."""
+    """Invites somebody and redeems the link, returning their address.
+
+    Accepting signs the joiner in, which takes the cookies off whoever was
+    signed in before. The caller is put back afterwards so a test can carry
+    on as the administrator.
+    """
+    inviter = (await client.get(f"{AUTH}/me")).json()["data"]["user"]["email"]
     address = email or unique_email("joiner")
     sent = await client.post(
         f"{API}/staff/invitations",
@@ -202,6 +208,9 @@ async def invite_and_accept(
         json={"token": outbox.latest_token(), "password": GOOD_PASSWORD},
     )
     assert accepted.status_code == 200, accepted.text
+
+    await client.post(f"{AUTH}/logout")
+    await sign_in(client, inviter)
     return address
 
 
@@ -506,3 +515,58 @@ class TestStaffManagement:
 
         await client.post(f"{AUTH}/logout")
         assert await sign_in(client, joiner)
+
+
+class TestJoiningSignsThemIn:
+    async def test_accepting_starts_a_session(
+        self, client: AsyncClient, outbox: Outbox
+    ) -> None:
+        """They have proved the address is theirs and chosen a password.
+        A sign-in form would ask for both again."""
+        owner = await sign_up(client, clinic_name="Harbour Road Clinic")
+        address = unique_email("joiner")
+        await client.post(
+            f"{API}/staff/invitations",
+            json={
+                "email": address,
+                "first_name": "Rohan",
+                "last_name": "Kulkarni",
+                "role_slug": "doctor",
+            },
+        )
+
+        accepted = await client.post(
+            f"{API}/invitations/accept",
+            json={"token": outbox.latest_token(), "password": GOOD_PASSWORD},
+        )
+        session = accepted.json()["data"]
+
+        assert session["user"]["email"] == address
+        assert session["user"]["first_name"] == "Rohan"
+        assert session["role"] == "doctor"
+        assert session["organization"]["id"] == owner["organization"]["id"]
+        assert "opd_access" in accepted.cookies
+
+    async def test_the_new_session_can_immediately_be_used(
+        self, client: AsyncClient, outbox: Outbox
+    ) -> None:
+        await sign_up(client)
+        await client.post(
+            f"{API}/staff/invitations",
+            json={
+                "email": unique_email("joiner"),
+                "first_name": "Rohan",
+                "last_name": "K",
+                "role_slug": "doctor",
+            },
+        )
+        await client.post(
+            f"{API}/invitations/accept",
+            json={"token": outbox.latest_token(), "password": GOOD_PASSWORD},
+        )
+
+        # The cookies now belong to the joiner, not the administrator.
+        me = (await client.get(f"{AUTH}/me")).json()["data"]
+        assert me["role"] == "doctor"
+        # And the doctor cannot reach what the administrator could.
+        assert (await client.get(f"{API}/staff")).status_code == 403

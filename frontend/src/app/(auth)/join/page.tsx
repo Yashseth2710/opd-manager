@@ -72,8 +72,10 @@ function Join() {
     setFieldError(undefined);
 
     try {
-      await acceptInvitation(token, password);
-      router.replace("/login?joined=1");
+      const joined = await acceptInvitation(token, password);
+      // Straight in: they have just proved the address is theirs and set a
+      // password, so a sign-in form would ask for both again.
+      router.replace(joined.organization?.onboarding_completed_at ? "/dashboard" : "/settings");
     } catch (error) {
       if (!(error instanceof ApiFailure)) throw error;
       if (error.fields?.password) setFieldError(error.fields.password);

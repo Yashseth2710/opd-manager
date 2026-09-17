@@ -47,7 +47,7 @@ def _secure_cookies() -> bool:
     return get_settings().environment != "development"
 
 
-def _set_session_cookies(response: Response, signed_in: auth.SignedIn) -> None:
+def set_session_cookies(response: Response, signed_in: auth.SignedIn) -> None:
     settings = get_settings()
     secure = _secure_cookies()
 
@@ -88,7 +88,7 @@ def _clear_session_cookies(response: Response) -> None:
     response.delete_cookie(SESSION_HINT_COOKIE, path="/")
 
 
-def _session_payload(signed_in: auth.SignedIn) -> SessionOut:
+def session_payload(signed_in: auth.SignedIn) -> SessionOut:
     return SessionOut(
         user=UserOut.model_validate(signed_in.user),
         organization=(
@@ -127,9 +127,9 @@ async def register(
             email_delivered=result.email_delivered,
         )
 
-    _set_session_cookies(response, result.session)
+    set_session_cookies(response, result.session)
     return RegisterOut(
-        session=_session_payload(result.session),
+        session=session_payload(result.session),
         verification_required=False,
         email_delivered=result.email_delivered,
     )
@@ -149,8 +149,8 @@ async def login(
         organization_slug=body.organization_slug,
         client_ip=client_ip(request),
     )
-    _set_session_cookies(response, signed_in)
-    return _session_payload(signed_in)
+    set_session_cookies(response, signed_in)
+    return session_payload(signed_in)
 
 
 @router.post("/refresh")
@@ -204,8 +204,8 @@ async def refresh(
         ),
         refresh_token=refresh_token,
     )
-    _set_session_cookies(response, signed_in)
-    return _session_payload(signed_in)
+    set_session_cookies(response, signed_in)
+    return session_payload(signed_in)
 
 
 @router.post("/logout")
