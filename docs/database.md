@@ -121,6 +121,23 @@ Duplicate detection runs on write and is advisory: exact phone match, exact emai
 
 Held against the person rather than a visit, because an allergy is a standing fact and the moment it matters is the moment nobody has time to read back through old notes. One substance per patient; recording it twice is refused rather than silently duplicated.
 
+### doctors
+
+`user_id`, `title`, `first_name`, `last_name`, `speciality`, `qualifications`, `registration_number`, `years_of_experience`, `phone`, `email`, `room`, `languages` (JSONB), `bio`, `consultation_fee`, `follow_up_fee`, `slot_duration_minutes`, `status` (`active` / `inactive`), `deactivated_at`.
+
+A doctor is a record of the clinic rather than of an account. `user_id` is nullable, because a visiting consultant needs a profile, a fee and a rota long before anyone gives them a login, and some never get one.
+
+`consultation_fee`, `follow_up_fee` and `slot_duration_minutes` are nullable, and null means the clinic's figure applies. Storing a copy of the default instead would freeze it at the moment the profile was written, so raising the clinic fee would quietly stop reaching anyone. Zero is a real fee and survives — clinics see staff families for nothing.
+
+```
+UNIQUE (organization_id, user_id)                WHERE user_id IS NOT NULL
+UNIQUE (organization_id, lower(registration_number)) WHERE registration_number IS NOT NULL
+INDEX  (organization_id, status, last_name)
+GIN    trigram index on name for fuzzy search
+```
+
+One account is one doctor, or a second profile could be linked to the same login and every consultation would have two plausible authors. A council registration number identifies one clinician, so two rows carrying the same one is a duplicate profile — and a prescription printed against the wrong one is a real-world problem.
+
 ### appointments
 
 `patient_id`, `doctor_id`, `scheduled_start`, `scheduled_end`, `appointment_type`, `reason`, `notes`, `source`, `status`, `cancelled_reason`, `cancelled_by`.
@@ -146,9 +163,26 @@ INDEX (organization_id, patient_id, scheduled_start DESC)
 
 ### doctor_schedules, doctor_leaves
 
-Schedules are recurring weekly rules: `day_of_week`, `start_time`, `end_time`, `slot_duration_minutes`, `break_start`, `break_end`. Times are `TIME`, interpreted in the clinic's timezone.
+Schedules are recurring weekly rules: `day_of_week`, `start_time`, `end_time`, `slot_duration_minutes`, `break_start`, `break_end`. Times are `TIME`, interpreted in the clinic's timezone — a doctor who starts at nine starts at nine in March and in November, which a stored instant would not. `day_of_week` runs Monday to Sunday as 0 to 6, matching how a rota is written down.
 
-`doctor_leaves` are dated exceptions with an optional time range, covering both a full day off and a two-hour gap.
+Several rows for one day is the normal case rather than the exception: an OPD running nine to one and five to eight is two blocks, not one long block with a four-hour hole in it. Each block may set its own `slot_duration_minutes`, falling back to the doctor's and then the clinic's.
+
+A whole week is replaced in one transaction rather than patched block by block, which is what makes the overlap check reliable — two people editing Tuesday from different desks could otherwise leave a doctor in two rooms at once. The table carries no timestamps for the same reason: a per-row `created_at` would only ever record the last replacement.
+
+```
+CHECK (end_time > start_time)
+CHECK (day_of_week BETWEEN 0 AND 6)
+CHECK ((break_start IS NULL) = (break_end IS NULL))
+INDEX (organization_id, doctor_id, day_of_week)
+```
+
+`doctor_leaves` are dated exceptions with an optional time range, covering both a full day off and a two-hour gap. A time range spanning several days means those hours on each of them, which is how somebody describes leaving early all week.
+
+```
+CHECK (ends_on >= starts_on)
+CHECK ((start_time IS NULL) = (end_time IS NULL))
+INDEX (organization_id, doctor_id, starts_on, ends_on)
+```
 
 Availability is computed, not stored. Materialising slots would mean regenerating them whenever a schedule changes, and stale slot tables are a classic source of double bookings.
 

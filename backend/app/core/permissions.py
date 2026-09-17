@@ -35,6 +35,7 @@ CATALOGUE: Final[dict[str, str]] = {
     "billing:update": "Edit and void invoices",
     "payment:record": "Record payments",
     "reports:read": "View reports",
+    "doctor:read": "View doctors and their hours",
     "doctor:manage": "Add and edit doctors",
     "staff:manage": "Invite and manage staff",
     "settings:manage": "Change clinic settings",
@@ -69,6 +70,7 @@ _CLINIC_ADMIN = [
     "billing:update",
     "payment:record",
     "reports:read",
+    "doctor:read",
     "doctor:manage",
     "staff:manage",
     "settings:manage",
@@ -95,6 +97,7 @@ _DOCTOR = [
     "document:upload",
     "document:read",
     "reports:read",
+    "doctor:read",
 ]
 
 _RECEPTIONIST = [
@@ -114,6 +117,7 @@ _RECEPTIONIST = [
     "billing:read",
     "billing:update",
     "payment:record",
+    "doctor:read",
 ]
 
 # Intentionally thin. The matrix marks most of this role as the clinic
@@ -122,6 +126,7 @@ _STAFF = [
     "patient:read",
     "appointment:read",
     "document:read",
+    "doctor:read",
 ]
 
 DEFAULT_ROLES: Final[tuple[tuple[str, str, str, list[str]], ...]] = (

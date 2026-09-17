@@ -77,6 +77,8 @@ AUTH_*        INVALID_CREDENTIALS, TOKEN_EXPIRED, ACCOUNT_LOCKED,
               EMAIL_NOT_VERIFIED, SESSION_EXPIRED
 PERM_*        INSUFFICIENT_PERMISSIONS, ROLE_REQUIRED
 PATIENT_*     NOT_FOUND, DUPLICATE_SUSPECTED, ARCHIVED
+DOCTOR_*      NOT_FOUND, INACTIVE
+              REGISTRATION_NUMBER_TAKEN, ACCOUNT_ALREADY_LINKED
 APPT_*        NOT_FOUND, SLOT_UNAVAILABLE, OUTSIDE_WORKING_HOURS,
               DOCTOR_ON_LEAVE, PAST_DATE, INVALID_TRANSITION
 QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, INVALID_TRANSITION
@@ -148,13 +150,17 @@ patients      GET    /patients
               POST   /patients/{id}/documents
 
 doctors       GET    /doctors
+              GET    /doctors/specialities?status=
               POST   /doctors
               GET    /doctors/{id}
               PATCH  /doctors/{id}
+              POST   /doctors/{id}/deactivate
+              POST   /doctors/{id}/restore
               GET    /doctors/{id}/schedule
               PUT    /doctors/{id}/schedule
               GET    /doctors/{id}/availability?date=
               POST   /doctors/{id}/leaves
+              DELETE /doctors/{id}/leaves/{leave_id}
 
 staff         GET    /staff
               POST   /staff
@@ -231,9 +237,13 @@ Standard query parameters across every collection:
 
 `per_page` defaults to 25 and is capped at 100. The response carries `total` and `pages` alongside the page itself, so a client can render "26–50 of 312" without a second request. `sort` takes a field name with an optional `-` for descending, validated against an allowlist so it cannot be used to probe the schema. Filters are endpoint-specific and documented in the OpenAPI schema.
 
-`/patients` is the exception that takes no `sort`. Its order is decided by whether there is a search term: results come back closest-match first, and an unsearched list comes back most recently registered first. A `sort` that overrode either would only ever make the list less useful.
+`/patients` and `/doctors` are the exceptions that take no `sort`. Its order is decided by whether there is a search term: results come back closest-match first, and an unsearched list comes back most recently registered first. A `sort` that overrode either would only ever make the list less useful.
+
+`/doctors` orders by status, then surname. A clinic has tens of doctors rather than thousands, so the useful question is who is practising and where they are in the list, not which of them was added most recently.
 
 Search is debounced at 300ms client-side and always executed server-side. No endpoint returns an unbounded collection.
+
+`GET /doctors/specialities` is the one collection with no paging, because it returns the distinct specialities a single clinic offers and that is a list of a dozen at most. It exists so the filter on the list is built from what a clinic actually does rather than from a fixed set every clinic has to pick the wrong answer from. It takes the same `status` as `/doctors` and defaults to the same value, so the two always agree — a clinic whose only orthopaedist has been stood down is not offering orthopaedics, and a filter that can only come back empty is worse than no filter.
 
 ## Dates and money
 
@@ -244,6 +254,10 @@ Timestamps are ISO-8601 with offset, in and out:
 ```
 
 Date-only fields are `YYYY-MM-DD`. Times of day, for schedules, are `HH:MM` and interpreted in the clinic's timezone.
+
+`PUT /doctors/{id}/schedule` takes the whole week every time and replaces it, and an empty list clears it. Patching one block at a time would let two people editing the same day leave a doctor in two rooms at once; replacing the set inside one transaction is what makes the overlap check the truth rather than a guess. Field errors come back positioned against the submitted list — `blocks.1.start_time` — so a client can put the message on the block that caused it.
+
+`GET /doctors/{id}/availability` works the day out from the rota each time, subtracting breaks and leave. Nothing is stored: a materialised slot table goes stale the moment a schedule changes, and that is a well-worn route to a double booking. With no `date` it answers for today at the clinic, not today on the server.
 
 Money is a **string**:
 

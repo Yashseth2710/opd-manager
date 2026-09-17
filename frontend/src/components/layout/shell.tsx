@@ -8,6 +8,7 @@ import {
   ListOrdered,
   Loader2,
   Settings,
+  Stethoscope,
   UserRound,
   Users,
 } from "lucide-react";
@@ -34,6 +35,7 @@ type Destination = {
 const DESTINATIONS: Destination[] = [
   { href: "/dashboard", label: "Today", icon: LayoutDashboard },
   { href: "/patients", label: "Patients", icon: UserRound, permission: "patient:read" },
+  { href: "/doctors", label: "Doctors", icon: Stethoscope, permission: "doctor:read" },
   { label: "Appointments", icon: CalendarDays, permission: "appointment:read" },
   { label: "Queue", icon: ListOrdered, permission: "queue:checkin" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
@@ -68,7 +70,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[15rem_1fr]">
       <nav className="flex flex-col gap-1 bg-[var(--rail)] px-3 py-4 text-[var(--rail-text)] lg:min-h-screen lg:px-4 lg:py-6">
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-3">
           <ClinicMark session={data} />
           {/* The rail's footer is desktop only, so a phone needs its own. */}
           <div className="lg:hidden">
@@ -105,7 +107,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
 function ClinicMark({ session }: { session: Session }) {
   return (
-    <div className="flex items-center gap-2.5 px-2.5">
+    <div className="flex min-w-0 items-center gap-2.5 px-2.5">
       <span className="grid size-8 shrink-0 place-items-center rounded-[7px] bg-[var(--accent)] text-[15px] leading-none font-bold text-[var(--color-ink-900)]">
         {session.organization?.name.trim().charAt(0).toUpperCase() ?? "O"}
       </span>
