@@ -100,3 +100,9 @@ class AlreadyExists(AppError):
     code = "ALREADY_EXISTS"
     status = 409
     message = "That already exists."
+
+
+class AccountSuspended(AppError):
+    code = "ACCOUNT_SUSPENDED"
+    status = 403
+    message = "This account has been suspended. Ask an administrator to restore it."

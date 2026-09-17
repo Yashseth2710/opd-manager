@@ -220,3 +220,21 @@ def reset_message(*, to: str, name: str, url: str) -> Message:
         action_label="Choose a new password",
         action_url=url,
     )
+
+
+def invitation_message(
+    *, to: str, name: str, clinic: str, role: str, inviter: str, url: str
+) -> Message:
+    greeting = f"Hello, {name}" if name else "Hello"
+    return Message(
+        to=to,
+        subject=f"{inviter} has added you to {clinic}",
+        heading=greeting,
+        body=(
+            f"{inviter} has set up an account for you at {clinic}, "
+            f"as {role.lower()}. Choose a password and you are in. "
+            "The link expires in seven days."
+        ),
+        action_label="Set your password",
+        action_url=url,
+    )

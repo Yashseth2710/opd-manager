@@ -1,74 +1,78 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { Page } from "@/components/layout/shell";
+import { getClinic, money } from "@/lib/clinic";
+import { getSettings } from "@/lib/clinic";
 import { currentSession } from "@/lib/auth";
-import { SignOutButton } from "@/components/auth/sign-out";
 
 export default function DashboardPage() {
-  const { data, isPending, isError } = useQuery({
-    queryKey: ["session"],
-    queryFn: currentSession,
+  const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
+  const clinic = useQuery({ queryKey: ["clinic"], queryFn: getClinic, retry: false });
+  const settings = useQuery({
+    queryKey: ["clinic-settings"],
+    queryFn: getSettings,
     retry: false,
   });
 
-  if (isPending) {
+  if (session.isPending || clinic.isPending) {
     return (
-      <div className="flex min-h-screen items-center justify-center gap-3 text-[var(--text-muted)]">
+      <div className="flex min-h-[60vh] items-center justify-center gap-3 text-[var(--text-muted)]">
         <Loader2 className="size-5 animate-spin" />
-        <span className="text-[15px]">Loading your clinic…</span>
+        <span className="text-[15px]">Loading…</span>
       </div>
     );
   }
 
-  if (isError || !data) {
-    return (
-      <div className="flex min-h-screen items-center justify-center px-6">
-        <p className="text-[15px] text-[var(--text-muted)]">
-          Your session has ended.{" "}
-          <a href="/login" className="underline underline-offset-2">
-            Sign in again
-          </a>
-          .
-        </p>
-      </div>
-    );
-  }
+  const name = session.data?.user.first_name ?? "there";
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-14">
-      <div className="flex items-start justify-between gap-6">
-        <div>
-          <h1 className="text-[26px] font-semibold tracking-tight">
-            {data.organization?.name ?? "Your clinic"}
-          </h1>
-          <p className="mt-1.5 text-[15px] text-[var(--text-muted)]">
-            Signed in as {data.user.first_name} {data.user.last_name}
-          </p>
-        </div>
-        <SignOutButton />
-      </div>
+    <Page title={`Good day, ${name}`} blurb="Nothing here is real patient data.">
+      {clinic.data?.status === "pending" && (
+        <Link
+          href="/settings"
+          className="mb-8 flex items-center justify-between gap-4 rounded-[var(--radius-panel)] border border-[var(--accent)] bg-[var(--accent-wash)] px-5 py-4 transition-colors hover:brightness-[0.98]"
+        >
+          <span>
+            <span className="block text-[15px] font-medium">Finish setting up the clinic</span>
+            <span className="mt-0.5 block text-[14px] text-[var(--text-muted)]">
+              A contact number and address are still needed before you open.
+            </span>
+          </span>
+          <ArrowRight className="size-4 shrink-0" />
+        </Link>
+      )}
 
-      <dl className="mt-10 grid gap-px overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3">
-        <Cell label="Role" value={data.role.replace("-", " ")} />
-        <Cell label="Clinic address" value={data.organization?.slug ?? "—"} mono />
-        <Cell label="Permissions" value={String(data.permissions.length)} />
+      <dl className="grid gap-px overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3">
+        <Cell label="Your role" value={(session.data?.role ?? "").replace("-", " ")} />
+        <Cell
+          label="Consultation fee"
+          value={
+            settings.data && clinic.data
+              ? money(settings.data.consultation_fee, clinic.data.currency)
+              : "—"
+          }
+        />
+        <Cell
+          label="Appointment length"
+          value={settings.data ? `${settings.data.consultation_duration_minutes} minutes` : "—"}
+        />
       </dl>
 
       <p className="mt-10 text-[15px] leading-relaxed text-[var(--text-muted)]">
-        Patients, appointments and the queue arrive next. Nothing here is real patient data.
+        Patients, appointments and the queue arrive next.
       </p>
-    </main>
+    </Page>
   );
 }
 
-function Cell({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Cell({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-[var(--surface)] px-5 py-4">
       <dt className="text-[13px] text-[var(--text-subtle)]">{label}</dt>
-      <dd className={`mt-1 text-[15px] font-medium ${mono ? "font-mono text-[13px]" : ""}`}>
-        {value}
-      </dd>
+      <dd className="mt-1 text-[15px] font-medium capitalize">{value}</dd>
     </div>
   );
 }

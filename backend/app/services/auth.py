@@ -19,6 +19,7 @@ from app.core import rate_limit
 from app.core.config import get_settings
 from app.core.exceptions import (
     AccountLocked,
+    AccountSuspended,
     AlreadyExists,
     AppError,
     EmailNotVerified,
@@ -287,6 +288,13 @@ async def sign_in(
         )
 
     user = matched[0]
+
+    # Checked after the password, so the answer only reaches somebody who
+    # already holds the credentials and learns nothing new from it.
+    # Suspending somebody has to stop them signing back in, not merely end
+    # the session they already had.
+    if user.status != "active":
+        raise AccountSuspended
 
     if get_settings().email_configured and not user.is_verified:
         raise EmailNotVerified

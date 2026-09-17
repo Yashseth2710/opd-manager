@@ -43,7 +43,7 @@ export default function RegisterPage() {
       });
 
       if (result.session) {
-        router.replace("/onboarding");
+        router.replace("/settings");
         return;
       }
       setPending({ email });

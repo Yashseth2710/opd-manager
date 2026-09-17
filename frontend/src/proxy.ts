@@ -12,11 +12,26 @@ import { NextResponse, type NextRequest } from "next/server";
 const SESSION_MARKER = "opd_session";
 
 const SIGNED_OUT_ONLY = ["/login", "/register", "/forgot-password", "/reset-password"];
-const SIGNED_IN_ONLY = ["/dashboard", "/onboarding", "/patients", "/appointments", "/queue"];
+
+// Open on purpose: whoever follows an invitation link has no account yet.
+const ALWAYS_OPEN = ["/join", "/verify-email"];
+const SIGNED_IN_ONLY = [
+  "/dashboard",
+  "/onboarding",
+  "/settings",
+  "/staff",
+  "/patients",
+  "/appointments",
+  "/queue",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const signedIn = request.cookies.has(SESSION_MARKER);
+
+  if (ALWAYS_OPEN.some((path) => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
 
   // The front door is not a page of its own. Someone opening the app either
   // has a clinic to get back to or needs to sign in.

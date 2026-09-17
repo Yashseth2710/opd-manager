@@ -92,6 +92,8 @@ VALIDATION_ERROR, RATE_LIMITED, INTERNAL_ERROR
 
 Plural nouns, no verbs in paths, hyphens for multi-word segments, `snake_case` in JSON bodies to match Python.
 
+`/clinic` is the one singular exception. A caller only ever has one, and it is decided by their session rather than named in the path, so `/organizations/current` would be a longer way of saying the same thing. The two invitation routes carry no session at all: whoever follows the link has no account yet, and the token stands in for one.
+
 ```
 GET    /api/v1/patients
 POST   /api/v1/patients
@@ -115,11 +117,22 @@ auth          POST   /auth/register
               POST   /auth/reset-password
               POST   /auth/verify-email
 
-org           POST   /organizations
-              GET    /organizations/current
-              PATCH  /organizations/current
-              GET    /organizations/current/settings
-              PATCH  /organizations/current/settings
+clinic        GET    /clinic
+              PATCH  /clinic
+              GET    /clinic/settings
+              PATCH  /clinic/settings
+              POST   /clinic/complete-setup
+              GET    /clinic/roles
+
+staff         GET    /staff
+              PATCH  /staff/{id}/role
+              POST   /staff/{id}/suspend
+              POST   /staff/{id}/restore
+              GET    /staff/invitations
+              POST   /staff/invitations
+              DELETE /staff/invitations/{id}
+              GET    /invitations/{token}
+              POST   /invitations/accept
 
 patients      GET    /patients
               POST   /patients

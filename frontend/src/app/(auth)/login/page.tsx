@@ -46,7 +46,7 @@ function SignInForm() {
         next && next.startsWith("/") && !next.startsWith("//") ? (next as Route) : null;
       router.replace(
         safeNext ??
-          (session.organization?.onboarding_completed_at ? "/dashboard" : "/onboarding"),
+          (session.organization?.onboarding_completed_at ? "/dashboard" : "/settings"),
       );
     } catch (error) {
       if (!(error instanceof ApiFailure)) throw error;

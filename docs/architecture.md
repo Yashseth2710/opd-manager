@@ -39,12 +39,12 @@ opd-manager/
 │   │   │   │   ├── billing/    reports/       doctors/
 │   │   │   │   └── staff/      notifications/ settings/
 │   │   │   ├── (platform)/admin/   platform administration
-│   │   │   ├── onboarding/     first-run clinic setup
+│   │   │   ├── onboarding/     redirects to settings
 │   │   │   └── layout.tsx      providers.tsx   globals.css
 │   │   ├── components/
 │   │   │   ├── ui/             library primitives, restyled to our tokens
 │   │   │   ├── auth/           forms and the pieces they share
-│   │   │   ├── layout/         rail, topbar, breadcrumbs, command palette
+│   │   │   ├── layout/         the rail, the page frame, permission gates
 │   │   │   ├── common/         empty states, skeletons, confirmations
 │   │   │   └── <feature>/      dashboard, patients, appointments, queue
 │   │   ├── services/           one module per resource; owns query keys
