@@ -21,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.api.v1 import router as v1
 from app.core.config import get_settings
 from app.core.exceptions import AccountLocked, AppError, RateLimited, ValidationFailed
+from app.core.messages import readable
 
 logger = logging.getLogger("opd")
 
@@ -124,7 +125,9 @@ async def handle_validation(_: Request, exc: RequestValidationError) -> JSONResp
     fields: dict[str, str] = {}
     for item in exc.errors():
         location = [str(part) for part in item["loc"] if part not in ("body", "query", "path")]
-        fields[".".join(location) or "body"] = item["msg"]
+        # Said the way the form should say it, rather than the way the schema
+        # describes itself. A person at a desk is the audience here.
+        fields[".".join(location) or "body"] = readable(dict(item))
     return _error(422, "VALIDATION_ERROR", "Some fields need attention.", fields=fields)
 
 
