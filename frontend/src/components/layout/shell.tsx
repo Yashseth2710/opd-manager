@@ -36,7 +36,12 @@ const DESTINATIONS: Destination[] = [
   { href: "/dashboard", label: "Today", icon: LayoutDashboard },
   { href: "/patients", label: "Patients", icon: UserRound, permission: "patient:read" },
   { href: "/doctors", label: "Doctors", icon: Stethoscope, permission: "doctor:read" },
-  { label: "Appointments", icon: CalendarDays, permission: "appointment:read" },
+  {
+    href: "/appointments",
+    label: "Appointments",
+    icon: CalendarDays,
+    permission: "appointment:read",
+  },
   { label: "Queue", icon: ListOrdered, permission: "queue:checkin" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },

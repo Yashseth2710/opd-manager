@@ -106,7 +106,10 @@ export type DoctorPage = {
   pages: number;
 };
 
-export type Slot = { start_time: string; end_time: string };
+/** Free to book, already booked, or over by the clinic's clock. */
+export type SlotState = "free" | "booked" | "past";
+
+export type Slot = { start_time: string; end_time: string; state: SlotState };
 
 export type Availability = {
   date: string;
@@ -222,10 +225,21 @@ export function slotMinutes(slot: Slot): number {
  * number as the answer, and picking one of them is worse than picking none.
  */
 export function countSlots(slots: Slot[]): string {
-  const many = slots.length === 1 ? "1 appointment" : `${slots.length} appointments`;
   const lengths = new Set(slots.map(slotMinutes));
   const only = lengths.size === 1 ? [...lengths][0] : null;
-  return only ? `${many} of ${only} minutes.` : `${many}.`;
+  const free = slots.filter((slot) => slot.state === "free").length;
+
+  if (free === slots.length) {
+    const many = slots.length === 1 ? "1 appointment" : `${slots.length} appointments`;
+    return only ? `${many} of ${only} minutes.` : `${many}.`;
+  }
+  if (free === 0) {
+    return slots.every((slot) => slot.state === "past")
+      ? "This clinic is over for the day."
+      : "Fully booked.";
+  }
+  const each = only ? `, ${only} minutes each` : "";
+  return `${free} of ${slots.length} appointments still free${each}.`;
 }
 
 /** What a time input needs, from what the API sends back. */

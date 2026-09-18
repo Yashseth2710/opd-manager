@@ -5,6 +5,7 @@ import { Archive, ArrowLeft, Loader2, Pencil, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { PatientAppointments } from "@/components/appointments/patient-appointments";
 import { Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -122,6 +123,12 @@ function Record() {
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
           <Details record={record} />
           <div className="flex flex-col gap-6">
+            {may("appointment:read") && (
+              <PatientAppointments
+                patientId={record.id}
+                mayBook={may("appointment:create") && record.status === "active"}
+              />
+            )}
             <Allergies
               patientId={record.id}
               allergies={record.allergies}

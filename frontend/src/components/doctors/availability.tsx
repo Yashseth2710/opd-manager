@@ -2,7 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useState } from "react";
+import { bookingHref } from "@/lib/appointments";
+import { currentSession } from "@/lib/auth";
 import {
   countSlots,
   getAvailability,
@@ -29,6 +33,9 @@ export function Availability({ doctorId }: { doctorId: string }) {
   });
 
   const isToday = date === todayISO();
+
+  const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
+  const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
 
   return (
     <section className="rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--surface)]">
@@ -86,15 +93,49 @@ export function Availability({ doctorId }: { doctorId: string }) {
         ) : (
           <>
             <ul className="flex flex-wrap gap-1.5">
-              {day.data.slots.map((slot) => (
-                <li
-                  key={slot.start_time}
-                  title={`${readableTime(slot.start_time)} to ${readableTime(slot.end_time)}`}
-                  className="rounded-[var(--radius-field)] border border-[var(--border)] bg-[var(--surface-sunken)] px-2.5 py-1.5 text-[13px] tabular"
-                >
-                  {readableTime(slot.start_time)}
-                </li>
-              ))}
+              {day.data.slots.map((slot) => {
+                const chip =
+                  "block rounded-[var(--radius-field)] border px-2.5 py-1.5 text-[13px] tabular";
+                const span = `${readableTime(slot.start_time)} to ${readableTime(slot.end_time)}`;
+                return (
+                  <li key={slot.start_time}>
+                    {slot.state === "free" && mayBook ? (
+                      <Link
+                        href={
+                          bookingHref({
+                            doctor: doctorId,
+                            date,
+                            time: slot.start_time,
+                          }) as Route
+                        }
+                        title={`Book ${span}`}
+                        className={`${chip} border-[var(--border)] bg-[var(--surface-sunken)] transition-colors hover:border-[var(--color-marigold-400)] hover:bg-[var(--accent-wash)]`}
+                      >
+                        {readableTime(slot.start_time)}
+                      </Link>
+                    ) : (
+                      <span
+                        title={
+                          slot.state === "booked"
+                            ? `Booked, ${span}`
+                            : slot.state === "past"
+                              ? `Gone by, ${span}`
+                              : span
+                        }
+                        className={`${chip} ${
+                          slot.state === "booked"
+                            ? "border-transparent text-[var(--text-subtle)] line-through"
+                            : slot.state === "past"
+                              ? "border-transparent text-[var(--text-subtle)] opacity-60"
+                              : "border-[var(--border)] bg-[var(--surface-sunken)]"
+                        }`}
+                      >
+                        {readableTime(slot.start_time)}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
             <p className="mt-3 text-[13px] text-[var(--text-muted)]">
               {countSlots(day.data.slots)}
