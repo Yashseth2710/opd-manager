@@ -289,10 +289,12 @@ jobs:
         working-directory: backend
         run: grep "slow request" api.log || echo "none"
 
-      # Traces are only kept for attempts that failed, so anything in
-      # test-results means something went wrong, retried or not.
+      # Traces are only kept for attempts that failed, so a trace means
+      # something went wrong, retried or not. Playwright writes a note of
+      # the last run into test-results every time, so the folder alone
+      # says nothing.
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() || (!cancelled() && hashFiles('frontend/test-results/**') != '') }}
+        if: ${{ failure() || (!cancelled() && hashFiles('frontend/test-results/**/trace.zip') != '') }}
         with:
           name: browser-report
           path: |
