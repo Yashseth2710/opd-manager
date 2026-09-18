@@ -46,11 +46,11 @@ export function Permitted({
           <Lock className="size-5 text-[var(--text-subtle)]" />
         </span>
         <h1 className="text-[20px] font-semibold tracking-tight">
-          This is not yours to change
+          Your role does not cover this
         </h1>
         <p className="mt-2 text-[15px] leading-relaxed text-[var(--text-muted)]">
-          Your role does not include this. An administrator at your clinic can change what you
-          have access to.
+          An administrator at your clinic decides what each role can see and do, and can change
+          it.
         </p>
         <Link
           href="/dashboard"

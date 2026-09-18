@@ -10,6 +10,7 @@ import {
   DoorOpen,
   ListOrdered,
   Loader2,
+  NotebookPen,
   Pencil,
   UserX,
   XCircle,
@@ -137,6 +138,7 @@ function Appointment() {
         mayCancel={may("appointment:cancel")}
         mayBook={may("appointment:create")}
         mayCheckIn={may("queue:checkin")}
+        mayReadNotes={may("consultation:read")}
         isDoctor={session.data?.role === "doctor"}
       />
 
@@ -265,6 +267,7 @@ function Actions({
   mayCancel,
   mayBook,
   mayCheckIn,
+  mayReadNotes,
   isDoctor,
 }: {
   record: AppointmentDetail;
@@ -274,9 +277,20 @@ function Actions({
   mayCancel: boolean;
   mayBook: boolean;
   mayCheckIn: boolean;
+  mayReadNotes: boolean;
   isDoctor: boolean;
 }) {
   const queries = useQueryClient();
+  const notesLink =
+    mayReadNotes && record.consultation_id ? (
+      <Link
+        href={`/consultations/${record.consultation_id}` as Route}
+        className="inline-flex items-center gap-2 rounded-[var(--radius-field)] border border-[var(--border-strong)] bg-[var(--surface)] px-3.5 py-2 text-[14px] transition-colors hover:bg-[var(--surface-sunken)]"
+      >
+        <NotebookPen className="size-4" />
+        Notes from this visit
+      </Link>
+    ) : null;
   const [problem, setProblem] = useState<string | null>(null);
   const open = isOpen(record.status);
 
@@ -338,20 +352,26 @@ function Actions({
           <ListOrdered className="size-3.5" />
           Open the queue
         </Link>
+        {notesLink}
       </div>
     );
   }
 
   if (!open) {
-    return mayBook ? (
-      <div className="mt-6">
-        <Link
-          href={bookingHref({ patient: record.patient.id, doctor: record.doctor.id }) as Route}
-          className="inline-flex items-center gap-2 rounded-[var(--radius-field)] border border-[var(--border-strong)] px-3.5 py-2 text-[14px] transition-colors hover:bg-[var(--surface-sunken)]"
-        >
-          <CalendarPlus className="size-4" />
-          Book again
-        </Link>
+    return mayBook || notesLink ? (
+      <div className="mt-6 flex flex-wrap gap-2">
+        {notesLink}
+        {mayBook && (
+          <Link
+            href={
+              bookingHref({ patient: record.patient.id, doctor: record.doctor.id }) as Route
+            }
+            className="inline-flex items-center gap-2 rounded-[var(--radius-field)] border border-[var(--border-strong)] px-3.5 py-2 text-[14px] transition-colors hover:bg-[var(--surface-sunken)]"
+          >
+            <CalendarPlus className="size-4" />
+            Book again
+          </Link>
+        )}
       </div>
     ) : null;
   }

@@ -9,6 +9,7 @@ import {
   Megaphone,
   MonitorPlay,
   MoreHorizontal,
+  NotebookPen,
   Siren,
   UserPlus,
   X,
@@ -24,6 +25,7 @@ import { Token } from "@/components/queue/token";
 import { ApiFailure } from "@/lib/api";
 import { longDate, TYPE_LABELS } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
+import { openNotes } from "@/lib/consultations";
 import { readableTime } from "@/lib/doctors";
 import type { PatientSummary } from "@/lib/patients";
 import {
@@ -85,6 +87,7 @@ function Queue() {
   const may = (permission: string) => session.data?.permissions.includes(permission) ?? false;
   const mayCheckIn = may("queue:checkin");
   const mayManage = may("queue:manage");
+  const notes = { write: may("consultation:create"), read: may("consultation:read") };
 
   const queue = useQuery({
     queryKey: ["queue"],
@@ -260,6 +263,7 @@ function Queue() {
               lane={lane}
               mayCheckIn={mayCheckIn}
               mayManage={mayManage}
+              notes={notes}
               onNotice={setNotice}
               onChanged={refresh}
             />
@@ -270,19 +274,24 @@ function Queue() {
   );
 }
 
+type NotesAccess = { write: boolean; read: boolean };
+
 function LaneView({
   lane,
   mayCheckIn,
   mayManage,
+  notes,
   onNotice,
   onChanged,
 }: {
   lane: Lane;
   mayCheckIn: boolean;
   mayManage: boolean;
+  notes: NotesAccess;
   onNotice: (notice: Notice) => void;
   onChanged: () => void;
 }) {
+  const router = useRouter();
   const [problem, setProblem] = useState<string | null>(null);
   const next = lane.waiting[0];
 
@@ -307,6 +316,16 @@ function LaneView({
           text: `Token ${entry.token}, ${calledBy(entry.patient)}, has been called.`,
         });
     },
+    onError: (error) => {
+      setProblem(failure(error));
+      onChanged();
+    },
+  });
+
+  // Opening makes the notes the first time and finds them every time after.
+  const write = useMutation({
+    mutationFn: (entry: QueueEntry) => openNotes(entry.id),
+    onSuccess: (opened) => router.push(`/consultations/${opened.id}` as Route),
     onError: (error) => {
       setProblem(failure(error));
       onChanged();
@@ -368,11 +387,30 @@ function LaneView({
                 since={lane.now_seeing.started_at}
                 sinceWords="in for"
               >
-                {mayManage && (
+                {notes.write && (
                   <ActionButton
                     primary
+                    busy={write.isPending}
+                    disabled={write.isPending}
+                    onClick={() => write.mutate(lane.now_seeing!)}
+                  >
+                    <NotebookPen className="size-3.5" />
+                    {lane.now_seeing.consultation_id ? "Open notes" : "Write notes"}
+                  </ActionButton>
+                )}
+                {!notes.write && notes.read && lane.now_seeing.consultation_id && (
+                  <NotesLink id={lane.now_seeing.consultation_id}>Read notes</NotesLink>
+                )}
+                {mayManage && (
+                  <ActionButton
+                    primary={!notes.write}
                     busy={busy(lane.now_seeing, "complete")}
                     disabled={act.isPending}
+                    title={
+                      notes.write
+                        ? "Finishing the notes finishes the visit too. This is for a visit with nothing to write."
+                        : undefined
+                    }
                     onClick={() => act.mutate({ entry: lane.now_seeing!, step: "complete" })}
                   >
                     Finish
@@ -533,7 +571,14 @@ function LaneView({
           </Group>
         )}
 
-        {lane.done.length > 0 && <Done entries={lane.done} />}
+        {lane.done.length > 0 && (
+          <Done
+            entries={lane.done}
+            notes={notes}
+            opening={write.isPending ? write.variables?.id : undefined}
+            onWrite={(entry) => write.mutate(entry)}
+          />
+        )}
       </div>
     </section>
   );
@@ -826,7 +871,29 @@ function ArrivalRow({
   );
 }
 
-function Done({ entries }: { entries: QueueEntry[] }) {
+function NotesLink({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={`/consultations/${id}` as Route}
+      className="inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-medium transition hover:bg-[var(--surface-sunken)]"
+    >
+      <NotebookPen className="size-3.5" />
+      {children}
+    </Link>
+  );
+}
+
+function Done({
+  entries,
+  notes,
+  opening,
+  onWrite,
+}: {
+  entries: QueueEntry[];
+  notes: NotesAccess;
+  opening: string | undefined;
+  onWrite: (entry: QueueEntry) => void;
+}) {
   const seen = entries.filter((entry) => entry.status === "completed").length;
   const left = entries.length - seen;
   return (
@@ -838,14 +905,34 @@ function Done({ entries }: { entries: QueueEntry[] }) {
       </summary>
       <ul className="mt-2 divide-y divide-[var(--border)] rounded-[var(--radius-field)] border border-[var(--border)]">
         {entries.map((entry) => (
-          <li key={entry.id} className="flex items-center gap-4 px-4 py-2 text-[14px]">
+          <li
+            key={entry.id}
+            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[14px] sm:grid-cols-[auto_1fr_auto_auto]"
+          >
             <Token number={entry.token} status={entry.status} />
-            <span className="min-w-0 flex-1 truncate">{entry.patient.full_name}</span>
-            <span className="shrink-0 text-[13px] text-[var(--text-muted)]">
+            <span className="min-w-0 truncate">{entry.patient.full_name}</span>
+            <span className="col-start-2 text-[13px] text-[var(--text-muted)] sm:col-start-auto">
               {entry.status === "completed"
                 ? `Seen after ${spokenMinutes(entry.waited_minutes)}`
                 : "Left without being seen"}
             </span>
+            {entry.status === "completed" &&
+              (entry.consultation_id && notes.read ? (
+                <span className="col-start-2 sm:col-start-auto">
+                  <NotesLink id={entry.consultation_id}>Notes</NotesLink>
+                </span>
+              ) : notes.write ? (
+                <span className="col-start-2 sm:col-start-auto">
+                  <ActionButton
+                    busy={opening === entry.id}
+                    disabled={opening !== undefined}
+                    onClick={() => onWrite(entry)}
+                  >
+                    <NotebookPen className="size-3.5" />
+                    Write notes
+                  </ActionButton>
+                </span>
+              ) : null)}
           </li>
         ))}
       </ul>

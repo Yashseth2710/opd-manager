@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PatientAppointments } from "@/components/appointments/patient-appointments";
+import { PatientVisits } from "@/components/consultations/patient-visits";
 import { Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -128,6 +129,9 @@ function Record() {
                 patientId={record.id}
                 mayBook={may("appointment:create") && record.status === "active"}
               />
+            )}
+            {may("consultation:read") && (
+              <PatientVisits patientId={record.id} ownOnly={session.data?.role === "doctor"} />
             )}
             <Allergies
               patientId={record.id}

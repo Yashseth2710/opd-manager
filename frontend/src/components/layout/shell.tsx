@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   Loader2,
+  NotebookPen,
   Settings,
   Stethoscope,
   UserRound,
@@ -43,6 +44,12 @@ const DESTINATIONS: Destination[] = [
     permission: "appointment:read",
   },
   { href: "/queue", label: "Queue", icon: ListOrdered, permission: "appointment:read" },
+  {
+    href: "/consultations",
+    label: "Notes",
+    icon: NotebookPen,
+    permission: "consultation:read",
+  },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];

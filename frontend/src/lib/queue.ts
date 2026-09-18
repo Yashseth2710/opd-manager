@@ -36,6 +36,8 @@ export type QueueEntry = {
   waited_minutes: number;
   position: number | null;
   expected_wait_minutes: number | null;
+  /** The notes written for this place, once the doctor has opened them. */
+  consultation_id: string | null;
 };
 
 export type Arrival = {

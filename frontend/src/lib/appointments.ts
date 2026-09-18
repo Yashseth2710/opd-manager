@@ -83,7 +83,11 @@ export type AppointmentEvent = {
   created_at: string;
 };
 
-export type AppointmentDetail = Appointment & { history: AppointmentEvent[] };
+export type AppointmentDetail = Appointment & {
+  history: AppointmentEvent[];
+  /** The notes written at this visit, if any. Reading them is a separate permission. */
+  consultation_id: string | null;
+};
 
 export type AppointmentDay = {
   date: string;
