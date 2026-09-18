@@ -92,6 +92,11 @@ jobs:
       run:
         working-directory: backend
 
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        attempt: [1, 2, 3, 4, 5, 6]
     services:
       postgres:
         image: postgres:18
@@ -142,7 +147,11 @@ jobs:
         run: alembic downgrade base
 
       - name: Tests
-        run: pytest -q
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          PGPASSWORD=opd psql -h localhost -U opd -d opd_test -c "ALTER DATABASE opd_test SET lock_timeout = '30s'"
+          pytest -v -p no:cacheprovider
 
   browser:
     name: Browser
