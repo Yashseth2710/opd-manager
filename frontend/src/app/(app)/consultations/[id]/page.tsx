@@ -20,6 +20,14 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
+import { IssuedPrescription, MedicineTable } from "@/components/prescriptions/card";
+import {
+  editable,
+  PrescriptionLines,
+  problemsByRow,
+  sendable,
+  type EditableLine,
+} from "@/components/prescriptions/lines";
 import { Token } from "@/components/queue/token";
 import { ApiFailure } from "@/lib/api";
 import { bookingHref, shortDate, whenItHappened } from "@/lib/appointments";
@@ -310,10 +318,15 @@ type Draft = {
   advice: string;
   diagnoses: Diagnosis[];
   follow_up_date: string | null;
+  medicines: EditableLine[];
+  prescription_instructions: string;
 };
 
 function draftOf(record: Consultation): Draft {
+  const prescription = record.prescriptions.find((each) => each.status === "draft");
   return {
+    medicines: editable(prescription?.items ?? []),
+    prescription_instructions: prescription?.instructions ?? "",
     chief_complaint: record.chief_complaint ?? "",
     history: record.history ?? "",
     examination: record.examination ?? "",
@@ -349,6 +362,11 @@ function changesBetween(current: Draft, stored: Draft): NoteChanges {
     changes.diagnoses = current.diagnoses;
   if (current.follow_up_date !== stored.follow_up_date)
     changes.follow_up_date = current.follow_up_date;
+  const lines = sendable(current.medicines);
+  if (JSON.stringify(lines) !== JSON.stringify(sendable(stored.medicines)))
+    changes.medicines = lines;
+  if (current.prescription_instructions.trim() !== stored.prescription_instructions.trim())
+    changes.prescription_instructions = current.prescription_instructions;
   return changes;
 }
 
@@ -510,9 +528,9 @@ function Editor({
     onError: (error) => {
       setConfirming(false);
       if (error instanceof ApiFailure) {
-        setFinishProblem(
-          error.fields ? (Object.values(error.fields)[0] ?? error.message) : error.message,
-        );
+        // The sentence says what stopped it; the fields point at where.
+        setFinishProblem(error.message);
+        if (error.fields) setFields(error.fields);
       } else {
         setFinishProblem(
           "The latest changes are not saved yet, so the notes were not finished.",
@@ -655,6 +673,36 @@ function Editor({
           onChange={(value) => set("advice", value)}
           onBlur={() => void flush()}
         />
+        <section aria-labelledby="notes-prescription" className="flex flex-col gap-3">
+          <div>
+            <h2 id="notes-prescription" className="text-[15px] font-semibold">
+              Prescription
+            </h2>
+            <p className="text-[13px] text-[var(--text-muted)]">
+              Issued with its own number when the visit is finished, and printable from then.
+            </p>
+          </div>
+          <PrescriptionLines
+            lines={draft.medicines}
+            onChange={(value) => set("medicines", value)}
+            problems={problemsByRow(draft.medicines, fields)}
+          />
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="notes-rx-advice" className="text-[14px] font-medium">
+              Advice printed on the prescription
+            </label>
+            <textarea
+              id="notes-rx-advice"
+              value={draft.prescription_instructions}
+              maxLength={2000}
+              rows={2}
+              placeholder="Plenty of fluids. Come back sooner if the fever does not settle."
+              onChange={(event) => set("prescription_instructions", event.target.value)}
+              onBlur={() => void flush()}
+              className={`${FIELD_CLASS} max-w-[75ch] min-h-[4rem] resize-y [field-sizing:content]`}
+            />
+          </div>
+        </section>
         <FollowUpField
           visit={initial.visit_date}
           value={draft.follow_up_date}
@@ -1046,10 +1094,15 @@ function FollowUpField({
 // --- Reading finished notes -------------------------------------------------------
 
 function Finished({ record }: { record: Consultation }) {
+  const queries = useQueryClient();
   const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
   const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
+  const mayPrescribe = session.data?.permissions.includes("prescription:create") ?? false;
   const draft = record.status === "draft";
   const today = todayISO();
+  const standing = record.prescriptions.find((each) => each.status === "issued");
+  const being = record.prescriptions.find((each) => each.status === "draft");
+  const replaced = record.prescriptions.filter((each) => each.status === "replaced");
 
   return (
     <div className="flex flex-col gap-7">
@@ -1066,6 +1119,30 @@ function Finished({ record }: { record: Consultation }) {
       )}
 
       <WrittenNote record={record} />
+
+      {standing && (
+        <IssuedPrescription
+          prescription={standing}
+          earlier={replaced}
+          mayCorrect={mayPrescribe && record.can_add_addendum}
+          onCorrected={() => {
+            void queries.invalidateQueries({ queryKey: ["consultation", record.id] });
+            void queries.invalidateQueries({ queryKey: ["prescriptions"] });
+            void queries.invalidateQueries({ queryKey: ["queue"] });
+          }}
+        />
+      )}
+      {draft && being && (being.items.length > 0 || being.instructions) && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-[13px] font-semibold text-[var(--text-muted)]">
+            Prescription being written
+          </h2>
+          <MedicineTable items={being.items} />
+          {being.instructions && (
+            <p className="max-w-[75ch] text-[15px] whitespace-pre-wrap">{being.instructions}</p>
+          )}
+        </section>
+      )}
 
       {record.follow_up_date && (
         <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-field)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">

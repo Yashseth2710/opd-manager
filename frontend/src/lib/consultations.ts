@@ -1,5 +1,6 @@
 import { post, request } from "@/lib/api";
 import type { AppointmentType, DoctorRef, PatientRef, Status } from "@/lib/appointments";
+import type { MedicineLine, Prescription } from "@/lib/prescriptions";
 
 export type ConsultationStatus = "draft" | "completed";
 
@@ -45,6 +46,8 @@ export type Consultation = ConsultationSummary & {
   advice: string | null;
   diagnoses: Diagnosis[];
   addenda: Addendum[];
+  /** The one being written or standing first, then anything it replaced. */
+  prescriptions: Prescription[];
   updated_at: string;
   can_edit: boolean;
   can_add_addendum: boolean;
@@ -60,6 +63,8 @@ export type NoteChanges = {
   advice?: string;
   diagnoses?: Diagnosis[];
   follow_up_date?: string | null;
+  medicines?: MedicineLine[];
+  prescription_instructions?: string;
 };
 
 export const TEXT_SECTIONS = ["chief_complaint", "history", "examination", "advice"] as const;

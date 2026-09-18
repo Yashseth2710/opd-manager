@@ -38,6 +38,8 @@ export type QueueEntry = {
   expected_wait_minutes: number | null;
   /** The notes written for this place, once the doctor has opened them. */
   consultation_id: string | null;
+  /** The prescription issued at this visit, for the desk to print. */
+  prescription_id: string | null;
 };
 
 export type Arrival = {

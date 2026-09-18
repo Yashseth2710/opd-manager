@@ -25,6 +25,7 @@ const SIGNED_IN_ONLY = [
   "/appointments",
   "/queue",
   "/consultations",
+  "/prescriptions",
 ];
 
 export function proxy(request: NextRequest) {

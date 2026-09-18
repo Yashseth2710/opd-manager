@@ -10,6 +10,7 @@ import {
   MonitorPlay,
   MoreHorizontal,
   NotebookPen,
+  Pill,
   Siren,
   UserPlus,
   X,
@@ -87,7 +88,11 @@ function Queue() {
   const may = (permission: string) => session.data?.permissions.includes(permission) ?? false;
   const mayCheckIn = may("queue:checkin");
   const mayManage = may("queue:manage");
-  const notes = { write: may("consultation:create"), read: may("consultation:read") };
+  const notes = {
+    write: may("consultation:create"),
+    read: may("consultation:read"),
+    prescriptions: may("prescription:read"),
+  };
 
   const queue = useQuery({
     queryKey: ["queue"],
@@ -274,7 +279,7 @@ function Queue() {
   );
 }
 
-type NotesAccess = { write: boolean; read: boolean };
+type NotesAccess = { write: boolean; read: boolean; prescriptions: boolean };
 
 function LaneView({
   lane,
@@ -907,7 +912,7 @@ function Done({
         {entries.map((entry) => (
           <li
             key={entry.id}
-            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[14px] sm:grid-cols-[auto_1fr_auto_auto]"
+            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[14px] sm:grid-cols-[auto_1fr_auto_auto_auto]"
           >
             <Token number={entry.token} status={entry.status} />
             <span className="min-w-0 truncate">{entry.patient.full_name}</span>
@@ -933,6 +938,17 @@ function Done({
                   </ActionButton>
                 </span>
               ) : null)}
+            {entry.prescription_id && notes.prescriptions && (
+              <span className="col-start-2 sm:col-start-auto">
+                <Link
+                  href={`/prescriptions/${entry.prescription_id}` as Route}
+                  className="inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-medium transition hover:bg-[var(--surface-sunken)]"
+                >
+                  <Pill className="size-3.5" />
+                  Prescription
+                </Link>
+              </span>
+            )}
           </li>
         ))}
       </ul>
