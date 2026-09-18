@@ -48,6 +48,7 @@ The title says what it does — "Let receptionists search patients by phone numb
 - Custom exceptions from `core/exceptions`, mapped centrally to error codes. No `HTTPException` scattered through services.
 - Pydantic models for every request and response. No raw dicts crossing a boundary.
 - Never `select(Model)` without tenant scoping outside the platform admin path.
+- Routes take the database as `session: DbSession`, never `Depends(db_session)`. The alias commits before the response is sent; the bare dependency commits after it, so a client can read back the record from before its own save.
 
 ## TypeScript
 

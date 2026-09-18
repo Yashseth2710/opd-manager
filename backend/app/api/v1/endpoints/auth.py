@@ -8,16 +8,15 @@ session away.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request, Response
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import (
     ACCESS_COOKIE,
     REFRESH_COOKIE,
     SESSION_HINT_COOKIE,
     Caller,
+    DbSession,
     client_ip,
     current_caller,
-    db_session,
 )
 from app.core.config import get_settings
 from app.core.exceptions import SessionExpired
@@ -103,10 +102,10 @@ def session_payload(signed_in: auth.SignedIn) -> SessionOut:
 
 @router.post("/register", status_code=201)
 async def register(
+    session: DbSession,
     body: RegisterRequest,
     response: Response,
     request: Request,
-    session: AsyncSession = Depends(db_session),
 ) -> RegisterOut:
     result = await auth.register(
         session,
@@ -137,10 +136,10 @@ async def register(
 
 @router.post("/login")
 async def login(
+    session: DbSession,
     body: LoginRequest,
     response: Response,
     request: Request,
-    session: AsyncSession = Depends(db_session),
 ) -> SessionOut:
     signed_in = await auth.sign_in(
         session,
@@ -155,9 +154,9 @@ async def login(
 
 @router.post("/refresh")
 async def refresh(
+    session: DbSession,
     request: Request,
     response: Response,
-    session: AsyncSession = Depends(db_session),
 ) -> SessionOut:
     """Exchanges a refresh token for a new pair.
 
@@ -219,8 +218,8 @@ async def logout(request: Request, response: Response) -> AcknowledgedOut:
 
 @router.get("/me")
 async def me(
+    session: DbSession,
     caller: Caller = Depends(current_caller),
-    session: AsyncSession = Depends(db_session),
 ) -> SessionOut:
     user = await UserRepository(session).get(caller.user_id)
     if user is None or user.status != "active":
@@ -240,8 +239,8 @@ async def me(
 
 @router.post("/forgot-password")
 async def forgot_password(
+    session: DbSession,
     body: ForgotPasswordRequest,
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     """Answers the same way whether or not the address has an account."""
     await auth.request_password_reset(session, email=body.email)
@@ -250,9 +249,9 @@ async def forgot_password(
 
 @router.post("/reset-password")
 async def reset_password(
+    session: DbSession,
     body: ResetPasswordRequest,
     response: Response,
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     await auth.complete_password_reset(session, token=body.token, password=body.password)
     # Every session on the account has just been revoked, including this one.
@@ -262,8 +261,8 @@ async def reset_password(
 
 @router.post("/verify-email")
 async def verify_email(
+    session: DbSession,
     body: VerifyEmailRequest,
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     await auth.verify_email(session, token=body.token)
     return AcknowledgedOut()
@@ -271,8 +270,8 @@ async def verify_email(
 
 @router.post("/resend-verification")
 async def resend_verification(
+    session: DbSession,
     body: ResendVerificationRequest,
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     await auth.resend_verification(session, email=body.email)
     return AcknowledgedOut(email_configured=get_settings().email_configured)

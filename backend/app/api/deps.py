@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import AsyncIterator, Callable, Coroutine
 from dataclasses import dataclass
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,6 +41,15 @@ async def db_session() -> AsyncIterator[AsyncSession]:
         except Exception:
             await session.rollback()
             raise
+
+
+# Routes take the session through this rather than Depends(db_session).
+# Left to itself, FastAPI finishes a dependency after the response has gone,
+# which put the commit behind the answer: the page asked for the record again
+# the moment a save came back and could be handed the version from before
+# it, and a commit that failed there had already been reported as a success.
+# Scoped to the function, the commit happens before anything is sent.
+DbSession = Annotated[AsyncSession, Depends(db_session, scope="function")]
 
 
 @dataclass(frozen=True)

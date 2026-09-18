@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, current_tenant, db_session, requires
+from app.api.deps import Caller, DbSession, current_tenant, requires
 from app.models import Organization
 from app.models.doctor import ACTIVE
 from app.repositories.doctors import (
@@ -124,6 +124,7 @@ async def _read(
 
 @router.get("/doctors")
 async def list_doctors(
+    session: DbSession,
     query: str = Query(default="", max_length=120, alias="q"),
     speciality: str = Query(default="", max_length=80),
     status: str = Query(default=ACTIVE, pattern="^(active|inactive|all)$"),
@@ -131,7 +132,6 @@ async def list_doctors(
     per_page: int = Query(default=25, ge=1, le=100),
     _: Caller = Depends(requires("doctor:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorPage:
     clinic = await _clinic(session, organization_id)
     found, total = await DoctorRepository(session, organization_id).search(
@@ -152,10 +152,10 @@ async def list_doctors(
 
 @router.get("/doctors/specialities")
 async def list_specialities(
+    session: DbSession,
     status: str = Query(default=ACTIVE, pattern="^(active|inactive|all)$"),
     _: Caller = Depends(requires("doctor:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[str]:
     """What this clinic actually offers, rather than a fixed list every
     clinic has to pick the wrong answer from.
@@ -170,10 +170,10 @@ async def list_specialities(
 
 @router.post("/doctors", status_code=201)
 async def add_doctor(
+    session: DbSession,
     body: DoctorCreate,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorOut:
     doctor = await service.add(session, organization_id=organization_id, body=body)
     return await _read(session, organization_id, doctor.id)
@@ -181,21 +181,21 @@ async def add_doctor(
 
 @router.get("/doctors/{doctor_id}")
 async def read_doctor(
+    session: DbSession,
     doctor_id: uuid.UUID,
     _: Caller = Depends(requires("doctor:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorOut:
     return await _read(session, organization_id, doctor_id)
 
 
 @router.patch("/doctors/{doctor_id}")
 async def update_doctor(
+    session: DbSession,
     doctor_id: uuid.UUID,
     body: DoctorUpdate,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorOut:
     await service.update(
         session, organization_id=organization_id, doctor_id=doctor_id, body=body
@@ -205,10 +205,10 @@ async def update_doctor(
 
 @router.post("/doctors/{doctor_id}/deactivate")
 async def deactivate_doctor(
+    session: DbSession,
     doctor_id: uuid.UUID,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorOut:
     """Takes a doctor off the lists without losing their rota or anything
     signed in their name."""
@@ -220,10 +220,10 @@ async def deactivate_doctor(
 
 @router.post("/doctors/{doctor_id}/restore")
 async def restore_doctor(
+    session: DbSession,
     doctor_id: uuid.UUID,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> DoctorOut:
     await service.set_active(
         session, organization_id=organization_id, doctor_id=doctor_id, active=True
@@ -233,10 +233,10 @@ async def restore_doctor(
 
 @router.get("/doctors/{doctor_id}/schedule")
 async def read_schedule(
+    session: DbSession,
     doctor_id: uuid.UUID,
     _: Caller = Depends(requires("doctor:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[ScheduleBlockOut]:
     await service.fetch(session, organization_id=organization_id, doctor_id=doctor_id)
     blocks = await ScheduleRepository(session, organization_id).for_doctor(doctor_id)
@@ -245,11 +245,11 @@ async def read_schedule(
 
 @router.put("/doctors/{doctor_id}/schedule")
 async def write_schedule(
+    session: DbSession,
     doctor_id: uuid.UUID,
     body: ScheduleWrite,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[ScheduleBlockOut]:
     """The whole week at once. Sending an empty list clears it."""
     blocks = await service.replace_schedule(
@@ -260,11 +260,11 @@ async def write_schedule(
 
 @router.get("/doctors/{doctor_id}/availability")
 async def read_availability(
+    session: DbSession,
     doctor_id: uuid.UUID,
     date: dt.date | None = Query(default=None),
     _: Caller = Depends(requires("doctor:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> Availability:
     clinic = await _clinic(session, organization_id)
     day = date or service.clinic_today(clinic)
@@ -280,11 +280,11 @@ async def read_availability(
 
 @router.post("/doctors/{doctor_id}/leaves", status_code=201)
 async def record_leave(
+    session: DbSession,
     doctor_id: uuid.UUID,
     body: LeaveWrite,
     caller: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> LeaveOut:
     leave = await service.add_leave(
         session,
@@ -298,11 +298,11 @@ async def record_leave(
 
 @router.delete("/doctors/{doctor_id}/leaves/{leave_id}")
 async def cancel_leave(
+    session: DbSession,
     doctor_id: uuid.UUID,
     leave_id: uuid.UUID,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> Removed:
     await service.remove_leave(
         session,

@@ -13,7 +13,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, current_tenant, db_session, requires
+from app.api.deps import Caller, DbSession, current_tenant, requires
 from app.models.patient import ACTIVE
 from app.repositories.patients import AllergyRepository, Listed, PatientRepository, names_of
 from app.schemas.patient import (
@@ -88,13 +88,13 @@ async def _read(
 
 @router.get("/patients")
 async def list_patients(
+    session: DbSession,
     query: str = Query(default="", max_length=120, alias="q"),
     status: str = Query(default=ACTIVE, pattern="^(active|archived|all)$"),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=25, ge=1, le=100),
     _: Caller = Depends(requires("patient:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientPage:
     found, total = await PatientRepository(session, organization_id).search(
         query=query,
@@ -115,10 +115,10 @@ async def list_patients(
 
 @router.post("/patients/check-duplicates")
 async def check_duplicates(
+    session: DbSession,
     body: DuplicateCheck,
     _: Caller = Depends(requires("patient:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[DuplicateCandidate]:
     """Asked while the form is still being filled in, so whoever is at the
     desk sees the existing record in time to open it instead."""
@@ -141,10 +141,10 @@ async def check_duplicates(
 
 @router.post("/patients", status_code=201)
 async def register_patient(
+    session: DbSession,
     body: PatientCreate,
     caller: Caller = Depends(requires("patient:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientOut:
     patient = await service.register(
         session, organization_id=organization_id, actor_id=caller.user_id, body=body
@@ -154,21 +154,21 @@ async def register_patient(
 
 @router.get("/patients/{patient_id}")
 async def read_patient(
+    session: DbSession,
     patient_id: uuid.UUID,
     _: Caller = Depends(requires("patient:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientOut:
     return await _read(session, organization_id, patient_id)
 
 
 @router.patch("/patients/{patient_id}")
 async def update_patient(
+    session: DbSession,
     patient_id: uuid.UUID,
     body: PatientUpdate,
     _: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientOut:
     await service.update(
         session, organization_id=organization_id, patient_id=patient_id, body=body
@@ -178,10 +178,10 @@ async def update_patient(
 
 @router.post("/patients/{patient_id}/archive")
 async def archive_patient(
+    session: DbSession,
     patient_id: uuid.UUID,
     _: Caller = Depends(requires("patient:archive")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientOut:
     """Hides the record from the day-to-day lists. Nothing is deleted: the
     visits, invoices and notes that hang off it stay exactly as they were."""
@@ -193,10 +193,10 @@ async def archive_patient(
 
 @router.post("/patients/{patient_id}/restore")
 async def restore_patient(
+    session: DbSession,
     patient_id: uuid.UUID,
     _: Caller = Depends(requires("patient:archive")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> PatientOut:
     await service.set_archived(
         session, organization_id=organization_id, patient_id=patient_id, archived=False
@@ -206,11 +206,11 @@ async def restore_patient(
 
 @router.post("/patients/{patient_id}/allergies", status_code=201)
 async def record_allergy(
+    session: DbSession,
     patient_id: uuid.UUID,
     body: AllergyWrite,
     caller: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AllergyOut:
     allergy = await service.add_allergy(
         session,
@@ -224,11 +224,11 @@ async def record_allergy(
 
 @router.delete("/patients/{patient_id}/allergies/{allergy_id}")
 async def remove_allergy(
+    session: DbSession,
     patient_id: uuid.UUID,
     allergy_id: uuid.UUID,
     _: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> Removed:
     await service.remove_allergy(
         session,

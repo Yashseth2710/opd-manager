@@ -12,7 +12,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, client_ip, current_caller, current_tenant, db_session, requires
+from app.api.deps import Caller, DbSession, client_ip, current_caller, current_tenant, requires
 from app.api.v1.endpoints.auth import session_payload, set_session_cookies
 from app.core.config import get_settings
 from app.core.exceptions import NotFound, SessionExpired
@@ -52,8 +52,8 @@ def _settings_out(clinic: Organization) -> ClinicSettingsOut:
 
 @router.get("/clinic")
 async def read_clinic(
+    session: DbSession,
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> ClinicOut:
     """Readable by anyone signed in. A receptionist needs the clinic's name
     and opening details to do their job."""
@@ -62,10 +62,10 @@ async def read_clinic(
 
 @router.patch("/clinic")
 async def update_clinic(
+    session: DbSession,
     body: ClinicUpdate,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> ClinicOut:
     clinic = await _clinic(session, organization_id)
     return ClinicOut.model_validate(await service.update_clinic(session, clinic, body))
@@ -73,18 +73,18 @@ async def update_clinic(
 
 @router.get("/clinic/settings")
 async def read_settings(
+    session: DbSession,
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> ClinicSettingsOut:
     return _settings_out(await _clinic(session, organization_id))
 
 
 @router.patch("/clinic/settings")
 async def update_settings(
+    session: DbSession,
     body: ClinicSettingsUpdate,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> ClinicSettingsOut:
     clinic = await _clinic(session, organization_id)
     return _settings_out(await service.update_settings(session, clinic, body))
@@ -92,9 +92,9 @@ async def update_settings(
 
 @router.post("/clinic/complete-setup")
 async def complete_setup(
+    session: DbSession,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> ClinicOut:
     """Opens the clinic for business. Refuses while the details it cannot
     operate without are still missing."""
@@ -104,9 +104,9 @@ async def complete_setup(
 
 @router.get("/clinic/roles")
 async def list_roles(
+    session: DbSession,
     _: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[RoleOut]:
     roles = await StaffRepository(session, organization_id).roles()
     return [RoleOut.model_validate(role) for role in roles]
@@ -114,9 +114,9 @@ async def list_roles(
 
 @router.get("/staff")
 async def list_staff(
+    session: DbSession,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[StaffMemberOut]:
     listing = await StaffRepository(session, organization_id).listing()
     return [
@@ -138,11 +138,11 @@ async def list_staff(
 
 @router.patch("/staff/{member_id}/role")
 async def change_role(
+    session: DbSession,
     member_id: uuid.UUID,
     body: ChangeRoleRequest,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     actor = await UserRepository(session).get(caller.user_id)
     if actor is None:
@@ -156,10 +156,10 @@ async def change_role(
 
 @router.post("/staff/{member_id}/suspend")
 async def suspend_member(
+    session: DbSession,
     member_id: uuid.UUID,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     actor = await UserRepository(session).get(caller.user_id)
     if actor is None:
@@ -173,10 +173,10 @@ async def suspend_member(
 
 @router.post("/staff/{member_id}/restore")
 async def restore_member(
+    session: DbSession,
     member_id: uuid.UUID,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     actor = await UserRepository(session).get(caller.user_id)
     if actor is None:
@@ -190,9 +190,9 @@ async def restore_member(
 
 @router.get("/staff/invitations")
 async def list_invitations(
+    session: DbSession,
     _: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> list[InvitationOut]:
     pending = await InvitationRepository(session, organization_id).pending()
     return [
@@ -210,10 +210,10 @@ async def list_invitations(
 
 @router.post("/staff/invitations", status_code=201)
 async def send_invitation(
+    session: DbSession,
     body: InviteRequest,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     inviter = await UserRepository(session).get(caller.user_id)
     if inviter is None:
@@ -236,10 +236,10 @@ async def send_invitation(
 
 @router.delete("/staff/invitations/{invitation_id}")
 async def revoke_invitation(
+    session: DbSession,
     invitation_id: uuid.UUID,
     _: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> AcknowledgedOut:
     clinic = await _clinic(session, organization_id)
     await service.revoke(session, clinic, invitation_id)
@@ -248,8 +248,8 @@ async def revoke_invitation(
 
 @router.get("/invitations/{token}")
 async def preview_invitation(
+    session: DbSession,
     token: str,
-    session: AsyncSession = Depends(db_session),
 ) -> InvitationPreview:
     """Open, because whoever follows the link has no account yet.
 
@@ -268,10 +268,10 @@ async def preview_invitation(
 
 @router.post("/invitations/accept")
 async def accept_invitation(
+    session: DbSession,
     body: AcceptInvitation,
     request: Request,
     response: Response,
-    session: AsyncSession = Depends(db_session),
 ) -> SessionOut:
     """Turns an invitation into an account, and signs them in.
 
@@ -293,9 +293,9 @@ async def accept_invitation(
 
 @router.get("/clinic/needs-setup")
 async def needs_setup(
+    session: DbSession,
     _: Caller = Depends(current_caller),
     organization_id: uuid.UUID = Depends(current_tenant),
-    session: AsyncSession = Depends(db_session),
 ) -> dict[str, bool]:
     clinic = await session.get(Organization, organization_id)
     if clinic is None:
