@@ -167,7 +167,9 @@ test("copying Monday across the week fills the weekdays and leaves the weekend",
       "10:00 am – 2:00 pm",
     );
   }
-  await expect(page.getByText("Saturday")).toBeHidden();
+  // The week's hours only: a day panel elsewhere on the page names today,
+  // and on a Saturday that is the word this would otherwise trip over.
+  await expect(page.getByRole("listitem").filter({ hasText: "Saturday" })).toHaveCount(0);
 });
 
 test("clearing the week puts the profile back to having no hours", async ({ page }) => {

@@ -85,6 +85,10 @@ E2E_API_LOG=../backend/api.log npm run e2e
 
 Early development. Architecture and conventions are documented in [`docs/`](docs/); implementation follows the build order described there.
 
+## Credits
+
+The medicine list doctors pick from is India's National List of Essential Medicines 2022, published by the Ministry of Health and Family Welfare. Printed prescriptions are set in IBM Plex, used under the SIL Open Font License, which ships with the fonts in `backend/app/assets/fonts`.
+
 ## A note on the data
 
 Everything in this repository — seeds, fixtures, tests, screenshots — uses synthetic data. No real patient information is used anywhere, and this build has not been assessed against any healthcare regulation. It is not certified for clinical use.

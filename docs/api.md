@@ -85,6 +85,7 @@ QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, HAS_APPOINTMENT, NOT_TODAY,
               INVALID_TRANSITION
 CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER, NOT_IN_ROOM,
               EDITED_ELSEWHERE, STILL_DRAFT
+RX_*          NOT_FOUND, ALREADY_REPLACED, NOT_PRESCRIBER
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED
@@ -199,9 +200,11 @@ consultations GET    /consultations
               GET    /consultation-templates
               POST   /consultation-templates
 
-prescriptions POST   /prescriptions
+prescriptions GET    /prescriptions?patient_id=
               GET    /prescriptions/{id}
               GET    /prescriptions/{id}/pdf
+              POST   /prescriptions/{id}/corrections
+              GET    /medicines?q=
 
 labs          POST   /lab-orders
               GET    /lab-orders
@@ -279,6 +282,10 @@ Tokens count from 1 per doctor per clinic day. The line is arrival order with ur
 `POST /consultations` opens the notes for a place in the queue whose patient is with the doctor, or already seen. Asking again hands back the same notes with a 200 rather than a 201, so two tabs land on one draft; a patient still waiting or called is `409 CONSULT_NOT_IN_ROOM`. The complaint starts as the reason the desk wrote down. Only the doctor the place belongs to opens, writes and finishes notes, which leaves the clinic admin reading them and nobody else: a doctor asking for a colleague's notes gets `403 CONSULT_NOT_OWNER` with whose they are, and the desk has no route to them at all.
 
 `PATCH /consultations/{id}` changes only the sections it carries and must name the `version` it was written against. A save from an older copy is `409 CONSULT_EDITED_ELSEWHERE` and changes nothing, so a second tab cannot quietly undo the first. Diagnoses are sent as the whole list; one is the main one, the first if none is marked. A follow-up falls after the visit and within a year of it. `POST /consultations/{id}/complete` locks the notes, needs something written in them, and finishes the patient in the queue and on the book if they are still shown in the room. Finished notes are `409 CONSULT_ALREADY_COMPLETED` to any change; `POST /consultations/{id}/addenda` adds a dated, signed paragraph underneath instead, and a draft is `409 CONSULT_STILL_DRAFT` to that.
+
+A prescription is written through the notes: `PATCH /consultations/{id}` carries `medicines`, the whole list of lines, and `prescription_instructions`, the advice printed on it. Lines can be saved without a dose while the doctor is still writing; finishing the visit issues the prescription with the clinic's next `RX-` number, and a line still without a dose stops it with `422` and the field that needs it. Drafts are never listed or printed. `GET /prescriptions/{id}/pdf` answers with the page itself, `application/pdf`, made fresh each time. `POST /prescriptions/{id}/corrections` issues a replacement with a new number and a reason, and marks the original replaced; only the doctor who wrote it may, which is `403 RX_NOT_PRESCRIBER` for anyone else, and a prescription already replaced is `409 RX_ALREADY_REPLACED` naming the newer one. Issued prescriptions are readable across the clinic by anyone holding `prescription:read`, because the desk prints them.
+
+`GET /medicines?q=` offers what this clinic has prescribed before, most used first, then the published list, with tablets and capsules ahead of syrups and injections. It needs two characters, and a near miss still finds the medicine.
 
 A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 

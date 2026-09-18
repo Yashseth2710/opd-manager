@@ -253,15 +253,33 @@ Several per visit, in the doctor's words, with one marked as the main reason for
 
 The doctor selects the diagnosis. The system never infers one.
 
+### medicines
+
+`name`, `presentation`, `source`. Not a tenant table: one published list shared by every clinic, loaded by a migration and never written by the application.
+
+The list is India's National List of Essential Medicines 2022, read out of the published PDF and checked by hand against its own alphabetical index: 376 medicines in 793 presentations such as `Tablet 500 mg` or `Eye drops 0.3%`. Blood products, dialysis fluids, disinfectants and devices a clinic does not write on a prescription are left out, and drops and ointments say whether they are for the eye or the ear, which the list only shows by section. The file behind it is `backend/app/data/medicines-nlem-2022.json`.
+
+```
+UNIQUE (lower(name), coalesce(lower(presentation), ''))
+GIN    (lower(name) gin_trgm_ops)
+```
+
 ### prescriptions, prescription_items
 
-`prescriptions`: `consultation_id`, `patient_id`, `doctor_id`, `prescription_number`, `instructions`, `follow_up_date`, `pdf_blob_url`, `issued_at`.
+`prescriptions`: `consultation_id`, `patient_id`, `doctor_id`, `prescription_number` (`RX-000001`), `status` (`draft` / `issued` / `replaced`), `instructions`, `follow_up_date`, `replaces_id`, `correction_reason`, `issued_at`, `issued_by_id`.
 
-`prescription_items`: `medicine_name`, `strength`, `dosage` (`1-0-1`), `frequency`, `duration_days`, `route`, `instructions`, `sort_order`.
+`prescription_items`: `medicine_name`, `presentation`, `dose` (`1-0-1`, `5 mL`), `timing` (`before_food` / `after_food` / `with_food` / `empty_stomach` / `bedtime` / `as_needed`), `duration_days`, `instructions`, `position`.
 
-Medicine names are stored as text alongside a nullable reference to a catalogue entry. A doctor must be able to prescribe something the catalogue does not know about.
+```
+UNIQUE (consultation_id) WHERE status = 'draft'
+UNIQUE (consultation_id) WHERE status = 'issued'
+UNIQUE (organization_id, prescription_number) WHERE prescription_number IS NOT NULL
+CHECK  ((status = 'draft') = (prescription_number IS NULL))
+```
 
-Once issued, a prescription is immutable. A correction is a new prescription referencing the original.
+A prescription is written with the visit's notes as a draft and issued when the visit is finished, which is when it takes the clinic's next number. Medicine names are kept as the doctor wrote them rather than as a reference into the list: a doctor has to be able to prescribe a brand, or anything else the list does not carry, and what was printed must read back the same whatever happens to the list later.
+
+Once issued, a prescription is never changed. A correction is a new prescription, with its own number, that replaces the original; the original stays, marked replaced, because a copy of it may already be with a pharmacy. The printed page is made on request rather than stored, since an issued prescription never changes and every copy comes out the same.
 
 ### lab_orders, lab_results
 
