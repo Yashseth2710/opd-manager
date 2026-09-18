@@ -195,14 +195,18 @@ test.describe("as the clinic admin", () => {
 
     await page.goto(`/consultations?doctor=${doctor.id}`);
     await page.getByRole("link", { name: new RegExp(`Asha Admin${tag}`) }).click();
+    // The list row says Osteoarthritis too, so nothing is checked until the
+    // notes themselves are open.
+    await expect(page).toHaveURL(new RegExp(`/consultations/${notes.id}$`));
 
-    await expect(page.getByText("Osteoarthritis")).toBeVisible();
+    await expect(page.getByRole("definition").getByText("Osteoarthritis")).toBeVisible();
     await expect(page.getByRole("textbox")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Finish visit" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add an addendum" })).toHaveCount(0);
 
     // The notes are on the patient's record too.
-    await page.getByRole("link", { name: `Asha Admin${tag}` }).click();
+    await page.getByRole("heading", { level: 1 }).getByRole("link").click();
+    await expect(page).toHaveURL(/\/patients\//);
     await expect(page.getByRole("region", { name: "Visit notes" })).toContainText(
       "Osteoarthritis",
     );

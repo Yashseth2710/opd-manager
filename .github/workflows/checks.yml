@@ -88,6 +88,7 @@ jobs:
   backend:
     name: Backend
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: backend
@@ -141,12 +142,17 @@ jobs:
       - name: Migrations reverse cleanly
         run: alembic downgrade base
 
+      # A test left waiting on a lock fails with the statement that waited,
+      # rather than holding the job open until the runner gives up.
       - name: Tests
-        run: pytest -q
+        run: |
+          PGPASSWORD=opd psql -h localhost -U opd -d opd_test             -c "ALTER DATABASE opd_test SET lock_timeout = '30s'"
+          pytest -q
 
   browser:
     name: Browser
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     services:
       postgres:
