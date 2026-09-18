@@ -232,6 +232,30 @@
   }
 }
 
+/*
+  The one attention pulse a called token gets on the waiting-room screen,
+  then it settles. Longer than anything else here because it is meant to be
+  seen from across a room, not felt under a cursor.
+*/
+@keyframes token-called {
+  0% {
+    transform: scale(0.94);
+    box-shadow: 0 0 0 0 rgb(233 162 59 / 0.75);
+  }
+  45% {
+    transform: scale(1.03);
+    box-shadow: 0 0 0 28px rgb(233 162 59 / 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(233 162 59 / 0);
+  }
+}
+
+.token-called {
+  animation: token-called 900ms var(--ease-out-quint) 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

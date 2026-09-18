@@ -404,7 +404,12 @@ function AppointmentRow({
           )}
         </div>
 
-        <div className="col-start-2 sm:col-start-auto">
+        <div className="col-start-2 flex items-center gap-2 sm:col-start-auto">
+          {appointment.queue_token !== null && (
+            <span className="font-mono text-[13px] text-[var(--text-muted)] tabular">
+              Token {appointment.queue_token}
+            </span>
+          )}
           <StatusBadge status={appointment.status} />
         </div>
       </Link>

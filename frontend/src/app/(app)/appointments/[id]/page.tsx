@@ -7,6 +7,8 @@ import {
   CalendarClock,
   CalendarPlus,
   Check,
+  DoorOpen,
+  ListOrdered,
   Loader2,
   Pencil,
   UserX,
@@ -43,6 +45,7 @@ import {
 import { currentSession } from "@/lib/auth";
 import { listDoctors, readableTime, todayISO } from "@/lib/doctors";
 import { initials, readablePhone } from "@/lib/patients";
+import { checkIn } from "@/lib/queue";
 
 type Mode = "move" | "edit" | "cancel" | "no_show" | null;
 
@@ -133,6 +136,7 @@ function Appointment() {
         mayUpdate={may("appointment:update")}
         mayCancel={may("appointment:cancel")}
         mayBook={may("appointment:create")}
+        mayCheckIn={may("queue:checkin")}
         isDoctor={session.data?.role === "doctor"}
       />
 
@@ -260,6 +264,7 @@ function Actions({
   mayUpdate,
   mayCancel,
   mayBook,
+  mayCheckIn,
   isDoctor,
 }: {
   record: AppointmentDetail;
@@ -268,6 +273,7 @@ function Actions({
   mayUpdate: boolean;
   mayCancel: boolean;
   mayBook: boolean;
+  mayCheckIn: boolean;
   isDoctor: boolean;
 }) {
   const queries = useQueryClient();
@@ -293,6 +299,49 @@ function Actions({
     onError: failed,
   });
 
+  // Answers with the place in the queue rather than the appointment, so the
+  // appointment is asked for again to pick up its new status and token.
+  const arrive = useMutation({
+    mutationFn: () => checkIn(record.id),
+    onSuccess: () => {
+      setProblem(null);
+      void queries.invalidateQueries({ queryKey: ["appointment", record.id] });
+      void queries.invalidateQueries({ queryKey: ["appointments"] });
+      void queries.invalidateQueries({ queryKey: ["queue"] });
+      void queries.invalidateQueries({ queryKey: ["patient-appointments", record.patient.id] });
+    },
+    onError: (error) => {
+      failed(error);
+      void queries.invalidateQueries({ queryKey: ["appointment", record.id] });
+    },
+  });
+
+  if (
+    record.queue_token !== null &&
+    (record.status === "waiting" || record.status === "in_consultation")
+  ) {
+    return (
+      <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-panel)] border border-[color-mix(in_srgb,var(--color-state-waiting)_45%,transparent)] bg-[color-mix(in_srgb,var(--color-state-waiting)_8%,transparent)] px-4 py-3">
+        <span className="font-mono text-[22px] leading-none font-semibold tabular">
+          <span className="sr-only">Token </span>
+          {record.queue_token}
+        </span>
+        <p className="min-w-0 flex-1 text-[14px]">
+          {record.status === "in_consultation"
+            ? `With ${record.doctor.display_name} now.`
+            : `Checked in and waiting for ${record.doctor.display_name}.`}
+        </p>
+        <Link
+          href={`/queue?doctor=${record.doctor.id}` as Route}
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-medium transition-colors hover:bg-[var(--surface-sunken)]"
+        >
+          <ListOrdered className="size-3.5" />
+          Open the queue
+        </Link>
+      </div>
+    );
+  }
+
   if (!open) {
     return mayBook ? (
       <div className="mt-6">
@@ -314,6 +363,21 @@ function Actions({
     <div className="mt-6">
       {mode === null && (
         <div className="flex flex-wrap gap-2">
+          {mayCheckIn && record.is_today && (
+            <button
+              type="button"
+              onClick={() => arrive.mutate()}
+              disabled={arrive.isPending}
+              className="inline-flex items-center gap-2 rounded-[var(--radius-field)] bg-[var(--accent)] px-3.5 py-2 text-[14px] font-semibold text-[var(--color-ink-900)] transition hover:brightness-[1.06] disabled:opacity-60"
+            >
+              {arrive.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <DoorOpen className="size-4" />
+              )}
+              {arrive.isPending ? "Checking in" : "Check in"}
+            </button>
+          )}
           {mayUpdate && record.status === "scheduled" && !record.is_over && (
             <button
               type="button"
@@ -896,6 +960,11 @@ const EVENT_WORDS: Record<AppointmentEvent["event"], string> = {
   cancelled: "Cancelled",
   no_show: "Marked as a no-show",
   edited: "Details changed",
+  checked_in: "Checked in",
+  check_in_undone: "Check-in taken back",
+  started: "Went in to the doctor",
+  seen: "Seen",
+  left: "Left without being seen",
 };
 
 function History({ events }: { events: AppointmentEvent[] }) {

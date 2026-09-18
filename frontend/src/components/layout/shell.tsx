@@ -42,7 +42,7 @@ const DESTINATIONS: Destination[] = [
     icon: CalendarDays,
     permission: "appointment:read",
   },
-  { label: "Queue", icon: ListOrdered, permission: "queue:checkin" },
+  { href: "/queue", label: "Queue", icon: ListOrdered, permission: "appointment:read" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];

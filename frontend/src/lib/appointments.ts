@@ -55,12 +55,27 @@ export type Appointment = {
   /** Against the clinic's clock, not this browser's. */
   has_started: boolean;
   is_over: boolean;
+  /** The clinic's today, the only day anybody can be checked in for. */
+  is_today: boolean;
   conflict: string | null;
+  /** The number they were given at check-in, once they have one. */
+  queue_token: number | null;
 };
 
 export type AppointmentEvent = {
   id: string;
-  event: "booked" | "confirmed" | "rescheduled" | "cancelled" | "no_show" | "edited";
+  event:
+    | "booked"
+    | "confirmed"
+    | "rescheduled"
+    | "cancelled"
+    | "no_show"
+    | "edited"
+    | "checked_in"
+    | "check_in_undone"
+    | "started"
+    | "seen"
+    | "left";
   from_status: Status | null;
   to_status: Status;
   detail: string | null;
