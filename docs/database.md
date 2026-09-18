@@ -218,11 +218,22 @@ Estimated wait is worked out from the doctor's recent consultation times and the
 
 ### consultations
 
-One per completed visit, tied to one appointment.
+The doctor's notes for one visit: one per place in the queue, and tied to the appointment when the patient had one.
 
-`appointment_id`, `patient_id`, `doctor_id`, `chief_complaint`, `symptoms`, `examination`, `treatment_plan`, `notes`, `status` (`draft` / `completed`), `started_at`, `completed_at`.
+`queue_entry_id`, `appointment_id`, `patient_id`, `doctor_id`, `chief_complaint`, `history`, `examination`, `advice`, `follow_up_date`, `status` (`draft` / `completed`), `version`, `started_at`, `completed_at`, `written_by_id`.
 
-Drafts autosave so a doctor does not lose ten minutes of typing to a closed tab.
+```
+UNIQUE (queue_entry_id) WHERE queue_entry_id IS NOT NULL
+CHECK  ((status = 'completed') = (completed_at IS NOT NULL))
+```
+
+Drafts save as the doctor types, so a closed tab does not cost ten minutes of typing. `version` counts saves, and a save has to name the one it was written against, so two tabs on the same draft cannot overwrite each other without either noticing. Finished notes are never edited.
+
+### consultation_addenda
+
+`consultation_id`, `body`, `written_by_id`, `created_at`.
+
+What comes to light after the notes were finished: a result, a phone call. Added underneath, dated and signed, and never changed or removed, because a note somebody may already have acted on has to keep saying what it said.
 
 ### vitals
 
@@ -230,9 +241,15 @@ Drafts autosave so a doctor does not lose ten minutes of typing to a closed tab.
 
 BMI is derived. Every field is nullable — a clinic taking only blood pressure and weight is normal, and forcing a full vitals panel produces fabricated numbers.
 
-### diagnoses, consultation_diagnoses
+### consultation_diagnoses
 
-`diagnoses` is a searchable platform catalogue with an optional ICD-10 code. `consultation_diagnoses` joins it to a consultation, allows several per visit, marks one primary, and permits free-text entries for anything not in the catalogue.
+`consultation_id`, `label`, `is_primary`, `position`.
+
+```
+UNIQUE (consultation_id) WHERE is_primary
+```
+
+Several per visit, in the doctor's words, with one marked as the main reason for it. A searchable catalogue with ICD-10 codes can sit behind this later; the label stays as the doctor wrote it either way.
 
 The doctor selects the diagnosis. The system never infers one.
 

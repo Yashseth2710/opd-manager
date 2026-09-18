@@ -193,6 +193,9 @@ jobs:
       UPSTASH_REDIS_REST_URL: http://localhost:8079
       UPSTASH_REDIS_REST_TOKEN: only-for-continuous-integration
       APP_URL: http://localhost:3000
+      # With no email provider the API logs the links it would have sent,
+      # and the doctor the browser tests sign in as joins through one.
+      E2E_API_LOG: ${{ github.workspace }}/backend/api.log
       CI: "true"
 
     steps:

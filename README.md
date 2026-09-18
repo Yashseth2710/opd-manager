@@ -71,11 +71,14 @@ cd backend && pytest
 
 The browser suite drives the running application, so it needs both halves up
 and an API with no email provider configured — it sets up its own clinics, and
-a confirmation step it cannot read would stop it at the first screen.
+a confirmation step it cannot read would stop it at the first screen. It also
+invites a doctor to one of them and follows the link the API writes to its
+log, so the API's output has to go to a file the suite is told about.
 
 ```
+cd backend && python -m uvicorn app.main:app --port 8000 > api.log 2>&1
 cd frontend && npx playwright install chromium   # once
-npm run e2e
+E2E_API_LOG=../backend/api.log npm run e2e
 ```
 
 ## Status

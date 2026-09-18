@@ -7,6 +7,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+# Where the API's output goes when the browser suite runs against it.
+backend/api.log
 
 # Next.js
 .next/

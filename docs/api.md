@@ -83,7 +83,8 @@ APPT_*        NOT_FOUND, SLOT_UNAVAILABLE, PATIENT_BUSY, OUTSIDE_WORKING_HOURS,
               DOCTOR_ON_LEAVE, PAST_DATE, INVALID_TRANSITION
 QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, HAS_APPOINTMENT, NOT_TODAY,
               INVALID_TRANSITION
-CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER
+CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER, NOT_IN_ROOM,
+              EDITED_ELSEWHERE, STILL_DRAFT
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED
@@ -194,6 +195,7 @@ consultations GET    /consultations
               GET    /consultations/{id}
               PATCH  /consultations/{id}
               POST   /consultations/{id}/complete
+              POST   /consultations/{id}/addenda
               GET    /consultation-templates
               POST   /consultation-templates
 
@@ -274,7 +276,11 @@ Date-only fields are `YYYY-MM-DD`. Times of day, for schedules, are `HH:MM` and 
 
 Tokens count from 1 per doctor per clinic day. The line is arrival order with urgent places first. `GET /queue` returns one lane per doctor: who is in the room, who has been called, who is waiting with a `position` and a rough `expected_wait_minutes`, who missed their call, who is booked and still to arrive, and who is done. The expected wait uses the doctor's appointment length until three consultations have finished that day, then the average of the last ten. A doctor has at most one patient called and one in the room, held by the database. Every step is written onto the appointment and its history, so the day's book and the queue agree. `DELETE /queue/{id}` takes back a check-in made by mistake, only before the patient has been called, and puts the appointment back as it stood.
 
-A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk.
+`POST /consultations` opens the notes for a place in the queue whose patient is with the doctor, or already seen. Asking again hands back the same notes with a 200 rather than a 201, so two tabs land on one draft; a patient still waiting or called is `409 CONSULT_NOT_IN_ROOM`. The complaint starts as the reason the desk wrote down. Only the doctor the place belongs to opens, writes and finishes notes, which leaves the clinic admin reading them and nobody else: a doctor asking for a colleague's notes gets `403 CONSULT_NOT_OWNER` with whose they are, and the desk has no route to them at all.
+
+`PATCH /consultations/{id}` changes only the sections it carries and must name the `version` it was written against. A save from an older copy is `409 CONSULT_EDITED_ELSEWHERE` and changes nothing, so a second tab cannot quietly undo the first. Diagnoses are sent as the whole list; one is the main one, the first if none is marked. A follow-up falls after the visit and within a year of it. `POST /consultations/{id}/complete` locks the notes, needs something written in them, and finishes the patient in the queue and on the book if they are still shown in the room. Finished notes are `409 CONSULT_ALREADY_COMPLETED` to any change; `POST /consultations/{id}/addenda` adds a dated, signed paragraph underneath instead, and a draft is `409 CONSULT_STILL_DRAFT` to that.
+
+A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 
 Money is a **string**:
 
