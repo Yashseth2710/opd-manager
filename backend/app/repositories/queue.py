@@ -11,9 +11,9 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, select
 
-from app.models import Appointment, Consultation, Doctor, Patient, QueueEntry
+from app.models import Appointment, Consultation, Doctor, Patient, Prescription, QueueEntry
 from app.models.queue import LIVE
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
@@ -27,6 +27,7 @@ class Placed:
     appointment: Appointment | None
     allergy_count: int
     consultation_id: uuid.UUID | None = None
+    prescription_id: uuid.UUID | None = None
 
 
 class QueueRepository(TenantScopedRepository[QueueEntry]):
@@ -34,11 +35,27 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
 
     def _joined(self) -> Select[Any]:
         return (
-            select(QueueEntry, Patient, Doctor, Appointment, allergy_count(), Consultation.id)
+            select(
+                QueueEntry,
+                Patient,
+                Doctor,
+                Appointment,
+                allergy_count(),
+                Consultation.id,
+                Prescription.id,
+            )
             .join(Patient, Patient.id == QueueEntry.patient_id)
             .join(Doctor, Doctor.id == QueueEntry.doctor_id)
             .outerjoin(Appointment, Appointment.id == QueueEntry.appointment_id)
             .outerjoin(Consultation, Consultation.queue_entry_id == QueueEntry.id)
+            # The prescription standing for the visit, which the desk prints.
+            .outerjoin(
+                Prescription,
+                and_(
+                    Prescription.consultation_id == Consultation.id,
+                    Prescription.status == "issued",
+                ),
+            )
             .where(QueueEntry.organization_id == self.organization_id)
         )
 
@@ -52,6 +69,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 appointment=row[3],
                 allergy_count=row[4],
                 consultation_id=row[5],
+                prescription_id=row[6],
             )
             for row in result.all()
         ]

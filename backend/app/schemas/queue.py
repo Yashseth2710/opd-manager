@@ -68,6 +68,8 @@ class QueueEntryOut(BaseModel):
     expected_wait_minutes: int | None
     # The notes written for this place, once the doctor has opened them.
     consultation_id: uuid.UUID | None = None
+    # The prescription issued at this visit, for the desk to print.
+    prescription_id: uuid.UUID | None = None
 
 
 class Arrival(BaseModel):

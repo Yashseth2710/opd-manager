@@ -1,0 +1,2659 @@
+{
+ "source": "National List of Essential Medicines 2022, Ministry of Health and Family Welfare, Government of India",
+ "url": "https://cdsco.gov.in/opencms/resources/UploadCDSCOWeb/2018/UploadConsumer/nlem2022.pdf",
+ "medicines": [
+  {
+   "name": "5-aminosalicylic acid (Mesalazine/ Mesalaine)",
+   "presentations": [
+    "Retention enema",
+    "Suppository 500 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "5-Fluorouracil",
+   "presentations": [
+    "Injection 250 mg/5 mL"
+   ]
+  },
+  {
+   "name": "6-Mercaptopurine",
+   "presentations": [
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Abacavir",
+   "presentations": [
+    "Tablet 60 mg",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Abacavir (A) + Lamivudine (B)",
+   "presentations": [
+    "Tablet 60 mg (A) + 30 mg (B)",
+    "Tablet 600 mg (A) + 300 mg (B)"
+   ]
+  },
+  {
+   "name": "Acetazolamide",
+   "presentations": [
+    "Tablet 250 mg"
+   ]
+  },
+  {
+   "name": "Acetylsalicylic acid",
+   "presentations": [
+    "Effervescent/dispersible/enteric coated tablet 300 mg to 500 mg",
+    "Enteric coated tablet 75 mg",
+    "Enteric coated tablet 100 mg",
+    "Tablet 150 mg (conventional, effervescent, dispersible or enteric coated)",
+    "Tablet 300 mg to 500 mg",
+    "Tablet 325 mg (conventional, effervescent, dispersible or enteric coated)"
+   ]
+  },
+  {
+   "name": "Actinomycin D",
+   "presentations": [
+    "Powder for injection 0.5 mg"
+   ]
+  },
+  {
+   "name": "Activated Charcoal",
+   "presentations": [
+    "Powder (as licensed)"
+   ]
+  },
+  {
+   "name": "Acyclovir",
+   "presentations": [
+    "Eye ointment 3%",
+    "Injection 250 mg",
+    "Oral liquid 400 mg/5 mL",
+    "Powder for injection 250 mg",
+    "Powder for injection 500 mg",
+    "Tablet 200 mg",
+    "Tablet 400 mg",
+    "Tablet 800 mg"
+   ]
+  },
+  {
+   "name": "Adenosine",
+   "presentations": [
+    "Injection 3 mg/mL"
+   ]
+  },
+  {
+   "name": "Adrenaline",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Albendazole",
+   "presentations": [
+    "Chewable tablet 400 mg",
+    "Oral liquid 200 mg/5 mL",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "All-trans retinoic acid",
+   "presentations": [
+    "Capsule 10 mg"
+   ]
+  },
+  {
+   "name": "Allopurinol",
+   "presentations": [
+    "Tablet 100 mg",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Alprostadil",
+   "presentations": [
+    "Injection 0.5 mg/mL"
+   ]
+  },
+  {
+   "name": "Amikacin",
+   "presentations": [
+    "Injection 100 mg/mL",
+    "Injection 250 mg/mL",
+    "Injection 500 mg/mL"
+   ]
+  },
+  {
+   "name": "Amiodarone",
+   "presentations": [
+    "Injection 50 mg/mL",
+    "Tablet 100 mg",
+    "Tablet 200 mg"
+   ]
+  },
+  {
+   "name": "Amitriptyline",
+   "presentations": [
+    "Tablet 10 mg",
+    "Tablet 25 mg",
+    "Tablet 50 mg",
+    "Tablet 75 mg"
+   ]
+  },
+  {
+   "name": "Amlodipine",
+   "presentations": [
+    "Tablet 2.5 mg",
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Amoxicillin",
+   "presentations": [
+    "Capsule 250 mg",
+    "Capsule 500 mg",
+    "Oral liquid 125 mg/5 mL",
+    "Oral liquid 250 mg/5 mL",
+    "Powder for injection 250 mg",
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Amoxicillin (A) + Clavulanic acid (B)",
+   "presentations": [
+    "Dry syrup 125 mg (A) + 31.25 (B)/5 mL",
+    "Oral liquid 200 mg (A) + 28.5 mg (B)/5 mL",
+    "Powder for injection 1 g (A) + 200 mg (B)",
+    "Powder for injection 500 mg (A) + 100 mg (B)",
+    "Tablet 500 mg (A) + 125 mg (B)"
+   ]
+  },
+  {
+   "name": "Amphotericin B",
+   "presentations": [
+    "Injection 50 mg/vial (conventional)",
+    "Injection 50 mg/vial (lipid)",
+    "Injection 50 mg/vial (liposomal)"
+   ]
+  },
+  {
+   "name": "Ampicillin",
+   "presentations": [
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Anti-D immunoglobulin",
+   "presentations": []
+  },
+  {
+   "name": "Anti-rabies immunoglobulin",
+   "presentations": []
+  },
+  {
+   "name": "Anti-tetanus immunoglobulin",
+   "presentations": []
+  },
+  {
+   "name": "Arsenic trioxide",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Artemether (A) + Lumefantrine (B)",
+   "presentations": [
+    "Tablet 20 mg (A) + 120 mg (B)",
+    "Tablet 40 mg (A) + 240 mg (B)",
+    "Tablet 80 mg (A) + 480 mg (B)"
+   ]
+  },
+  {
+   "name": "Artesunate",
+   "presentations": [
+    "Powder for injection 60 mg",
+    "Powder for injection 120 mg"
+   ]
+  },
+  {
+   "name": "Artesunate (A) + Sulphadoxine - Pyrimethamine (B)",
+   "presentations": [
+    "Combi pack: 1 tablet 25 mg (A) + 1 tablet 250 mg + 12.5 mg (B)",
+    "Combi pack: 1 tablet 50 mg (A) + 1 tablet 500 mg + 25 mg (B)",
+    "Combi pack: 1 tablet 100 mg (A) + 1 tablet 750 mg + 37.5 mg (B)",
+    "Combi pack: 1 tablet 150 mg (A) + 2 tablets 500 mg + 25 mg (B)",
+    "Combi pack: 1 tablet 200 mg (A) + 2 tablets 750 mg + 37.5 mg (B)"
+   ]
+  },
+  {
+   "name": "Ascorbic acid (Vitamin C)",
+   "presentations": [
+    "Tablet 100 mg",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Atazanavir (A) + Ritonavir (B)",
+   "presentations": [
+    "Tablet 300 mg (A) + 100 mg (B)"
+   ]
+  },
+  {
+   "name": "Atorvastatin",
+   "presentations": [
+    "Tablet 10 mg",
+    "Tablet 20 mg",
+    "Tablet 40 mg",
+    "Tablet 80 mg"
+   ]
+  },
+  {
+   "name": "Atracurium",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Atropine",
+   "presentations": [
+    "Eye drops 1%",
+    "Eye ointment 1%",
+    "Injection 0.6 mg/mL"
+   ]
+  },
+  {
+   "name": "Azathioprine",
+   "presentations": [
+    "Tablet 25 mg",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Azithromycin",
+   "presentations": [
+    "Oral liquid 200 mg/5 mL",
+    "Powder for injection 500 mg",
+    "Tablet 250 mg",
+    "Tablet 500 mg",
+    "Tablet 1000 mg"
+   ]
+  },
+  {
+   "name": "Baclofen",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Barium sulphate",
+   "presentations": [
+    "Oral liquid 95% w/v"
+   ]
+  },
+  {
+   "name": "BCG vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Bedaquiline",
+   "presentations": [
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Bendamustine hydrochloride",
+   "presentations": [
+    "Injection 25 mg/vial",
+    "Injection 100 mg/vial"
+   ]
+  },
+  {
+   "name": "Benzathine benzylpenicillin",
+   "presentations": [
+    "Powder for injection 6 lac units",
+    "Powder for injection 12 lac units",
+    "Powder for injection 24 lac units"
+   ]
+  },
+  {
+   "name": "Benzoyl peroxide",
+   "presentations": [
+    "Gel 2.5% - 5%"
+   ]
+  },
+  {
+   "name": "Benzylpenicillin",
+   "presentations": [
+    "Powder for injection 5 lac units",
+    "Powder for injection 10 lac units"
+   ]
+  },
+  {
+   "name": "Betamethasone",
+   "presentations": [
+    "Injection 4 mg/mL"
+   ]
+  },
+  {
+   "name": "Betamethasone valerate",
+   "presentations": [
+    "Cream 0.05%",
+    "Cream 0.1%"
+   ]
+  },
+  {
+   "name": "Bicalutamide",
+   "presentations": [
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Bisacodyl",
+   "presentations": [
+    "Suppository 5 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Bleomycin",
+   "presentations": [
+    "Powder for injection 15 units"
+   ]
+  },
+  {
+   "name": "Bortezomib",
+   "presentations": [
+    "Powder for injection 2 mg"
+   ]
+  },
+  {
+   "name": "Budesonide",
+   "presentations": [
+    "Inhalation (MDI/DPI) 100 mcg/dose",
+    "Inhalation (MDI/DPI) 200 mcg/dose",
+    "Nasal spray 50 mcg/dose",
+    "Nasal spray 100 mcg/dose",
+    "Respirator solution for nebuliser 0.5 mg/mL",
+    "Respirator solution for nebuliser 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Budesonide (A) + Formoterol (B)",
+   "presentations": [
+    "Inhalation (MDI/DPI) 100 mcg (A) + 6 mcg (B)",
+    "Inhalation (MDI/DPI) 200 mcg (A) + 6 mcg (B)",
+    "Inhalation (MDI/DPI) 400 mcg (A) + 6 mcg (B)"
+   ]
+  },
+  {
+   "name": "Bupivacaine",
+   "presentations": [
+    "Injection 0.25%",
+    "Injection 0.5%",
+    "Injection 0.5% with 7.5% glucose"
+   ]
+  },
+  {
+   "name": "Buprenorphine",
+   "presentations": [
+    "Tablet (Sub-lingual) 0.4 mg"
+   ]
+  },
+  {
+   "name": "Buprenorphine (A) + Naloxone (B)",
+   "presentations": [
+    "Tablet (Sub-lingual) 0.4 mg (A) + 0.1 mg (B)",
+    "Tablet (Sub-lingual) 2 mg (A) + 0.5 mg (B)"
+   ]
+  },
+  {
+   "name": "Caffeine",
+   "presentations": [
+    "Injection 20 mg/mL",
+    "Oral liquid 20 mg/mL"
+   ]
+  },
+  {
+   "name": "Calamine",
+   "presentations": [
+    "Lotion (As per IP)"
+   ]
+  },
+  {
+   "name": "Calcium carbonate",
+   "presentations": [
+    "Tablet 625 mg (equivalent to elemental calcium 250 mg)",
+    "Tablet 1250 mg (equivalent to elemental calcium 500 mg)"
+   ]
+  },
+  {
+   "name": "Calcium folinate",
+   "presentations": [
+    "Injection 3 mg/mL",
+    "Tablet 15 mg"
+   ]
+  },
+  {
+   "name": "Calcium gluconate",
+   "presentations": [
+    "Injection 100 mg/mL"
+   ]
+  },
+  {
+   "name": "Capecitabine",
+   "presentations": [
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Carbamazepine",
+   "presentations": [
+    "Oral liquid 100 mg/5 mL",
+    "Tablet 100 mg",
+    "Tablet 200 mg",
+    "Tablet 400 mg Modified Release",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Carbimazole",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Carboplatin",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Carboxymethyl cellulose",
+   "presentations": [
+    "Eye drops 0.5%",
+    "Eye drops 1%"
+   ]
+  },
+  {
+   "name": "Cefadroxil",
+   "presentations": [
+    "Oral liquid 125 mg/5 mL",
+    "Tablet 100 mg",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Cefazolin",
+   "presentations": [
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Cefixime",
+   "presentations": [
+    "Oral liquid 50 mg/5 mL",
+    "Oral liquid 100 mg/5 mL",
+    "Tablet 200 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Cefotaxime",
+   "presentations": [
+    "Injection 1000 mg",
+    "Powder for injection 250 mg",
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Ceftazidime",
+   "presentations": [
+    "Powder for injection 250 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Ceftriaxone",
+   "presentations": [
+    "Powder for injection 250 mg",
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg",
+    "Powder for injection 2000 mg"
+   ]
+  },
+  {
+   "name": "Cefuroxime",
+   "presentations": [
+    "Injection 1500 mg",
+    "Oral liquid 125 mg/5 mL",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Cetirizine",
+   "presentations": [
+    "Oral liquid 5 mg/5 mL",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Chlorambucil",
+   "presentations": [
+    "Tablet 2 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Chlorhexidine",
+   "presentations": [
+    "Solution 5% (Concentrate)"
+   ]
+  },
+  {
+   "name": "Chloroquine",
+   "presentations": [
+    "Oral liquid 50 mg/5 mL",
+    "Tablet 150 mg"
+   ]
+  },
+  {
+   "name": "Cholecalciferol",
+   "presentations": [
+    "Oral liquid 400 IU/mL",
+    "Solid oral dosage form 1000 IU",
+    "Solid oral dosage form 60000 IU"
+   ]
+  },
+  {
+   "name": "Ciprofloxacin",
+   "presentations": [
+    "Ear drops 0.3%",
+    "Eye drops 0.3%",
+    "Eye ointment 0.3%",
+    "Injection 200 mg/100 mL",
+    "Oral liquid 250 mg/5 mL",
+    "Tablet 250 mg",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Cisplatin",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Clarithromycin",
+   "presentations": [
+    "Oral liquid 125 mg/5 mL",
+    "Tablet 250 mg",
+    "Tablet 500 mg",
+    "Tablet 750 mg"
+   ]
+  },
+  {
+   "name": "Clindamycin",
+   "presentations": [
+    "Capsule 150 mg",
+    "Capsule 300 mg",
+    "Injection 150 mg/mL",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Clobazam",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Clofazimine",
+   "presentations": [
+    "Capsule 50 mg",
+    "Capsule 100 mg"
+   ]
+  },
+  {
+   "name": "Clomiphene citrate",
+   "presentations": [
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Clomipramine",
+   "presentations": [
+    "Capsule 10 mg",
+    "Capsule 25 mg",
+    "Capsule 75 mg"
+   ]
+  },
+  {
+   "name": "Clonazepam",
+   "presentations": [
+    "Tablet 0.25 mg",
+    "Tablet 0.5 mg",
+    "Tablet 1 mg"
+   ]
+  },
+  {
+   "name": "Clopidogrel",
+   "presentations": [
+    "Tablet 75 mg",
+    "Tablet 150 mg"
+   ]
+  },
+  {
+   "name": "Clotrimazole",
+   "presentations": [
+    "Cream 1%",
+    "Ear drops 1%",
+    "Lotion 1%",
+    "Ointment 1%",
+    "Pessary 100 mg"
+   ]
+  },
+  {
+   "name": "Cloxacillin",
+   "presentations": [
+    "Capsule 250 mg",
+    "Capsule 500 mg",
+    "Oral liquid 125 mg/5 mL",
+    "Powder for injection 250 mg"
+   ]
+  },
+  {
+   "name": "Clozapine",
+   "presentations": [
+    "Tablet 25 mg",
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Co-trimoxazole [Sulphamethoxazole (A) + Trimethoprim (B)]",
+   "presentations": [
+    "Oral liquid 200 mg (A) + 40 mg (B)/5 mL",
+    "Tablet 400 mg (A) + 80 mg (B)",
+    "Tablet 800 mg (A) + 160 mg (B)"
+   ]
+  },
+  {
+   "name": "Coagulation factor IX",
+   "presentations": [
+    "Powder for injection 600 IU"
+   ]
+  },
+  {
+   "name": "Coagulation factor VIII",
+   "presentations": [
+    "Powder for injection 250 IU",
+    "Powder for injection 500 IU"
+   ]
+  },
+  {
+   "name": "Coal tar (A) + Salicylic Acid (B)",
+   "presentations": [
+    "Solution 1% (A) + 3% (B)"
+   ]
+  },
+  {
+   "name": "Colchicine",
+   "presentations": [
+    "Tablet 0.5 mg"
+   ]
+  },
+  {
+   "name": "Cyclophosphamide",
+   "presentations": [
+    "Powder for injection 500 mg",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Cycloserine",
+   "presentations": [
+    "Capsule 125 mg",
+    "Capsule 250 mg"
+   ]
+  },
+  {
+   "name": "Cyclosporine",
+   "presentations": [
+    "Capsule 25 mg",
+    "Capsule 50 mg",
+    "Capsule 100 mg",
+    "Injection 50 mg/mL",
+    "Oral liquid 100 mg/mL"
+   ]
+  },
+  {
+   "name": "Cytosine arabinoside",
+   "presentations": [
+    "Injection 100 mg/vial",
+    "Injection 500 mg/vial",
+    "Injection 1000 mg/vial"
+   ]
+  },
+  {
+   "name": "D- Penicillamine",
+   "presentations": [
+    "Capsule 150 mg",
+    "Capsule 250 mg"
+   ]
+  },
+  {
+   "name": "Dabigatran",
+   "presentations": [
+    "Tablet 110 mg",
+    "Tablet 150 mg"
+   ]
+  },
+  {
+   "name": "Dacarbazine",
+   "presentations": [
+    "Powder for injection 200 mg",
+    "Powder for injection 500 mg"
+   ]
+  },
+  {
+   "name": "Daclatasvir",
+   "presentations": [
+    "Tablet 30 mg",
+    "Tablet 60 mg"
+   ]
+  },
+  {
+   "name": "Dapsone",
+   "presentations": [
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Darunavir",
+   "presentations": [
+    "Tablet 600 mg"
+   ]
+  },
+  {
+   "name": "Darunavir (A) + Ritonavir (B)",
+   "presentations": [
+    "Tablet 600 mg (A) + 100 mg (B)"
+   ]
+  },
+  {
+   "name": "Daunorubicin",
+   "presentations": [
+    "Injection 5 mg/mL"
+   ]
+  },
+  {
+   "name": "Delamanid",
+   "presentations": [
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Desferrioxamine",
+   "presentations": [
+    "Powder for injection 500 mg"
+   ]
+  },
+  {
+   "name": "Dexamethasone",
+   "presentations": [
+    "Injection 4 mg/mL",
+    "Oral liquid 0.5 mg/5 mL",
+    "Tablet 0.5 mg",
+    "Tablet 2 mg",
+    "Tablet 4 mg"
+   ]
+  },
+  {
+   "name": "Dextran-40",
+   "presentations": [
+    "Injection 10%"
+   ]
+  },
+  {
+   "name": "Diazepam",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Oral liquid 2 mg/5 mL",
+    "Suppository 5 mg",
+    "Tablet 2 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Diclofenac",
+   "presentations": [
+    "Injection 25 mg/mL",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Dicyclomine",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Oral solution 10 mg/5 mL",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Diethylcarbamazine (DEC)",
+   "presentations": [
+    "Oral liquid 120 mg/5 mL",
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Digoxin",
+   "presentations": [
+    "Injection 0.25 mg/mL",
+    "Oral liquid 0.05 mg/mL",
+    "Tablet 0.25 mg"
+   ]
+  },
+  {
+   "name": "Diltiazem",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Modified release tablet 180 mg",
+    "Tablet 30 mg",
+    "Tablet 60 mg"
+   ]
+  },
+  {
+   "name": "Dinoprostone",
+   "presentations": [
+    "Gel 0.5 mg",
+    "Tablet 0.5 mg"
+   ]
+  },
+  {
+   "name": "Diphtheria antitoxin",
+   "presentations": []
+  },
+  {
+   "name": "Dobutamine",
+   "presentations": [
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "Docetaxel",
+   "presentations": [
+    "Powder for injection 20 mg",
+    "Powder for injection 80 mg"
+   ]
+  },
+  {
+   "name": "Dolutegravir",
+   "presentations": [
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Domperidone",
+   "presentations": [
+    "Oral liquid 1 mg/mL",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Donepezil",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Dopamine",
+   "presentations": [
+    "Injection 40 mg/mL"
+   ]
+  },
+  {
+   "name": "Doxorubicin",
+   "presentations": [
+    "Injection 2 mg/mL"
+   ]
+  },
+  {
+   "name": "Doxycycline",
+   "presentations": [
+    "Capsule 100 mg",
+    "Dry syrup 50 mg/5 mL",
+    "Oral liquid 50 mg/5 mL (for prophylaxis of P. vivax)",
+    "Powder for injection 100 mg"
+   ]
+  },
+  {
+   "name": "DPT vaccine",
+   "presentations": []
+  },
+  {
+   "name": "DPT+ Hib+ Hep B vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Efavirenz",
+   "presentations": [
+    "Tablet 200 mg",
+    "Tablet 600 mg"
+   ]
+  },
+  {
+   "name": "Enalapril",
+   "presentations": [
+    "Tablet 2.5 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Enoxaparin",
+   "presentations": [
+    "Injection 40 mg/0.4 mL",
+    "Injection 60 mg/0.6 mL"
+   ]
+  },
+  {
+   "name": "Entecavir",
+   "presentations": [
+    "Oral liquid 0.05 mg/mL",
+    "Tablet 0.5 mg",
+    "Tablet 1 mg"
+   ]
+  },
+  {
+   "name": "Erythropoietin",
+   "presentations": [
+    "Injection 2000 IU/mL",
+    "Injection 10000 IU/mL"
+   ]
+  },
+  {
+   "name": "Escitalopram",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Esmolol",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Ethambutol",
+   "presentations": [
+    "Tablet 200 mg",
+    "Tablet 400 mg",
+    "Tablet 600 mg",
+    "Tablet 800 mg"
+   ]
+  },
+  {
+   "name": "Ethinylestradiol (A)+ Levonorgestrel (B)",
+   "presentations": [
+    "Tablet 0.03 mg (A) + 0.15 mg (B)"
+   ]
+  },
+  {
+   "name": "Ethionamide",
+   "presentations": [
+    "Tablet 125 mg",
+    "Tablet 250 mg"
+   ]
+  },
+  {
+   "name": "Ethyl alcohol (Denatured)",
+   "presentations": [
+    "Solution 70%"
+   ]
+  },
+  {
+   "name": "Etoposide",
+   "presentations": [
+    "Capsule 50 mg",
+    "Injection 20 mg/mL"
+   ]
+  },
+  {
+   "name": "Fentanyl",
+   "presentations": [
+    "Injection 50 mcg/mL"
+   ]
+  },
+  {
+   "name": "Ferrous Salt (A)+ Folic acid (B)",
+   "presentations": [
+    "Oral liquid 20 mg elemental iron (A) + 100 mcg/mL (B)",
+    "Tablet 45 mg elemental iron (A) + 400 mcg (B)",
+    "Tablet 100 mg elemental iron (A) + 500 mcg (B)"
+   ]
+  },
+  {
+   "name": "Ferrous salts",
+   "presentations": [
+    "Tablet equivalent to 60 mg of elemental iron"
+   ]
+  },
+  {
+   "name": "Filgrastim",
+   "presentations": [
+    "Injection 300 mcg"
+   ]
+  },
+  {
+   "name": "Fluconazole",
+   "presentations": [
+    "Injection 200 mg/100 mL",
+    "Oral liquid 50 mg/5 mL",
+    "Tablet 50 mg",
+    "Tablet 100 mg",
+    "Tablet 150 mg",
+    "Tablet 200 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Fludrocortisone",
+   "presentations": [
+    "Tablet 0.1 mg"
+   ]
+  },
+  {
+   "name": "Flunarizine",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Fluorescein",
+   "presentations": [
+    "Ophthalmic strips"
+   ]
+  },
+  {
+   "name": "Fluoxetine",
+   "presentations": [
+    "Capsule 10 mg",
+    "Capsule 20 mg",
+    "Capsule 40 mg",
+    "Capsule 60 mg"
+   ]
+  },
+  {
+   "name": "Fluphenazine",
+   "presentations": [
+    "Injection 25 mg/mL"
+   ]
+  },
+  {
+   "name": "Folic Acid",
+   "presentations": [
+    "Tablet 1 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Framycetin",
+   "presentations": [
+    "Cream 1%"
+   ]
+  },
+  {
+   "name": "Furosemide",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Oral liquid 10 mg/mL",
+    "Tablet 40 mg"
+   ]
+  },
+  {
+   "name": "Fusidic acid",
+   "presentations": [
+    "Cream 2%"
+   ]
+  },
+  {
+   "name": "Gadobenate dimeglumine",
+   "presentations": [
+    "Injection 529 mg/mL"
+   ]
+  },
+  {
+   "name": "Gefitinib",
+   "presentations": [
+    "Tablet 250 mg"
+   ]
+  },
+  {
+   "name": "Gemcitabine",
+   "presentations": [
+    "Powder for injection 200 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Gentamicin",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Injection 40 mg/mL"
+   ]
+  },
+  {
+   "name": "Glimepiride",
+   "presentations": [
+    "Tablet 1 mg",
+    "Tablet 2 mg"
+   ]
+  },
+  {
+   "name": "Glucose",
+   "presentations": [
+    "Injection 5%",
+    "Injection 10%",
+    "Injection 25%",
+    "Injection 50%"
+   ]
+  },
+  {
+   "name": "Glucose(A) + Sodium chloride (B)",
+   "presentations": [
+    "Injection 5% (A) + 0.9% (B)"
+   ]
+  },
+  {
+   "name": "Glycerin/glycerol (as mentioned in IP)",
+   "presentations": [
+    "Topical"
+   ]
+  },
+  {
+   "name": "Glyceryl trinitrate",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Sublingual tablet 0.5 mg"
+   ]
+  },
+  {
+   "name": "Glycopyrrolate",
+   "presentations": [
+    "Injection 0.2 mg/mL"
+   ]
+  },
+  {
+   "name": "Griseofulvin",
+   "presentations": [
+    "Tablet 125 mg",
+    "Tablet 250 mg",
+    "Tablet 375 mg"
+   ]
+  },
+  {
+   "name": "Haloperidol",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Oral liquid 2 mg/5 mL",
+    "Tablet 1.5 mg",
+    "Tablet 2 mg",
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Halothane",
+   "presentations": [
+    "Liquid for inhalation"
+   ]
+  },
+  {
+   "name": "Heparin",
+   "presentations": [
+    "Injection 1000 IU/mL",
+    "Injection 5000 IU/mL"
+   ]
+  },
+  {
+   "name": "Hepatitis B immunoglobulin",
+   "presentations": []
+  },
+  {
+   "name": "Hepatitis B vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Homatropine",
+   "presentations": [
+    "Eye drops 2%"
+   ]
+  },
+  {
+   "name": "Hormone releasing IUD",
+   "presentations": [
+    "Intrauterine device containing 52 mg levonorgestrel"
+   ]
+  },
+  {
+   "name": "Human chorionic gonadotropin",
+   "presentations": [
+    "Injection 2000 IU",
+    "Injection 5000 IU",
+    "Injection 10000 IU"
+   ]
+  },
+  {
+   "name": "Human normal immunoglobulin",
+   "presentations": []
+  },
+  {
+   "name": "Hydrochlorothiazide",
+   "presentations": [
+    "Tablet 12.5 mg",
+    "Tablet 25 mg",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Hydrocortisone",
+   "presentations": [
+    "Powder for injection 100 mg",
+    "Powder for injection 200 mg",
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Hydrogen peroxide",
+   "presentations": [
+    "Solution 6%"
+   ]
+  },
+  {
+   "name": "Hydroxocobalamin",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Hydroxychloroquine",
+   "presentations": [
+    "Tablet 200 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Hydroxypropyl methylcellulose",
+   "presentations": [
+    "Injection 2%"
+   ]
+  },
+  {
+   "name": "Hydroxyurea",
+   "presentations": [
+    "Capsule 500 mg"
+   ]
+  },
+  {
+   "name": "Hyoscine butyl bromide",
+   "presentations": [
+    "Injection 20 mg/mL",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Ibuprofen",
+   "presentations": [
+    "Oral liquid 100 mg/5 mL",
+    "Tablet 200 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Ifosfamide",
+   "presentations": [
+    "Powder for injection 1000 mg",
+    "Powder for injection 2000 mg"
+   ]
+  },
+  {
+   "name": "Imatinib",
+   "presentations": [
+    "Tablet 100 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Insulin (Soluble)",
+   "presentations": [
+    "Injection 40 IU/mL"
+   ]
+  },
+  {
+   "name": "Insulin Glargine",
+   "presentations": [
+    "Injection 100 IU/mL"
+   ]
+  },
+  {
+   "name": "Insulin Intermediate Acting (NPH)",
+   "presentations": [
+    "Injection 40 IU/mL"
+   ]
+  },
+  {
+   "name": "Insulin premix 30:70 (regular:NPH)",
+   "presentations": [
+    "Injection 40 IU/mL"
+   ]
+  },
+  {
+   "name": "Iohexol",
+   "presentations": [
+    "Injection 140 to 350 mg iodine/mL"
+   ]
+  },
+  {
+   "name": "Ipratropium",
+   "presentations": [
+    "Inhalation (MDI/DPI) 20 mcg/dose",
+    "Respirator solution for nebuliser 250 mcg/mL"
+   ]
+  },
+  {
+   "name": "Irinotecan HCl trihydrate",
+   "presentations": [
+    "Solution for injection 20 mg/mL"
+   ]
+  },
+  {
+   "name": "Iron dextran",
+   "presentations": [
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "Iron sorbitol citrate complex",
+   "presentations": [
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "Iron sucrose",
+   "presentations": [
+    "Injection 20 mg/mL"
+   ]
+  },
+  {
+   "name": "Isoflurane",
+   "presentations": [
+    "Liquid for inhalation"
+   ]
+  },
+  {
+   "name": "Isoniazid",
+   "presentations": [
+    "Oral liquid 50 mg/5 mL",
+    "Tablet 100 mg",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Isosorbide dinitrate",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Ispaghula",
+   "presentations": [
+    "Granules/husk/powder"
+   ]
+  },
+  {
+   "name": "Itraconazole",
+   "presentations": [
+    "Capsule 100 mg",
+    "Capsule 200 mg",
+    "Oral liquid 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Ivermectin",
+   "presentations": [
+    "Tablet 6 mg",
+    "Tablet 12 mg"
+   ]
+  },
+  {
+   "name": "Japanese encephalitis vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Ketamine",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "L-Asparaginase",
+   "presentations": [
+    "Powder for injection 5000 KU",
+    "Powder for injection 10000 KU"
+   ]
+  },
+  {
+   "name": "Labetalol",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Lactulose",
+   "presentations": [
+    "Oral liquid 10 g/15 mL"
+   ]
+  },
+  {
+   "name": "Lamivudine",
+   "presentations": [
+    "Tablet 100 mg",
+    "Tablet 150 mg"
+   ]
+  },
+  {
+   "name": "Latanoprost",
+   "presentations": [
+    "Eye drops 0.005%"
+   ]
+  },
+  {
+   "name": "Lenalidomide",
+   "presentations": [
+    "Capsule 5 mg",
+    "Capsule 25 mg"
+   ]
+  },
+  {
+   "name": "Letrozole",
+   "presentations": [
+    "Tablet 2.5 mg"
+   ]
+  },
+  {
+   "name": "Leuprolide acetate",
+   "presentations": [
+    "Powder for injection 3.75 mg",
+    "Powder for injection 11.25 mg",
+    "Powder for injection 22.5 mg"
+   ]
+  },
+  {
+   "name": "Levetiracetam",
+   "presentations": [
+    "Injection 100 mg/mL",
+    "Modified release tablet 750 mg",
+    "Oral liquid 100 mg/mL",
+    "Tablet 250 mg",
+    "Tablet 500 mg",
+    "Tablet 750 mg"
+   ]
+  },
+  {
+   "name": "Levodopa (A) + Carbidopa (B)",
+   "presentations": [
+    "Tablet 100 mg (A) + 10 mg (B)",
+    "Tablet 100 mg (A) + 25 mg (B)",
+    "Tablet 200 mg (A) + 50 mg (B)",
+    "Tablet 250 mg (A) + 25 mg (B) Modified Release"
+   ]
+  },
+  {
+   "name": "Levofloxacin",
+   "presentations": [
+    "Tablet 250 mg",
+    "Tablet 500 mg",
+    "Tablet 750 mg"
+   ]
+  },
+  {
+   "name": "Levonorgestrel",
+   "presentations": [
+    "Tablet 0.75 mg",
+    "Tablet 1.5 mg"
+   ]
+  },
+  {
+   "name": "Levothyroxine",
+   "presentations": [
+    "Tablet 12.5 mcg",
+    "Tablet 25 mcg",
+    "Tablet 50 mcg",
+    "Tablet 62.5 mcg",
+    "Tablet 75 mcg",
+    "Tablet 88 mcg",
+    "Tablet 100 mcg",
+    "Tablet 112 mcg",
+    "Tablet 125 mcg",
+    "Tablet 150 mcg"
+   ]
+  },
+  {
+   "name": "Lignocaine",
+   "presentations": [
+    "Injection 1%",
+    "Injection 2%",
+    "Injection 5% with 7.5% glucose",
+    "Topical forms 2-5%"
+   ]
+  },
+  {
+   "name": "Lignocaine (A) + Adrenaline (B)",
+   "presentations": [
+    "Injection 1% (A) + 1:200000 (5 mcg/mL) (B)",
+    "Injection 2% (A) + 1:200000 (5 mcg/mL) (B)"
+   ]
+  },
+  {
+   "name": "Linezolid",
+   "presentations": [
+    "Tablet 300 mg",
+    "Tablet 600 mg"
+   ]
+  },
+  {
+   "name": "Lithium",
+   "presentations": [
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Loperamide",
+   "presentations": [
+    "Tablet 2 mg"
+   ]
+  },
+  {
+   "name": "Lopinavir (A) + Ritonavir (B)",
+   "presentations": [
+    "Capsule/sachet (pellets or granules) 40 mg (A) + 10 mg (B)",
+    "Oral liquid 80 mg (A) + 20 mg (B)/mL",
+    "Tablet 100 mg (A) + 25 mg (B)",
+    "Tablet 200 mg (A) + 50 mg (B)"
+   ]
+  },
+  {
+   "name": "Lorazepam",
+   "presentations": [
+    "Injection 2 mg/mL",
+    "Injection 4 mg/mL",
+    "Tablet 1 mg",
+    "Tablet 2 mg"
+   ]
+  },
+  {
+   "name": "Magnesium sulphate",
+   "presentations": [
+    "Injection 500 mg/mL"
+   ]
+  },
+  {
+   "name": "Mannitol",
+   "presentations": [
+    "Injection 10%",
+    "Injection 20%"
+   ]
+  },
+  {
+   "name": "Measles vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Mebendazole",
+   "presentations": [
+    "Oral liquid 100 mg/5 mL",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Medroxyprogesterone acetate",
+   "presentations": [
+    "Injection 150 mg/mL",
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Mefenamic acid",
+   "presentations": [
+    "Oral liquid 100 mg/5 mL",
+    "Tablet 250 mg"
+   ]
+  },
+  {
+   "name": "Mefloquine",
+   "presentations": [
+    "Tablet 250 mg (chemoprophylaxis for long-term travellers)"
+   ]
+  },
+  {
+   "name": "Meglumine diatrizoate",
+   "presentations": [
+    "Injection 60% w/v",
+    "Injection 76% w/v"
+   ]
+  },
+  {
+   "name": "Melphalan",
+   "presentations": [
+    "Tablet 2 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Meropenem",
+   "presentations": [
+    "Powder for injection 500 mg (as trihydrate)",
+    "Powder for injection 1000 mg (as trihydrate)"
+   ]
+  },
+  {
+   "name": "Mesna",
+   "presentations": [
+    "Injection 100 mg/mL"
+   ]
+  },
+  {
+   "name": "Metformin",
+   "presentations": [
+    "Modified release tablet 1000 mg",
+    "Tablet 500 mg",
+    "Tablet 1000 mg"
+   ]
+  },
+  {
+   "name": "Methotrexate",
+   "presentations": [
+    "Injection 50 mg/mL",
+    "Tablet 2.5 mg",
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Methylergometrine",
+   "presentations": [
+    "Injection 0.2 mg/mL",
+    "Tablet 0.125 mg"
+   ]
+  },
+  {
+   "name": "Methylprednisolone",
+   "presentations": [
+    "Injection 40 mg/mL"
+   ]
+  },
+  {
+   "name": "Methylrosanilinium chloride (Gentian Violet)",
+   "presentations": [
+    "Topical preparation 0.25% to 2%"
+   ]
+  },
+  {
+   "name": "Methylthioninium chloride (Methylene blue)",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Metoclopramide",
+   "presentations": [
+    "Injection 5 mg/mL",
+    "Oral liquid 5 mg/5 mL",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Metoprolol",
+   "presentations": [
+    "Injection 1 mg/mL",
+    "Modified release tablet 100 mg",
+    "Tablet 25 mg",
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Metronidazole",
+   "presentations": [
+    "Injection 500 mg/100 mL",
+    "Oral liquid 200 mg/5 mL",
+    "Tablet 200 mg",
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Midazolam",
+   "presentations": [
+    "Injection 1 mg/mL",
+    "Injection 5 mg/mL",
+    "Nasal spray 0.5 mg",
+    "Nasal spray 0.5 mg/actuation",
+    "Nasal spray 1.25 mg",
+    "Nasal spray 1.25 mg/actuation",
+    "Tablet 7.5 mg",
+    "Tablet 15 mg"
+   ]
+  },
+  {
+   "name": "Mifepristone",
+   "presentations": [
+    "Tablet 200 mg"
+   ]
+  },
+  {
+   "name": "Miltefosine",
+   "presentations": [
+    "Capsule 50 mg"
+   ]
+  },
+  {
+   "name": "Misoprostol",
+   "presentations": [
+    "Tablet 100 mcg",
+    "Tablet 200 mcg"
+   ]
+  },
+  {
+   "name": "Montelukast",
+   "presentations": [
+    "Tablet 4 mg",
+    "Tablet 5 mg (including chewable tablets)",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Morphine",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Injection 15 mg/mL",
+    "Modified release tablet 30 mg",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Moxifloxacin",
+   "presentations": [
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Mupirocin",
+   "presentations": [
+    "Ointment 2%"
+   ]
+  },
+  {
+   "name": "Mycophenolate mofetil",
+   "presentations": [
+    "Tablet 250 mg",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "N-acetylcysteine",
+   "presentations": [
+    "Injection 200 mg/mL",
+    "Sachet 200 mg"
+   ]
+  },
+  {
+   "name": "Naloxone",
+   "presentations": [
+    "Injection 0.4 mg/mL"
+   ]
+  },
+  {
+   "name": "Natamycin",
+   "presentations": [
+    "Eye drops 5%"
+   ]
+  },
+  {
+   "name": "Neostigmine",
+   "presentations": [
+    "Injection 0.5 mg/mL",
+    "Tablet 15 mg"
+   ]
+  },
+  {
+   "name": "Nevirapine",
+   "presentations": [
+    "Dispersible tablet 50 mg",
+    "Oral liquid 50 mg/5 mL",
+    "Tablet 200 mg"
+   ]
+  },
+  {
+   "name": "Nicotine (for nicotine replacement therapy)",
+   "presentations": [
+    "Oral dosage form 2 mg",
+    "Oral dosage form 4 mg"
+   ]
+  },
+  {
+   "name": "Nifedipine",
+   "presentations": [
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Nitrofurantoin",
+   "presentations": [
+    "Oral liquid 25 mg/5 mL",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Nitrous oxide",
+   "presentations": []
+  },
+  {
+   "name": "Noradrenaline",
+   "presentations": [
+    "Injection 2 mg/mL"
+   ]
+  },
+  {
+   "name": "Norethisterone",
+   "presentations": [
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Nystatin",
+   "presentations": [
+    "Oral liquid 1 Lac IU/mL",
+    "Pessary 1 Lac IU"
+   ]
+  },
+  {
+   "name": "Omeprazole",
+   "presentations": [
+    "Capsule 10 mg",
+    "Capsule 20 mg",
+    "Capsule 40 mg",
+    "Powder for oral liquid 20 mg"
+   ]
+  },
+  {
+   "name": "Ondansetron",
+   "presentations": [
+    "Injection 2 mg/mL",
+    "Oral liquid 2 mg/5 mL",
+    "Tablet 4 mg",
+    "Tablet 8 mg"
+   ]
+  },
+  {
+   "name": "Oral poliomyelitis vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Oral rehydration salts",
+   "presentations": []
+  },
+  {
+   "name": "Ormeloxifene (Centchroman)",
+   "presentations": [
+    "Tablet 30 mg"
+   ]
+  },
+  {
+   "name": "Oxaliplatin",
+   "presentations": [
+    "Injection 5 mg/mL in 10 mL vial",
+    "Injection 5 mg/mL in 20 mL vial"
+   ]
+  },
+  {
+   "name": "Oxygen",
+   "presentations": []
+  },
+  {
+   "name": "Oxytocin",
+   "presentations": [
+    "Injection 5 IU/mL",
+    "Injection 10 IU/mL"
+   ]
+  },
+  {
+   "name": "Paclitaxel",
+   "presentations": [
+    "Injection 30 mg/5 mL",
+    "Injection 100 mg/16.7 mL"
+   ]
+  },
+  {
+   "name": "Pantoprazole",
+   "presentations": [
+    "Injection 40 mg"
+   ]
+  },
+  {
+   "name": "Para- aminosalicylic acid",
+   "presentations": [
+    "Granules (As licensed)"
+   ]
+  },
+  {
+   "name": "Paracetamol",
+   "presentations": [
+    "Injection 150 mg/mL",
+    "Oral liquid 120 mg/5 mL",
+    "Oral liquid 125 mg/5 mL",
+    "Oral liquid 250 mg/5 mL",
+    "Suppository 80 mg",
+    "Suppository 170 mg",
+    "Tablet 500 mg",
+    "Tablet 650 mg"
+   ]
+  },
+  {
+   "name": "Paromomycin",
+   "presentations": [
+    "Injection 375 mg/mL"
+   ]
+  },
+  {
+   "name": "Permethrin",
+   "presentations": [
+    "Cream 5%",
+    "Lotion 1%"
+   ]
+  },
+  {
+   "name": "Pheniramine",
+   "presentations": [
+    "Injection 22.75 mg/mL"
+   ]
+  },
+  {
+   "name": "Phenobarbitone",
+   "presentations": [
+    "Injection 200 mg/mL",
+    "Oral liquid 20 mg/5 mL",
+    "Tablet 30 mg",
+    "Tablet 60 mg"
+   ]
+  },
+  {
+   "name": "Phenoxymethyl penicillin",
+   "presentations": [
+    "Tablet 250 mg"
+   ]
+  },
+  {
+   "name": "Phenylephrine",
+   "presentations": [
+    "Eye drops 5%",
+    "Eye drops 10%"
+   ]
+  },
+  {
+   "name": "Phenytoin",
+   "presentations": [
+    "Injection 25 mg/mL",
+    "Injection 50 mg/mL",
+    "Modified release tablet 300 mg",
+    "Oral liquid 30 mg/5 mL",
+    "Oral liquid 125 mg/5 mL",
+    "Tablet 50 mg",
+    "Tablet 100 mg",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Phytomenadione (Vitamin K1)",
+   "presentations": [
+    "Injection 10 mg/mL",
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Pilocarpine",
+   "presentations": [
+    "Eye drops 2%",
+    "Eye drops 4%"
+   ]
+  },
+  {
+   "name": "Piperacillin (A) + Tazobactam (B)",
+   "presentations": [
+    "Powder for injection 1000 mg (A) + 125 mg (B)",
+    "Powder for injection 2000 mg (A) + 250 mg (B)",
+    "Powder for injection 4000 mg (A) + 500 mg (B)"
+   ]
+  },
+  {
+   "name": "Podophyllin resin",
+   "presentations": [
+    "Solution 20%"
+   ]
+  },
+  {
+   "name": "Potassium chloride",
+   "presentations": [
+    "Injection 150 mg/mL",
+    "Oral liquid 500 mg/5 mL"
+   ]
+  },
+  {
+   "name": "Potassium permanganate",
+   "presentations": [
+    "Crystals for topical solution"
+   ]
+  },
+  {
+   "name": "Povidone iodine",
+   "presentations": [
+    "Eye drops 5%",
+    "Solution 4% to 10%"
+   ]
+  },
+  {
+   "name": "Pralidoxime chloride (2-PAM)",
+   "presentations": [
+    "Injection 25 mg/mL"
+   ]
+  },
+  {
+   "name": "Praziquantel",
+   "presentations": [
+    "Tablet 600 mg"
+   ]
+  },
+  {
+   "name": "Prednisolone",
+   "presentations": [
+    "Eye drops 1%",
+    "Injection 20 mg/2 mL",
+    "Oral liquid 5 mg/5 mL",
+    "Oral liquid 15 mg/5 mL",
+    "Tablet 5 mg",
+    "Tablet 10 mg",
+    "Tablet 20 mg",
+    "Tablet 40 mg"
+   ]
+  },
+  {
+   "name": "Primaquine",
+   "presentations": [
+    "Tablet 2.5 mg",
+    "Tablet 7.5 mg",
+    "Tablet 15 mg"
+   ]
+  },
+  {
+   "name": "Procaine Benzylpenicillin",
+   "presentations": [
+    "Powder for injection 1000 mg (=1 million IU)"
+   ]
+  },
+  {
+   "name": "Proparacaine",
+   "presentations": [
+    "Eye drops 0.5%"
+   ]
+  },
+  {
+   "name": "Propofol",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Propranolol",
+   "presentations": [
+    "Tablet 10 mg",
+    "Tablet 20 mg",
+    "Tablet 40 mg"
+   ]
+  },
+  {
+   "name": "Protamine Sulphate",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Pyrazinamide",
+   "presentations": [
+    "Oral liquid 250 mg/5 mL",
+    "Tablet 500 mg",
+    "Tablet 750 mg",
+    "Tablet 1000 mg",
+    "Tablet 1500 mg"
+   ]
+  },
+  {
+   "name": "Pyridoxine",
+   "presentations": [
+    "Tablet 10 mg",
+    "Tablet 50 mg",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Quinine",
+   "presentations": [
+    "Injection 300 mg/mL",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Rabies vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Raltegravir",
+   "presentations": [
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Ramipril",
+   "presentations": [
+    "Tablet 2.5 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Ribavirin",
+   "presentations": [
+    "Capsule 200 mg"
+   ]
+  },
+  {
+   "name": "Riboflavin",
+   "presentations": [
+    "Tablet 10 mg"
+   ]
+  },
+  {
+   "name": "Rifampicin",
+   "presentations": [
+    "Capsule 150 mg",
+    "Capsule 300 mg",
+    "Capsule 450 mg",
+    "Capsule 600 mg",
+    "Oral liquid 100 mg/5 mL"
+   ]
+  },
+  {
+   "name": "Ringer lactate",
+   "presentations": [
+    "Injection (as per IP)"
+   ]
+  },
+  {
+   "name": "Risperidone",
+   "presentations": [
+    "Injection (Long acting) 25 mg",
+    "Injection (Long acting) 37.5 mg",
+    "Oral liquid 1 mg/mL",
+    "Tablet 1 mg",
+    "Tablet 2 mg",
+    "Tablet 4 mg"
+   ]
+  },
+  {
+   "name": "Ritonavir",
+   "presentations": [
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Rituximab",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Rotavirus vaccine",
+   "presentations": []
+  },
+  {
+   "name": "Salbutamol",
+   "presentations": [
+    "Inhalation (MDI/DPI) 100 mcg/dose",
+    "Oral liquid 2 mg/5 mL",
+    "Respirator solution for nebuliser 5 mg/mL",
+    "Tablet 2 mg",
+    "Tablet 4 mg"
+   ]
+  },
+  {
+   "name": "Salicylic acid",
+   "presentations": [
+    "Ointment 3-6%"
+   ]
+  },
+  {
+   "name": "Sevoflurane",
+   "presentations": [
+    "Liquid for inhalation"
+   ]
+  },
+  {
+   "name": "Silver sulphadiazine",
+   "presentations": [
+    "Cream 1%"
+   ]
+  },
+  {
+   "name": "Snake venom antiserum",
+   "presentations": [
+    "Lyophilized polyvalent",
+    "Soluble/liquid polyvalent"
+   ]
+  },
+  {
+   "name": "Sodium bicarbonate",
+   "presentations": [
+    "Injection (as per IP)"
+   ]
+  },
+  {
+   "name": "Sodium chloride",
+   "presentations": [
+    "Injection 0.9%",
+    "Injection 3%"
+   ]
+  },
+  {
+   "name": "Sodium nitrite",
+   "presentations": [
+    "Injection 30 mg/mL"
+   ]
+  },
+  {
+   "name": "Sodium nitroprusside",
+   "presentations": [
+    "Injection 10 mg/mL"
+   ]
+  },
+  {
+   "name": "Sodium thiosulphate",
+   "presentations": [
+    "Injection 250 mg/mL"
+   ]
+  },
+  {
+   "name": "Sodium Valproate",
+   "presentations": [
+    "Injection 100 mg/mL",
+    "Oral liquid 200 mg/5 mL",
+    "Tablet 200 mg",
+    "Tablet 300 mg",
+    "Tablet 500 mg Modified Release",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Sofosbuvir",
+   "presentations": [
+    "Tablet 400 mg"
+   ]
+  },
+  {
+   "name": "Somatostatin",
+   "presentations": [
+    "Powder for injection 3 mg"
+   ]
+  },
+  {
+   "name": "Spironolactone",
+   "presentations": [
+    "Tablet 25 mg",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Streptokinase",
+   "presentations": [
+    "Injection 15,00,000 IU",
+    "Injection 750,000 IU"
+   ]
+  },
+  {
+   "name": "Streptomycin",
+   "presentations": [
+    "Powder for injection 750 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Succinylcholine",
+   "presentations": [
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "Sulfasalazine",
+   "presentations": [
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Sumatriptan",
+   "presentations": [
+    "Tablet 25 mg",
+    "Tablet 50 mg"
+   ]
+  },
+  {
+   "name": "Surfactant",
+   "presentations": [
+    "Suspension for intratracheal instillation (As licensed)"
+   ]
+  },
+  {
+   "name": "Tacrolimus",
+   "presentations": [
+    "Capsule 0.5 mg",
+    "Capsule 1 mg",
+    "Capsule 2 mg"
+   ]
+  },
+  {
+   "name": "Tamoxifen",
+   "presentations": [
+    "Tablet 10 mg",
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Telmisartan",
+   "presentations": [
+    "Tablet 20 mg",
+    "Tablet 40 mg",
+    "Tablet 80 mg"
+   ]
+  },
+  {
+   "name": "Temozolomide",
+   "presentations": [
+    "Capsule 20 mg",
+    "Capsule 100 mg",
+    "Capsule 250 mg"
+   ]
+  },
+  {
+   "name": "Tenecteplase",
+   "presentations": [
+    "Injection 30 mg/vial",
+    "Injection 40 mg/vial"
+   ]
+  },
+  {
+   "name": "Teneligliptin",
+   "presentations": [
+    "Tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Tenofovir Alafenamide Fumarate (TAF)",
+   "presentations": [
+    "Tablet 25 mg"
+   ]
+  },
+  {
+   "name": "Tenofovir Disproxil Fumarate (A) + Lamivudine (B)",
+   "presentations": [
+    "Tablet 300 mg (A) + 300 mg (B)"
+   ]
+  },
+  {
+   "name": "Tenofovir Disproxil Fumarate (A) + Lamivudine (B) + Dolutegravir (C)",
+   "presentations": [
+    "Tablet 300 mg (A) + 300 mg (B) + 50 mg (C)"
+   ]
+  },
+  {
+   "name": "Tenofovir Disproxil Fumarate (A) + Lamivudine (B) + Efavirenz (C)",
+   "presentations": [
+    "Tablet 300 mg (A) + 300 mg (B) + 600 mg (C)"
+   ]
+  },
+  {
+   "name": "Tenofovir Disproxil Fumarate (TDF)",
+   "presentations": [
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Terbinafine",
+   "presentations": [
+    "Cream 1%"
+   ]
+  },
+  {
+   "name": "Tetanus toxoid",
+   "presentations": []
+  },
+  {
+   "name": "Thalidomide",
+   "presentations": [
+    "Capsule 50 mg",
+    "Capsule 100 mg"
+   ]
+  },
+  {
+   "name": "Thiamine",
+   "presentations": [
+    "Injection 100 mg/mL",
+    "Tablet 100 mg"
+   ]
+  },
+  {
+   "name": "Thiopentone",
+   "presentations": [
+    "Powder for injection 0.5 g",
+    "Powder for injection 1 g"
+   ]
+  },
+  {
+   "name": "Timolol",
+   "presentations": [
+    "Eye drops 0.25%",
+    "Eye drops 0.5%"
+   ]
+  },
+  {
+   "name": "Tiotropium",
+   "presentations": [
+    "Inhalation (DPI) 18 mcg/dose",
+    "Inhalation (MDI) 9 mcg/dose"
+   ]
+  },
+  {
+   "name": "Tramadol",
+   "presentations": [
+    "Capsule 50 mg",
+    "Capsule 100 mg",
+    "Injection 50 mg/mL"
+   ]
+  },
+  {
+   "name": "Tranexamic acid",
+   "presentations": [
+    "Injection 100 mg/mL",
+    "Tablet 500 mg"
+   ]
+  },
+  {
+   "name": "Trastuzumab",
+   "presentations": [
+    "Injection 440 mg/50 mL"
+   ]
+  },
+  {
+   "name": "Trihexyphenidyl",
+   "presentations": [
+    "Tablet 2 mg"
+   ]
+  },
+  {
+   "name": "Tropicamide",
+   "presentations": [
+    "Eye drops 1%"
+   ]
+  },
+  {
+   "name": "Tuberculin, Purified Protein derivative",
+   "presentations": []
+  },
+  {
+   "name": "Valganciclovir",
+   "presentations": [
+    "Powder for oral solution 50 mg/mL",
+    "Tablet 450 mg",
+    "Tablet/capsule 450 mg"
+   ]
+  },
+  {
+   "name": "Vancomycin",
+   "presentations": [
+    "Capsule 125 mg",
+    "Capsule 250 mg",
+    "Powder for injection 250 mg",
+    "Powder for injection 500 mg",
+    "Powder for injection 1000 mg"
+   ]
+  },
+  {
+   "name": "Vecuronium",
+   "presentations": [
+    "Powder for injection 4 mg",
+    "Powder for injection 10 mg"
+   ]
+  },
+  {
+   "name": "Verapamil",
+   "presentations": [
+    "Injection 2.5 mg/mL",
+    "Tablet 40 mg",
+    "Tablet 80 mg"
+   ]
+  },
+  {
+   "name": "Vinblastine",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Vincristine",
+   "presentations": [
+    "Injection 1 mg/mL"
+   ]
+  },
+  {
+   "name": "Vitamin A",
+   "presentations": [
+    "Capsule/tablet 50000 IU (including chewable tablet)",
+    "Injection 50000 IU/mL",
+    "Oral liquid 100000 IU/mL"
+   ]
+  },
+  {
+   "name": "Warfarin",
+   "presentations": [
+    "Tablet 1 mg",
+    "Tablet 2 mg",
+    "Tablet 3 mg",
+    "Tablet 5 mg"
+   ]
+  },
+  {
+   "name": "Water for Injection",
+   "presentations": [
+    "Injection"
+   ]
+  },
+  {
+   "name": "Xylometazoline",
+   "presentations": [
+    "Nasal drops 0.05%",
+    "Nasal drops 0.1%"
+   ]
+  },
+  {
+   "name": "Zidovudine",
+   "presentations": [
+    "Oral liquid 50 mg/5 mL",
+    "Tablet 300 mg"
+   ]
+  },
+  {
+   "name": "Zidovudine (A) + Lamivudine (B)",
+   "presentations": [
+    "Tablet 60 mg (A) + 30 mg (B)",
+    "Tablet 300 mg (A) + 150 mg (B)"
+   ]
+  },
+  {
+   "name": "Zidovudine (A) + Lamivudine (B) + Nevirapine (C)",
+   "presentations": [
+    "Tablet 60 mg (A) + 30 mg (B) + 50 mg (C)",
+    "Tablet 300 mg (A) + 150 mg (B) + 200 mg (C)"
+   ]
+  },
+  {
+   "name": "Zinc Sulphate",
+   "presentations": [
+    "Dispersible tablet 20 mg"
+   ]
+  },
+  {
+   "name": "Zoledronic acid",
+   "presentations": [
+    "Powder for injection 4 mg"
+   ]
+  },
+  {
+   "name": "Zolpidem",
+   "presentations": [
+    "Tablet 5 mg",
+    "Tablet 10 mg"
+   ]
+  }
+ ]
+}

@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.appointment import DoctorRef, PatientRef
+from app.schemas.prescription import MAX_LINES, MedicineLine, PrescriptionOut
 from app.schemas.queue import BookedFor
 
 ConsultationStatus = Literal["draft", "completed"]
@@ -43,6 +44,9 @@ class ConsultationWrite(_Trimmed):
     advice: str | None = Field(default=None, max_length=LONG_TEXT)
     diagnoses: list[DiagnosisIn] | None = Field(default=None, max_length=20)
     follow_up_date: dt.date | None = None
+    # The prescription being written with these notes, as the whole list.
+    medicines: list[MedicineLine] | None = Field(default=None, max_length=MAX_LINES)
+    prescription_instructions: str | None = Field(default=None, max_length=2000)
 
 
 class ConsultationFinish(_Trimmed):
@@ -91,6 +95,8 @@ class ConsultationDetail(ConsultationSummary):
     advice: str | None
     diagnoses: list[DiagnosisOut]
     addenda: list[AddendumOut]
+    # The draft or standing prescription first, then anything it replaced.
+    prescriptions: list[PrescriptionOut]
     updated_at: dt.datetime
     can_edit: bool
     can_add_addendum: bool

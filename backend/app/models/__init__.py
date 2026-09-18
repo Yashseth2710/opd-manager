@@ -5,6 +5,7 @@ from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
 from app.models.invitation import Invitation
 from app.models.organization import DEFAULT_SETTINGS, Organization
 from app.models.patient import Patient, PatientAllergy
+from app.models.prescription import Medicine, Prescription, PrescriptionItem
 from app.models.queue import QueueEntry
 from app.models.role import Permission, Role, RolePermission, UserRole
 from app.models.user import User
@@ -20,10 +21,13 @@ __all__ = [
     "DoctorLeave",
     "DoctorSchedule",
     "Invitation",
+    "Medicine",
     "Organization",
     "Patient",
     "PatientAllergy",
     "Permission",
+    "Prescription",
+    "PrescriptionItem",
     "QueueEntry",
     "Role",
     "RolePermission",

@@ -24,7 +24,7 @@ from app.models import queue as line
 from app.repositories.consultations import ConsultationRepository, Written
 from app.repositories.queue import QueueRepository
 from app.schemas.consultation import ConsultationWrite
-from app.services import queue
+from app.services import prescriptions, queue
 from app.services.appointments import Reach
 from app.services.doctors import clinic_today, clinic_zone
 from app.services.patients import age_label
@@ -235,6 +235,16 @@ async def save(
         await ConsultationRepository(session, organization_id).replace_diagnoses(
             consultation.id, _diagnoses(body)
         )
+    if "medicines" in sent or "prescription_instructions" in sent:
+        await prescriptions.write_draft(
+            session,
+            organization_id=organization_id,
+            consultation=consultation,
+            lines=body.medicines,
+            instructions=body.prescription_instructions,
+            sent_lines="medicines" in sent,
+            sent_instructions="prescription_instructions" in sent,
+        )
 
     consultation.version += 1
     await session.flush()
@@ -249,14 +259,20 @@ async def finish(
     consultation_id: uuid.UUID,
     version: int,
 ) -> None:
-    """Locks the notes. If the patient is still shown in the room, they are
-    finished there too, so the doctor does not have to do it twice."""
+    """Locks the notes and issues the prescription written with them. If the
+    patient is still shown in the room, they are finished there too, so the
+    doctor does not have to do it twice."""
     found = await _for_writing(session, organization_id, reach, consultation_id)
     consultation = found.consultation
     if not consultation.is_draft:
         raise AlreadyCompleted
     _check_version(consultation, version)
 
+    # Checked before anything is locked, so a line without a dose leaves the
+    # visit open to be put right.
+    prescription = await prescriptions.ready_to_issue(
+        session, organization_id=organization_id, consultation=consultation
+    )
     written = any(
         (
             consultation.chief_complaint,
@@ -264,6 +280,7 @@ async def finish(
             consultation.examination,
             consultation.advice,
             found.diagnoses,
+            prescription,
         )
     )
     if not written:
@@ -276,6 +293,14 @@ async def finish(
     consultation.completed_at = dt.datetime.now(dt.UTC)
     consultation.version += 1
     await session.flush()
+    if prescription is not None:
+        await prescriptions.issue(
+            session,
+            organization_id=organization_id,
+            prescription=prescription,
+            follow_up_date=consultation.follow_up_date,
+            actor_id=actor_id,
+        )
 
     if consultation.queue_entry_id is None:
         return
@@ -425,6 +450,9 @@ async def detail(
             }
             for added in await repository.addenda(consultation.id)
         ],
+        "prescriptions": await prescriptions.for_consultation(
+            session, organization_id=organization_id, consultation_id=consultation.id
+        ),
         "updated_at": consultation.updated_at,
         "can_edit": author and consultation.is_draft,
         "can_add_addendum": author and not consultation.is_draft,
