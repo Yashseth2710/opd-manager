@@ -81,7 +81,8 @@ DOCTOR_*      NOT_FOUND, INACTIVE
               REGISTRATION_NUMBER_TAKEN, ACCOUNT_ALREADY_LINKED
 APPT_*        NOT_FOUND, SLOT_UNAVAILABLE, PATIENT_BUSY, OUTSIDE_WORKING_HOURS,
               DOCTOR_ON_LEAVE, PAST_DATE, INVALID_TRANSITION
-QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, INVALID_TRANSITION
+QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, HAS_APPOINTMENT, NOT_TODAY,
+              INVALID_TRANSITION
 CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
@@ -174,14 +175,19 @@ appointments  GET    /appointments?date=&doctor_id=
               POST   /appointments/{id}/confirm
               POST   /appointments/{id}/cancel
               POST   /appointments/{id}/no-show
-              POST   /appointments/{id}/check-in     arrives with the queue
+              POST   /appointments/{id}/check-in
 
-queue         GET    /queue
+queue         GET    /queue?doctor_id=
               POST   /queue/walk-in
+              GET    /queue/{id}
+              PATCH  /queue/{id}                     priority
+              DELETE /queue/{id}                     undo a check-in
               POST   /queue/{id}/call
+              POST   /queue/{id}/start
+              POST   /queue/{id}/complete
               POST   /queue/{id}/skip
               POST   /queue/{id}/recall
-              POST   /queue/{id}/complete
+              POST   /queue/{id}/no-show
 
 consultations GET    /consultations
               POST   /consultations
@@ -264,7 +270,11 @@ Date-only fields are `YYYY-MM-DD`. Times of day, for schedules, are `HH:MM` and 
 
 `PATCH /appointments/{id}` moves an appointment, corrects its details, or both. A move puts a confirmed appointment back to `scheduled`, because the patient agreed to the old time. `GET /appointments` lists one day at the clinic, cancelled ones included, and flags any open booking the doctor's week no longer fits in `conflict` — leave taken since, hours changed, stood down. Nothing is moved automatically.
 
-A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`.
+`POST /appointments/{id}/check-in` puts a booked patient in their doctor's queue for today and answers with the place, token included. Only today's appointments can be checked in (`422 QUEUE_NOT_TODAY` otherwise), and only open ones. A patient holds one live place at a time across every doctor, so checking somebody in twice, from two desks at once or into a second doctor's line, is `409 QUEUE_ALREADY_CHECKED_IN` with the token they already have. `POST /queue/walk-in` does the same without an appointment, and refuses with `409 QUEUE_HAS_APPOINTMENT` when the patient is booked with that doctor later today, since that booking is the one to check in. Both refuse a doctor who is on leave, stood down or has no clinic that day.
+
+Tokens count from 1 per doctor per clinic day. The line is arrival order with urgent places first. `GET /queue` returns one lane per doctor: who is in the room, who has been called, who is waiting with a `position` and a rough `expected_wait_minutes`, who missed their call, who is booked and still to arrive, and who is done. The expected wait uses the doctor's appointment length until three consultations have finished that day, then the average of the last ten. A doctor has at most one patient called and one in the room, held by the database. Every step is written onto the appointment and its history, so the day's book and the queue agree. `DELETE /queue/{id}` takes back a check-in made by mistake, only before the patient has been called, and puts the appointment back as it stood.
+
+A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk.
 
 Money is a **string**:
 
@@ -276,9 +286,9 @@ JSON numbers become doubles in JavaScript, and a rounding error in a bill is not
 
 ## Idempotency
 
-Endpoints that create money or a queue position accept an `Idempotency-Key` header. The key is held in Redis for 24 hours against the response. A retry after a timeout returns the original result instead of creating a second invoice.
+Endpoints that create money accept an `Idempotency-Key` header. The key is held in Redis for 24 hours against the response. A retry after a timeout returns the original result instead of creating a second invoice.
 
-Applies to invoice creation, payment recording, check-in and walk-in registration.
+Applies to invoice creation and payment recording. Check-in and walk-ins need no key: a patient can only hold one live place in the queue, which the database enforces, so a retried check-in is refused with the token the first one was given rather than handing out a second.
 
 ## Authentication
 

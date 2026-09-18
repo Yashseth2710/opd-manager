@@ -199,13 +199,12 @@ A recurring class of bug in scheduling software is comparing a local wall-clock 
 
 ## Caching and Redis
 
-Redis earns its place in four narrow cases and is not used as a general cache:
+Redis earns its place in three narrow cases and is not used as a general cache:
 
 | Use | Why |
 |---|---|
 | Refresh token families | Needs revocation, so it cannot be stateless |
 | Rate limiting | Needs a counter shared across function instances |
-| Queue token counters | High-contention increments, fast |
 | Idempotency keys | Prevents duplicate invoices and payments on retry |
 
 Everything else is served from Postgres with proper indexes, or cached client-side by TanStack Query. Adding a cache layer in front of a query that has not been proven slow is how stale data bugs get written.
@@ -215,9 +214,9 @@ Everything else is served from Postgres with proper indexes, or cached client-si
 Serverless functions cannot hold persistent connections, so V1 polls:
 
 - TanStack Query refetches the active queue every 5 seconds while the tab is focused
-- Polling pauses when the tab is hidden and resumes on focus
-- Mutations optimistically update, then reconcile
-- The queue endpoint is deliberately small and indexed so the poll is cheap
+- Polling pauses when the tab is hidden and resumes on focus, except on the waiting-room screen, which nobody watches from a keyboard
+- Every action asks for the line again as soon as it lands, since one step reorders everybody behind it
+- The queue read is three queries whatever the size of the day, so the poll stays cheap
 
 In practice a five-second lag on a waiting room screen is imperceptible. If it stops being enough, the queue read is already isolated behind one endpoint and one hook, so swapping in a realtime transport is a contained change.
 

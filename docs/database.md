@@ -91,10 +91,10 @@ Backs the human-readable display codes.
 
 ```
 PRIMARY KEY (organization_id, counter)
-counter ∈ patient | invoice | prescription | lab_order | queue_token
+counter ∈ patient | invoice | prescription | lab_order
 ```
 
-Incremented with a single `UPDATE ... RETURNING`, which is atomic and row-locked. `queue_token` additionally resets daily, keyed on the clinic's local date rather than UTC.
+Incremented with a single `UPDATE ... RETURNING`, which is atomic and row-locked. Queue tokens are not kept here: they start again every day for every doctor, and are counted from the queue itself.
 
 ## Clinical records
 
@@ -162,7 +162,7 @@ EXCLUDE USING gist (
 
 An exclusion constraint holds under concurrency. Two receptionists clicking "Book" on the same slot at the same moment is exactly the case an application-level check misses. Ranges are half-open, so one appointment ending at ten and the next starting at ten do not collide, and a cancelled or missed appointment gives its time back.
 
-`appointment_status_history` is written on every change and never updated: `event` (`booked`, `confirmed`, `rescheduled`, `cancelled`, `no_show`, `edited`), `from_status`, `to_status`, a `detail` sentence such as "Moved from Mon 22 Sep, 9:00 am", `actor_id`, and `actor_name` copied at the time so the history stays readable after somebody leaves.
+`appointment_status_history` is written on every change and never updated: `event` (`booked`, `confirmed`, `rescheduled`, `cancelled`, `no_show`, `edited`, and from the queue `checked_in`, `check_in_undone`, `started`, `seen`, `left`), `from_status`, `to_status`, a `detail` sentence such as "Moved from Mon 22 Sep, 9:00 am", `actor_id`, and `actor_name` copied at the time so the history stays readable after somebody leaves.
 
 ```
 INDEX (organization_id, doctor_id, scheduled_start)
@@ -197,16 +197,24 @@ Availability is computed, not stored. Materialising slots would mean regeneratin
 
 ### opd_queue_entries
 
-Created at check-in. `appointment_id`, `patient_id`, `doctor_id`, `token_number`, `token_date`, `priority`, `status`, `checked_in_at`, `called_at`, `completed_at`.
+Created at check-in, or for a walk-in with no appointment. `appointment_id` (null for a walk-in), `patient_id`, `doctor_id`, `token_number`, `token_date` (the clinic's date), `priority` (`normal` / `urgent`), `status`, `reason` (a walk-in's), `checked_in_at`, `called_at`, `started_at`, `completed_at`, `checked_in_by_id`.
 
-Status: `waiting` → `called` → `in_consultation` → `completed`, with `skipped` and `no_show` as exits. `skipped` can return to `waiting` on recall.
+Status: `waiting` → `called` → `in_consultation` → `completed`, with `skipped` and `no_show` as exits. `skipped` returns to `waiting` on recall, keeping its number. A doctor can also bring a waiting patient straight in. Each step moves the appointment along with it (`waiting`, `in_consultation`, `completed`, or `no_show` for somebody who left) and writes a line to its history.
 
 ```
 UNIQUE (organization_id, doctor_id, token_date, token_number)
+UNIQUE (appointment_id)                           WHERE appointment_id IS NOT NULL
+UNIQUE (organization_id, patient_id, token_date)  WHERE still in the building
+UNIQUE (organization_id, doctor_id, token_date)   WHERE status = 'called'
+UNIQUE (organization_id, doctor_id, token_date)   WHERE status = 'in_consultation'
 INDEX  (organization_id, doctor_id, token_date, status)
 ```
 
-Estimated wait is derived from the clinic's rolling average consultation time and queue position. It is a display value and is never persisted.
+The partial unique indexes stop two desks putting one patient in two lines, and a doctor having two patients called or two in the room. "Still in the building" means waiting, called, in consultation or skipped. They are keyed on the day, so a place nobody closed last night does not hold up the morning.
+
+The token is the next number after the highest one the doctor has handed out that day, taken while holding a lock on the doctor's row, so two desks checking in for the same doctor take turns. Undoing a check-in removes the row, which never meant anything, and writes the undo to the appointment's history.
+
+Estimated wait is worked out from the doctor's recent consultation times and the patient's position. It is a display value and is never persisted.
 
 ### consultations
 
