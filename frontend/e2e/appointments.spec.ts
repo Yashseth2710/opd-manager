@@ -34,8 +34,20 @@ test("booking from a free slot on the day sheet fills in all but the patient", a
   expect(patient.id).toBeTruthy();
 });
 
-test("the form says what is missing rather than sending half a booking", async ({ page }) => {
+test("the form says what is missing rather than sending half a booking", async ({
+  page,
+  tag,
+}) => {
+  // Two doctors, so the form has nobody to pick on its own: with only one it
+  // rightly chooses them, and whether the list had loaded before the click
+  // would decide what this test saw.
+  await bookableDoctor(page, { last_name: `Either${tag}` });
+  const second = await bookableDoctor(page, { last_name: `Or${tag}` });
+
   await page.goto("/appointments/new");
+  await expect(
+    page.getByLabel("Doctor").locator(`option[value="${second.id}"]`),
+  ).toBeAttached();
   await page.getByRole("button", { name: "Book appointment" }).click();
 
   await expect(page.getByText("Choose who the appointment is for.")).toBeVisible();
