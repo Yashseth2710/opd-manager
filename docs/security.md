@@ -38,7 +38,7 @@ The check reads the permission set from the verified access token. It is impossi
 | `patient:read` | — | ✓ | ✓ | ✓ | config |
 | `patient:update` | — | ✓ | ✓ | ✓ | config |
 | `patient:archive` | — | ✓ | — | — | — |
-| `appointment:create` | — | ✓ | ✓ | ✓ | config |
+| `appointment:create` | — | ✓ | own | ✓ | config |
 | `appointment:read` | — | ✓ | own | ✓ | config |
 | `appointment:update` | — | ✓ | own | ✓ | config |
 | `appointment:cancel` | — | ✓ | own | ✓ | — |

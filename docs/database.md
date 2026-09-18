@@ -140,25 +140,34 @@ One account is one doctor, or a second profile could be linked to the same login
 
 ### appointments
 
-`patient_id`, `doctor_id`, `scheduled_start`, `scheduled_end`, `appointment_type`, `reason`, `notes`, `source`, `status`, `cancelled_reason`, `cancelled_by`.
+`patient_id`, `doctor_id`, `scheduled_start`, `scheduled_end`, `appointment_type` (`consultation` / `follow_up`), `reason`, `notes`, `source` (`desk` / `phone`), `status`, `cancelled_reason`, `cancelled_at`, `cancelled_by_id`, `booked_by_id`.
+
+The start and end are instants, worked out from the clinic's date and wall-clock time when the slot was booked; the wall-clock view is derived again on the way out. The end always comes from the slot rather than the request.
 
 Status: `scheduled` → `confirmed` → `checked_in` → `waiting` → `in_consultation` → `completed`, with `cancelled` and `no_show` as terminal exits. Transitions are validated in the service layer; `appointment_status_history` records every change with actor and timestamp.
 
-Double booking is prevented in the database, not just in application code:
+Double booking is prevented in the database, not just in application code, for the doctor and for the patient:
 
 ```sql
 EXCLUDE USING gist (
   doctor_id WITH =,
   tstzrange(scheduled_start, scheduled_end) WITH &&
 ) WHERE (status NOT IN ('cancelled', 'no_show'))
+
+EXCLUDE USING gist (
+  patient_id WITH =,
+  tstzrange(scheduled_start, scheduled_end) WITH &&
+) WHERE (status NOT IN ('cancelled', 'no_show'))
 ```
 
-An exclusion constraint holds under concurrency. Two receptionists clicking "Book" on the same slot at the same moment is exactly the case an application-level check misses.
+An exclusion constraint holds under concurrency. Two receptionists clicking "Book" on the same slot at the same moment is exactly the case an application-level check misses. Ranges are half-open, so one appointment ending at ten and the next starting at ten do not collide, and a cancelled or missed appointment gives its time back.
+
+`appointment_status_history` is written on every change and never updated: `event` (`booked`, `confirmed`, `rescheduled`, `cancelled`, `no_show`, `edited`), `from_status`, `to_status`, a `detail` sentence such as "Moved from Mon 22 Sep, 9:00 am", `actor_id`, and `actor_name` copied at the time so the history stays readable after somebody leaves.
 
 ```
 INDEX (organization_id, doctor_id, scheduled_start)
-INDEX (organization_id, scheduled_start) WHERE status NOT IN ('cancelled','completed')
-INDEX (organization_id, patient_id, scheduled_start DESC)
+INDEX (organization_id, scheduled_start) WHERE status NOT IN ('cancelled','no_show','completed')
+INDEX (organization_id, patient_id, scheduled_start)
 ```
 
 ### doctor_schedules, doctor_leaves

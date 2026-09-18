@@ -79,7 +79,7 @@ PERM_*        INSUFFICIENT_PERMISSIONS, ROLE_REQUIRED
 PATIENT_*     NOT_FOUND, DUPLICATE_SUSPECTED, ARCHIVED
 DOCTOR_*      NOT_FOUND, INACTIVE
               REGISTRATION_NUMBER_TAKEN, ACCOUNT_ALREADY_LINKED
-APPT_*        NOT_FOUND, SLOT_UNAVAILABLE, OUTSIDE_WORKING_HOURS,
+APPT_*        NOT_FOUND, SLOT_UNAVAILABLE, PATIENT_BUSY, OUTSIDE_WORKING_HOURS,
               DOCTOR_ON_LEAVE, PAST_DATE, INVALID_TRANSITION
 QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, INVALID_TRANSITION
 CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER
@@ -145,6 +145,7 @@ patients      GET    /patients
               POST   /patients/{id}/restore
               POST   /patients/{id}/allergies
               DELETE /patients/{id}/allergies/{allergy_id}
+              GET    /patients/{id}/appointments
               GET    /patients/{id}/timeline
               GET    /patients/{id}/documents
               POST   /patients/{id}/documents
@@ -166,14 +167,14 @@ staff         GET    /staff
               POST   /staff
               PATCH  /staff/{id}
 
-appointments  GET    /appointments
+appointments  GET    /appointments?date=&doctor_id=
               POST   /appointments
               GET    /appointments/{id}
               PATCH  /appointments/{id}
               POST   /appointments/{id}/confirm
               POST   /appointments/{id}/cancel
-              POST   /appointments/{id}/check-in
               POST   /appointments/{id}/no-show
+              POST   /appointments/{id}/check-in     arrives with the queue
 
 queue         GET    /queue
               POST   /queue/walk-in
@@ -257,7 +258,13 @@ Date-only fields are `YYYY-MM-DD`. Times of day, for schedules, are `HH:MM` and 
 
 `PUT /doctors/{id}/schedule` takes the whole week every time and replaces it, and an empty list clears it. Patching one block at a time would let two people editing the same day leave a doctor in two rooms at once; replacing the set inside one transaction is what makes the overlap check the truth rather than a guess. Field errors come back positioned against the submitted list — `blocks.1.start_time` — so a client can put the message on the block that caused it.
 
-`GET /doctors/{id}/availability` works the day out from the rota each time, subtracting breaks and leave. Nothing is stored: a materialised slot table goes stale the moment a schedule changes, and that is a well-worn route to a double booking. With no `date` it answers for today at the clinic, not today on the server.
+`GET /doctors/{id}/availability` works the day out from the rota each time, subtracting breaks and leave. Nothing is stored: a materialised slot table goes stale the moment a schedule changes, and that is a well-worn route to a double booking. With no `date` it answers for today at the clinic, not today on the server. Each slot carries a `state` of `free`, `booked` or `past`, where past means it has ended by the clinic's clock.
+
+`POST /appointments` takes the clinic's `date` and a `start_time`, never an instant, and the time has to be the start of one of that day's free slots. The server works out the instant in the clinic's timezone and takes the end from the slot, so a browser in another timezone cannot book the wrong hour and a client cannot choose its own length. Refusals say why in the desk's words: `APPT_OUTSIDE_WORKING_HOURS`, `APPT_DOCTOR_ON_LEAVE` and `APPT_PAST_DATE` are 422s with the sentence on the field it concerns; a slot somebody else holds is `409 APPT_SLOT_UNAVAILABLE`; the same patient already booked across that time with anybody is `409 APPT_PATIENT_BUSY`. Two bookings landing on one slot at the same moment are settled by the database, and the loser gets the same 409.
+
+`PATCH /appointments/{id}` moves an appointment, corrects its details, or both. A move puts a confirmed appointment back to `scheduled`, because the patient agreed to the old time. `GET /appointments` lists one day at the clinic, cancelled ones included, and flags any open booking the doctor's week no longer fits in `conflict` — leave taken since, hours changed, stood down. Nothing is moved automatically.
+
+A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`.
 
 Money is a **string**:
 
