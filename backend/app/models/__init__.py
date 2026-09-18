@@ -1,3 +1,4 @@
+from app.models.appointment import Appointment, AppointmentEvent
 from app.models.counter import TenantCounter
 from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
 from app.models.invitation import Invitation
@@ -8,6 +9,8 @@ from app.models.user import User
 
 __all__ = [
     "DEFAULT_SETTINGS",
+    "Appointment",
+    "AppointmentEvent",
     "Doctor",
     "DoctorLeave",
     "DoctorSchedule",

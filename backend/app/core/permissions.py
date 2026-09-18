@@ -46,6 +46,10 @@ CATALOGUE: Final[dict[str, str]] = {
 
 OWNER: Final[str] = "clinic-admin"
 
+# The one role whose view of appointments is narrowed to its own list. The
+# matrix marks it "own", which a permission string cannot say.
+DOCTOR: Final[str] = "doctor"
+
 # Clinical documentation is deliberately absent from the admin role. An
 # administrator can read a consultation but never author one, because the
 # clinician who signs a note is the one accountable for it.
@@ -136,7 +140,7 @@ DEFAULT_ROLES: Final[tuple[tuple[str, str, str, list[str]], ...]] = (
         "Runs the clinic: staff, settings, billing and reports.",
         _CLINIC_ADMIN,
     ),
-    ("doctor", "Doctor", "Sees patients, writes notes and prescriptions.", _DOCTOR),
+    (DOCTOR, "Doctor", "Sees patients, writes notes and prescriptions.", _DOCTOR),
     (
         "receptionist",
         "Receptionist",

@@ -252,6 +252,8 @@ class DoctorPage(BaseModel):
 class Slot(BaseModel):
     start_time: dt.time
     end_time: dt.time
+    # Free to book, already booked, or over by the clinic's clock.
+    state: Literal["free", "booked", "past"] = "free"
 
 
 class Availability(BaseModel):

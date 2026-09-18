@@ -154,6 +154,10 @@ class DoctorRepository(TenantScopedRepository[Doctor]):
         result = await self.session.execute(statement.limit(1))
         return result.scalar_one_or_none() is not None
 
+    async def for_account(self, user_id: uuid.UUID) -> Doctor | None:
+        result = await self.session.execute(self.query().where(Doctor.user_id == user_id))
+        return result.scalar_one_or_none()
+
     async def registered_as(
         self, number: str, exclude_id: uuid.UUID | None = None
     ) -> Doctor | None:

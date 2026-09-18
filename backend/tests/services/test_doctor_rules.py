@@ -129,10 +129,16 @@ class TestLeave:
     def test_it_reads_as_a_sentence(self) -> None:
         today = dt.date(2026, 9, 17)
         one_day = DoctorLeave(starts_on=today, ends_on=today, reason="Conference")
-        assert describe_leave(one_day, today) == "On leave today — Conference"
+        assert describe_leave(one_day, today, today) == "On leave today (Conference)"
 
         longer = DoctorLeave(starts_on=today, ends_on=dt.date(2026, 10, 4), reason=None)
         assert describe_leave(longer, today) == "On leave until 4 October"
+
+    def test_a_day_ahead_is_not_called_today(self) -> None:
+        today = dt.date(2026, 9, 18)
+        monday = dt.date(2026, 9, 21)
+        leave = DoctorLeave(starts_on=monday, ends_on=monday, reason="Conference")
+        assert describe_leave(leave, monday, today) == "On leave that day (Conference)"
 
     def test_leave_crossing_a_year_says_which_year(self) -> None:
         today = dt.date(2026, 12, 20)

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 import uuid
+from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
 from itertools import pairwise
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -21,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AppError, NotFound, ValidationFailed
 from app.models import Doctor, DoctorLeave, DoctorSchedule, Organization
 from app.models.doctor import ACTIVE, DAY_NAMES, INACTIVE
+from app.repositories.appointments import AppointmentRepository
 from app.repositories.doctors import DoctorRepository, LeaveRepository, ScheduleRepository
 from app.repositories.users import UserRepository
 from app.schemas.doctor import (
@@ -74,6 +76,20 @@ def _now() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
 
 
+def clinic_zone(clinic: Organization) -> dt.tzinfo:
+    try:
+        return ZoneInfo(clinic.timezone or "UTC")
+    except (ZoneInfoNotFoundError, ValueError):
+        # A clinic carrying a timezone this machine has never heard of gets
+        # UTC rather than an error. Being an hour out beats a page that will
+        # not load, and dt.UTC needs no database behind it.
+        return dt.UTC
+
+
+def clinic_now(clinic: Organization) -> dt.datetime:
+    return dt.datetime.now(clinic_zone(clinic))
+
+
 def clinic_today(clinic: Organization) -> dt.date:
     """The date it is at the clinic, not on the server.
 
@@ -81,14 +97,20 @@ def clinic_today(clinic: Organization) -> dt.date:
     every UTC day, and "today" meaning yesterday is the sort of thing nobody
     notices until the morning list is empty.
     """
-    try:
-        zone: dt.tzinfo = ZoneInfo(clinic.timezone or "UTC")
-    except (ZoneInfoNotFoundError, ValueError):
-        # A clinic carrying a timezone this machine has never heard of gets
-        # UTC rather than an error. Being an hour out beats a page that will
-        # not load, and dt.UTC needs no database behind it.
-        zone = dt.UTC
-    return dt.datetime.now(zone).date()
+    return clinic_now(clinic).date()
+
+
+def at_clinic(clinic: Organization, day: dt.date, time: dt.time) -> dt.datetime:
+    """A date and wall-clock time at the clinic, as the instant it names."""
+    return dt.datetime.combine(day, time, tzinfo=clinic_zone(clinic))
+
+
+def day_bounds(clinic: Organization, day: dt.date) -> tuple[dt.datetime, dt.datetime]:
+    """Midnight to midnight at the clinic, which is not midnight to midnight
+    anywhere else."""
+    return at_clinic(clinic, day, dt.time()), at_clinic(
+        clinic, day + dt.timedelta(days=1), dt.time()
+    )
 
 
 def _money(value: Decimal | str | None) -> str:
@@ -334,8 +356,8 @@ async def update(
         # The column is not nullable; clearing a surname means blank.
         supplied["last_name"] = ""
 
-    for field, value in supplied.items():
-        setattr(doctor, field, value)
+    for name, value in supplied.items():
+        setattr(doctor, name, value)
 
     await session.flush()
     return doctor
@@ -435,11 +457,15 @@ async def remove_leave(
     await session.flush()
 
 
-def describe_leave(leave: DoctorLeave, day: dt.date) -> str:
-    """The sentence the screen shows in place of a list of times."""
-    reason = f" — {leave.reason}" if leave.reason else ""
+def describe_leave(leave: DoctorLeave, day: dt.date, today: dt.date | None = None) -> str:
+    """The sentence the screen shows in place of a list of times.
+
+    "Today" only when it is: the same leave looked at from the Friday before
+    is on leave that day, not today.
+    """
+    reason = f" ({leave.reason})" if leave.reason else ""
     if leave.ends_on == day:
-        return f"On leave today{reason}"
+        return f"On leave {'today' if day == today else 'that day'}{reason}"
 
     written = f"{leave.ends_on.day} {leave.ends_on.strftime('%B')}"
     if leave.ends_on.year != day.year:
@@ -447,54 +473,121 @@ def describe_leave(leave: DoctorLeave, day: dt.date) -> str:
     return f"On leave until {written}{reason}"
 
 
-async def availability(
+FREE = "free"
+BOOKED = "booked"
+GONE = "past"
+
+# Why a day has nothing in it, for the code that has to refuse a booking
+# rather than just show an empty list.
+INACTIVE_DOCTOR = "inactive"
+NO_CLINIC = "no_clinic"
+ON_LEAVE = "on_leave"
+
+
+@dataclass
+class PlannedSlot:
+    start_time: dt.time
+    end_time: dt.time
+    state: str = FREE
+
+
+@dataclass
+class DayPlan:
+    """One day of a doctor's rota, with the break, the leave and the bookings
+    already taken out of it.
+
+    Shared by the free-times panel and by booking, so the times a person is
+    shown and the times the server accepts cannot drift apart.
+    """
+
+    doctor: Doctor
+    day: dt.date
+    slot_duration_minutes: int
+    closed: str | None = None
+    reason: str | None = None
+    blocks: list[DoctorSchedule] = field(default_factory=list)
+    away: list[tuple[dt.time, dt.time]] = field(default_factory=list)
+    slots: list[PlannedSlot] = field(default_factory=list)
+
+    def slot_at(self, start: dt.time) -> PlannedSlot | None:
+        return next((slot for slot in self.slots if slot.start_time == start), None)
+
+    def fits(self, start: dt.time, end: dt.time) -> str | None:
+        """Why an existing booking no longer sits in this day, if it does not."""
+        name = self.doctor.display_name
+        if self.closed == INACTIVE_DOCTOR:
+            return f"{name} is no longer seeing patients here."
+        if self.closed == ON_LEAVE:
+            return f"{name} is on leave that day."
+        if any(_overlap(start, end, begins, ends) for begins, ends in self.away):
+            return f"{name} is away for part of this time."
+        inside = any(
+            block.start_time <= start
+            and end <= block.end_time
+            and not (
+                block.break_start
+                and block.break_end
+                and _overlap(start, end, block.break_start, block.break_end)
+            )
+            for block in self.blocks
+        )
+        if not inside:
+            return f"This is outside {name}'s hours now."
+        return None
+
+
+def _local(moment: dt.datetime, clinic: Organization) -> dt.datetime:
+    return moment.astimezone(clinic_zone(clinic))
+
+
+async def plan_day(
     session: AsyncSession,
     *,
     organization_id: uuid.UUID,
     clinic: Organization,
-    doctor_id: uuid.UUID,
+    doctor: Doctor,
     day: dt.date,
-) -> dict[str, object]:
-    """One day of a doctor's rota, minus their break and minus their leave."""
-    doctor = await fetch(session, organization_id=organization_id, doctor_id=doctor_id)
-    day_of_week = day.weekday()
-    minutes = effective_slot_minutes(doctor, clinic)
+    ignoring: uuid.UUID | None = None,
+) -> DayPlan:
+    """Works out a doctor's day from the rota, every time it is asked for.
 
-    empty: dict[str, object] = {
-        "date": day,
-        "day_of_week": day_of_week,
-        "day_name": DAY_NAMES[day_of_week],
-        "working": False,
-        "reason": None,
-        "slot_duration_minutes": minutes,
-        "slots": [],
-    }
+    `ignoring` leaves one appointment out of the bookings, so moving an
+    appointment to a later slot is not refused for clashing with itself.
+    """
+    day_of_week = day.weekday()
+    plan = DayPlan(
+        doctor=doctor, day=day, slot_duration_minutes=effective_slot_minutes(doctor, clinic)
+    )
 
     if not doctor.is_active:
-        empty["reason"] = "Not seeing patients at the moment."
-        return empty
+        plan.closed = INACTIVE_DOCTOR
+        plan.reason = "Not seeing patients at the moment."
+        return plan
 
-    blocks = await ScheduleRepository(session, organization_id).on_day(doctor_id, day_of_week)
-    if not blocks:
-        empty["reason"] = f"No {DAY_NAMES[day_of_week]} clinic."
-        return empty
+    plan.blocks = await ScheduleRepository(session, organization_id).on_day(
+        doctor.id, day_of_week
+    )
+    if not plan.blocks:
+        plan.closed = NO_CLINIC
+        plan.reason = f"No {DAY_NAMES[day_of_week]} clinic."
+        return plan
 
-    leaves = await LeaveRepository(session, organization_id).covering(doctor_id, day)
+    leaves = await LeaveRepository(session, organization_id).covering(doctor.id, day)
     whole_day = next((leave for leave in leaves if leave.is_all_day), None)
     if whole_day is not None:
-        empty["reason"] = describe_leave(whole_day, day)
-        return empty
+        plan.closed = ON_LEAVE
+        plan.reason = describe_leave(whole_day, day, clinic_today(clinic))
+        return plan
 
     # A timed leave spanning several days means those hours on each of them,
     # which is how somebody describes leaving early all week.
-    away = [
+    plan.away = [
         (leave.start_time, leave.end_time)
         for leave in leaves
         if leave.start_time and leave.end_time
     ]
 
-    slots: list[dict[str, dt.time]] = []
-    for block in blocks:
+    for block in plan.blocks:
         step = block_slot_minutes(block, doctor, clinic)
         start = _minutes(block.start_time)
         finish = _minutes(block.end_time)
@@ -509,17 +602,66 @@ async def availability(
                 and _overlap(opens, closes, block.break_start, block.break_end)
             ):
                 continue
-            if any(_overlap(opens, closes, begins, ends) for begins, ends in away):
+            if any(_overlap(opens, closes, begins, ends) for begins, ends in plan.away):
                 continue
 
-            slots.append({"start_time": opens, "end_time": closes})
+            plan.slots.append(PlannedSlot(start_time=opens, end_time=closes))
 
+    if not plan.slots:
+        plan.closed = ON_LEAVE
+        plan.reason = "Away for the whole of this clinic."
+        return plan
+
+    opens_at, closes_at = day_bounds(clinic, day)
+    held = await AppointmentRepository(session, organization_id).held(
+        doctor.id, opens_at, closes_at, ignoring=ignoring
+    )
+    # Clipped to the day, so a booking that runs past midnight still takes
+    # out the slots it covers on this side of it.
+    taken = [
+        (
+            max(_local(begins, clinic), opens_at).time(),
+            dt.time.max if ends >= closes_at else _local(ends, clinic).time(),
+        )
+        for begins, ends in held
+    ]
+    now = clinic_now(clinic)
+
+    for slot in plan.slots:
+        if at_clinic(clinic, day, slot.end_time) <= now:
+            slot.state = GONE
+        elif any(
+            _overlap(slot.start_time, slot.end_time, begins, ends) for begins, ends in taken
+        ):
+            slot.state = BOOKED
+
+    return plan
+
+
+async def availability(
+    session: AsyncSession,
+    *,
+    organization_id: uuid.UUID,
+    clinic: Organization,
+    doctor_id: uuid.UUID,
+    day: dt.date,
+) -> dict[str, object]:
+    """One day of a doctor's rota, minus their break, their leave and whoever
+    is already booked in."""
+    doctor = await fetch(session, organization_id=organization_id, doctor_id=doctor_id)
+    plan = await plan_day(
+        session, organization_id=organization_id, clinic=clinic, doctor=doctor, day=day
+    )
+    day_of_week = day.weekday()
     return {
         "date": day,
         "day_of_week": day_of_week,
         "day_name": DAY_NAMES[day_of_week],
-        "working": bool(slots),
-        "reason": None if slots else "Away for the whole of this clinic.",
-        "slot_duration_minutes": minutes,
-        "slots": slots,
+        "working": bool(plan.slots),
+        "reason": plan.reason,
+        "slot_duration_minutes": plan.slot_duration_minutes,
+        "slots": [
+            {"start_time": slot.start_time, "end_time": slot.end_time, "state": slot.state}
+            for slot in plan.slots
+        ],
     }
