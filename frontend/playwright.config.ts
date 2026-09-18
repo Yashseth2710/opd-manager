@@ -25,7 +25,10 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     storageState: SHARED_STATE,
-    trace: "on-first-retry",
+    // Kept for the attempt that failed, not the retry after it. A test that
+    // stalls once and then passes is the one worth a trace, and recording
+    // only the retry kept the run that explained nothing.
+    trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
   },

@@ -282,8 +282,17 @@ jobs:
         working-directory: backend
         run: tail -n 400 api.log || echo "the API never got as far as writing a log"
 
+      # A test that fails once and passes on the retry leaves the job green,
+      # so this runs either way. It is usually empty.
+      - name: Requests the API was slow to answer
+        if: ${{ !cancelled() }}
+        working-directory: backend
+        run: grep "slow request" api.log || echo "none"
+
+      # Traces are only kept for attempts that failed, so anything in
+      # test-results means something went wrong, retried or not.
       - uses: actions/upload-artifact@v4
-        if: failure()
+        if: ${{ failure() || (!cancelled() && hashFiles('frontend/test-results/**') != '') }}
         with:
           name: browser-report
           path: |

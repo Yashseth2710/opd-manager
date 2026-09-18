@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
@@ -38,6 +39,11 @@ app = FastAPI(
 
 _PASSTHROUGH = ("/docs", "/openapi.json")
 
+# Every request here makes a few round trips to a database in another region,
+# so a second or two is ordinary. Past this, something waited on something,
+# and the log should say which route it was.
+_SLOW_SECONDS = 5.0
+
 
 def _error(status: int, code: str, message: str, **extra: Any) -> JSONResponse:
     return JSONResponse(
@@ -53,8 +59,19 @@ async def envelope(
     """Tag every response with a request id, and wrap successful JSON bodies
     as {"success": true, "data": ...} so the client parses one shape."""
     request_id = str(uuid.uuid4())
+    started = time.perf_counter()
     response = await call_next(request)
     response.headers["X-Request-Id"] = request_id
+
+    took = time.perf_counter() - started
+    if took > _SLOW_SECONDS:
+        logger.warning(
+            "slow request: %s %s answered %s after %.1fs",
+            request.method,
+            request.url.path,
+            response.status_code,
+            took,
+        )
 
     if (
         response.status_code >= 400
