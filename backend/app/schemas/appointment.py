@@ -108,9 +108,13 @@ class AppointmentOut(BaseModel):
     # Worked out against the clinic's clock rather than the browser's.
     has_started: bool
     is_over: bool
+    # The clinic's today, which is the only day anybody can check in for.
+    is_today: bool
     # Something about the doctor's week that no longer fits this booking,
     # said in a sentence: leave taken since, hours changed, stood down.
     conflict: str | None = None
+    # The number they were given at check-in, once they have one.
+    queue_token: int | None = None
 
 
 class EventOut(BaseModel):

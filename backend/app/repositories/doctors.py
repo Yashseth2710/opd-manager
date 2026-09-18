@@ -40,6 +40,13 @@ def _literal(term: str) -> str:
 
 
 @dataclass
+class OnDuty:
+    doctor: Doctor
+    sits: bool
+    leave: DoctorLeave | None
+
+
+@dataclass
 class Listed:
     doctor: Doctor
     working_days: int
@@ -157,6 +164,54 @@ class DoctorRepository(TenantScopedRepository[Doctor]):
     async def for_account(self, user_id: uuid.UUID) -> Doctor | None:
         result = await self.session.execute(self.query().where(Doctor.user_id == user_id))
         return result.scalar_one_or_none()
+
+    async def on_duty(self, day: dt.date) -> list[OnDuty]:
+        """Every active doctor, whether they sit on this day, and the leave
+        that takes the whole of it, in a single query.
+
+        Read by the queue, which every screen showing it asks for every few
+        seconds, so one round trip rather than one per question.
+        """
+        sits = (
+            select(DoctorSchedule.id)
+            .where(DoctorSchedule.organization_id == self.organization_id)
+            .where(DoctorSchedule.doctor_id == Doctor.id)
+            .where(DoctorSchedule.day_of_week == day.weekday())
+            .correlate(Doctor)
+            .exists()
+        )
+        away = (
+            select(DoctorLeave.id)
+            .where(DoctorLeave.organization_id == self.organization_id)
+            .where(DoctorLeave.doctor_id == Doctor.id)
+            .where(DoctorLeave.starts_on <= day)
+            .where(DoctorLeave.ends_on >= day)
+            .where(DoctorLeave.start_time.is_(None))
+            .correlate(Doctor)
+            .order_by(DoctorLeave.starts_on)
+            .limit(1)
+            .scalar_subquery()
+        )
+        result = await self.session.execute(
+            self.query()
+            .where(Doctor.status == ACTIVE)
+            .add_columns(sits, away)
+            .order_by(Doctor.last_name, Doctor.first_name)
+        )
+        rows = result.all()
+        leave_ids = {row[2] for row in rows if row[2] is not None}
+        leaves: dict[uuid.UUID, DoctorLeave] = {}
+        if leave_ids:
+            found = await self.session.execute(
+                select(DoctorLeave).where(DoctorLeave.id.in_(leave_ids))
+            )
+            leaves = {leave.id: leave for leave in found.scalars().all()}
+        return [
+            OnDuty(
+                doctor=row[0], sits=bool(row[1]), leave=leaves.get(row[2]) if row[2] else None
+            )
+            for row in rows
+        ]
 
     async def registered_as(
         self, number: str, exclude_id: uuid.UUID | None = None

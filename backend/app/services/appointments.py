@@ -26,20 +26,24 @@ from app.models.appointment import (
     BOOKED,
     CANCELLED,
     CANCELLED_EVENT,
+    COMPLETED,
     CONFIRMED,
     CONFIRMED_EVENT,
     EDITED,
     FOLLOW_UP,
+    IN_CONSULTATION,
     MARKED_NO_SHOW,
     NO_SHOW,
     OPEN,
     RESCHEDULED,
     SCHEDULED,
+    WAITING,
 )
 from app.models.doctor import DAY_NAMES
 from app.repositories.appointments import AppointmentRepository, EventRepository, Listed
 from app.repositories.doctors import DoctorRepository, names_of
 from app.repositories.patients import PatientRepository
+from app.repositories.queue import QueueRepository
 from app.schemas.appointment import AppointmentCreate, AppointmentUpdate
 from app.services.doctors import (
     BOOKED as SLOT_BOOKED,
@@ -157,7 +161,7 @@ def _first_name(patient: Patient) -> str:
     return patient.preferred_name or patient.first_name
 
 
-async def _patient(
+async def registered_patient(
     session: AsyncSession, organization_id: uuid.UUID, patient_id: uuid.UUID
 ) -> Patient:
     patient = await PatientRepository(session, organization_id).get(patient_id)
@@ -170,7 +174,7 @@ async def _patient(
     return patient
 
 
-async def _doctor(
+async def bookable_doctor(
     session: AsyncSession, organization_id: uuid.UUID, doctor_id: uuid.UUID, reach: Reach
 ) -> Doctor:
     doctor = await DoctorRepository(session, organization_id).get(doctor_id)
@@ -294,7 +298,7 @@ async def _actor_name(session: AsyncSession, user_id: uuid.UUID) -> str | None:
     return (await names_of(session, {user_id})).get(user_id)
 
 
-async def _log(
+async def record_event(
     session: AsyncSession,
     *,
     organization_id: uuid.UUID,
@@ -326,8 +330,8 @@ async def book(
     actor_id: uuid.UUID,
     body: AppointmentCreate,
 ) -> Appointment:
-    patient = await _patient(session, organization_id, body.patient_id)
-    doctor = await _doctor(session, organization_id, body.doctor_id, reach)
+    patient = await registered_patient(session, organization_id, body.patient_id)
+    doctor = await bookable_doctor(session, organization_id, body.doctor_id, reach)
     starts, ends = await _place(
         session,
         organization_id=organization_id,
@@ -361,7 +365,7 @@ async def book(
     async with _refusing_clashes():
         await AppointmentRepository(session, organization_id).add(appointment)
 
-    await _log(
+    await record_event(
         session,
         organization_id=organization_id,
         appointment=appointment,
@@ -378,8 +382,9 @@ async def fetch(
     organization_id: uuid.UUID,
     reach: Reach,
     appointment_id: uuid.UUID,
+    lock: bool = False,
 ) -> Listed:
-    found = await AppointmentRepository(session, organization_id).one(appointment_id)
+    found = await AppointmentRepository(session, organization_id).one(appointment_id, lock=lock)
     # Outside a doctor's own list reads as absent, the same as another clinic.
     if found is None or not reach.covers(found.doctor.id):
         raise AppointmentNotFound
@@ -389,6 +394,9 @@ async def fetch(
 _CLOSED_BECAUSE = {
     CANCELLED: "This appointment was cancelled.",
     NO_SHOW: "This appointment was marked as a no-show.",
+    WAITING: "The patient has checked in and is in the queue.",
+    IN_CONSULTATION: "The patient is with the doctor now.",
+    COMPLETED: "The patient has already been seen.",
 }
 
 
@@ -411,7 +419,11 @@ async def update(
     body: AppointmentUpdate,
 ) -> Appointment:
     listed = await fetch(
-        session, organization_id=organization_id, reach=reach, appointment_id=appointment_id
+        session,
+        organization_id=organization_id,
+        reach=reach,
+        appointment_id=appointment_id,
+        lock=True,
     )
     appointment = listed.appointment
     _require_open(appointment)
@@ -426,7 +438,7 @@ async def update(
     )
     if wants_move:
         doctor = (
-            await _doctor(session, organization_id, supplied["doctor_id"], reach)
+            await bookable_doctor(session, organization_id, supplied["doctor_id"], reach)
             if supplied.get("doctor_id") and supplied["doctor_id"] != was_doctor.id
             else was_doctor
         )
@@ -467,7 +479,7 @@ async def update(
             appointment.status = SCHEDULED
             async with _refusing_clashes():
                 await session.flush()
-            await _log(
+            await record_event(
                 session,
                 organization_id=organization_id,
                 appointment=appointment,
@@ -496,7 +508,7 @@ async def update(
 
     if changed:
         await session.flush()
-        await _log(
+        await record_event(
             session,
             organization_id=organization_id,
             appointment=appointment,
@@ -524,7 +536,11 @@ async def confirm(
     appointment_id: uuid.UUID,
 ) -> Appointment:
     listed = await fetch(
-        session, organization_id=organization_id, reach=reach, appointment_id=appointment_id
+        session,
+        organization_id=organization_id,
+        reach=reach,
+        appointment_id=appointment_id,
+        lock=True,
     )
     appointment = listed.appointment
     if appointment.status == CONFIRMED:
@@ -535,7 +551,7 @@ async def confirm(
 
     appointment.status = CONFIRMED
     await session.flush()
-    await _log(
+    await record_event(
         session,
         organization_id=organization_id,
         appointment=appointment,
@@ -558,7 +574,11 @@ async def cancel(
     """Gives the slot back. Nothing is deleted: the history of who cancelled
     and why is worth more than the row it takes up."""
     listed = await fetch(
-        session, organization_id=organization_id, reach=reach, appointment_id=appointment_id
+        session,
+        organization_id=organization_id,
+        reach=reach,
+        appointment_id=appointment_id,
+        lock=True,
     )
     appointment = listed.appointment
     _require_open(appointment)
@@ -569,7 +589,7 @@ async def cancel(
     appointment.cancelled_at = dt.datetime.now(dt.UTC)
     appointment.cancelled_by_id = actor_id
     await session.flush()
-    await _log(
+    await record_event(
         session,
         organization_id=organization_id,
         appointment=appointment,
@@ -591,7 +611,11 @@ async def mark_no_show(
     appointment_id: uuid.UUID,
 ) -> Appointment:
     listed = await fetch(
-        session, organization_id=organization_id, reach=reach, appointment_id=appointment_id
+        session,
+        organization_id=organization_id,
+        reach=reach,
+        appointment_id=appointment_id,
+        lock=True,
     )
     appointment = listed.appointment
     _require_open(appointment)
@@ -602,7 +626,7 @@ async def mark_no_show(
     before = appointment.status
     appointment.status = NO_SHOW
     await session.flush()
-    await _log(
+    await record_event(
         session,
         organization_id=organization_id,
         appointment=appointment,
@@ -620,6 +644,7 @@ def present(
     now: dt.datetime,
     booked_by_name: str | None = None,
     conflict: str | None = None,
+    queue_token: int | None = None,
 ) -> dict[str, object]:
     appointment, patient, doctor = listed.appointment, listed.patient, listed.doctor
     zone = clinic_zone(clinic)
@@ -668,7 +693,9 @@ def present(
         "created_at": appointment.created_at,
         "has_started": appointment.scheduled_start <= now,
         "is_over": appointment.scheduled_end <= now,
+        "is_today": starts.date() == now.date(),
         "conflict": conflict,
+        "queue_token": queue_token,
     }
 
 
@@ -730,6 +757,9 @@ async def present_all(
 ) -> list[dict[str, object]]:
     now = clinic_now(clinic)
     names = await _bookers(session, rows)
+    tokens = await QueueRepository(session, organization_id).for_appointments(
+        {row.appointment.id for row in rows}
+    )
     conflicts = (
         await _conflicts(
             session, organization_id=organization_id, clinic=clinic, rows=rows, now=now
@@ -746,6 +776,7 @@ async def present_all(
             if row.appointment.booked_by_id
             else None,
             conflict=conflicts.get(row.appointment.id),
+            queue_token=tokens.get(row.appointment.id),
         )
         for row in rows
     ]

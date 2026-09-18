@@ -20,7 +20,6 @@ PATIENT = "patient"
 INVOICE = "invoice"
 PRESCRIPTION = "prescription"
 LAB_ORDER = "lab_order"
-QUEUE_TOKEN = "queue_token"
 
 
 class TenantCounter(Base):

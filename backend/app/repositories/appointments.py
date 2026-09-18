@@ -26,7 +26,7 @@ class Listed:
     allergy_count: int
 
 
-def _allergy_count() -> ColumnElement[int]:
+def allergy_count() -> ColumnElement[int]:
     return (
         select(func.count())
         .select_from(PatientAllergy)
@@ -41,7 +41,7 @@ class AppointmentRepository(TenantScopedRepository[Appointment]):
 
     def _joined(self) -> Select[tuple[Appointment, Patient, Doctor, int]]:
         return (
-            select(Appointment, Patient, Doctor, _allergy_count())
+            select(Appointment, Patient, Doctor, allergy_count())
             .join(Patient, Patient.id == Appointment.patient_id)
             .join(Doctor, Doctor.id == Appointment.doctor_id)
             .where(Appointment.organization_id == self.organization_id)
@@ -54,8 +54,16 @@ class AppointmentRepository(TenantScopedRepository[Appointment]):
             for row in result.all()
         ]
 
-    async def one(self, appointment_id: uuid.UUID) -> Listed | None:
-        found = await self._rows(self._joined().where(Appointment.id == appointment_id))
+    async def one(self, appointment_id: uuid.UUID, *, lock: bool = False) -> Listed | None:
+        """One appointment, locked for the rest of the request when it is about
+        to change: a cancel and a check-in landing together then take turns,
+        and the second one sees what the first did."""
+        statement = self._joined().where(Appointment.id == appointment_id)
+        if lock:
+            statement = statement.with_for_update(of=Appointment).execution_options(
+                populate_existing=True
+            )
+        found = await self._rows(statement)
         return found[0] if found else None
 
     async def between(

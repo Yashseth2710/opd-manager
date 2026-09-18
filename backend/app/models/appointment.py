@@ -162,7 +162,25 @@ RESCHEDULED = "rescheduled"
 CANCELLED_EVENT = "cancelled"
 MARKED_NO_SHOW = "no_show"
 EDITED = "edited"
-EVENTS = (BOOKED, CONFIRMED_EVENT, RESCHEDULED, CANCELLED_EVENT, MARKED_NO_SHOW, EDITED)
+# What the queue writes back as the patient moves through the day.
+CHECKED_IN_EVENT = "checked_in"
+CHECK_IN_UNDONE = "check_in_undone"
+STARTED = "started"
+SEEN = "seen"
+LEFT = "left"
+EVENTS = (
+    BOOKED,
+    CONFIRMED_EVENT,
+    RESCHEDULED,
+    CANCELLED_EVENT,
+    MARKED_NO_SHOW,
+    EDITED,
+    CHECKED_IN_EVENT,
+    CHECK_IN_UNDONE,
+    STARTED,
+    SEEN,
+    LEFT,
+)
 
 
 class AppointmentEvent(TenantRow):
