@@ -696,6 +696,7 @@ def _present(
         "waited_minutes": _minutes(waited),
         "position": position,
         "expected_wait_minutes": expected,
+        "consultation_id": placed.consultation_id,
     }
 
 

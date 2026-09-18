@@ -66,6 +66,8 @@ class QueueEntryOut(BaseModel):
     # A guess from how long this doctor's consultations have been taking
     # today. Never stored, and never shown as more than roughly.
     expected_wait_minutes: int | None
+    # The notes written for this place, once the doctor has opened them.
+    consultation_id: uuid.UUID | None = None
 
 
 class Arrival(BaseModel):

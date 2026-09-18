@@ -41,6 +41,7 @@ from app.models.appointment import (
 )
 from app.models.doctor import DAY_NAMES
 from app.repositories.appointments import AppointmentRepository, EventRepository, Listed
+from app.repositories.consultations import ConsultationRepository
 from app.repositories.doctors import DoctorRepository, names_of
 from app.repositories.patients import PatientRepository
 from app.repositories.queue import QueueRepository
@@ -874,4 +875,8 @@ async def detail(
     shaped["history"] = await EventRepository(session, organization_id).for_appointment(
         appointment_id
     )
+    notes = await ConsultationRepository(session, organization_id).for_appointment(
+        appointment_id
+    )
+    shaped["consultation_id"] = notes.id if notes else None
     return shaped

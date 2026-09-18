@@ -13,7 +13,7 @@ from typing import Any
 
 from sqlalchemy import Select, func, select
 
-from app.models import Appointment, Doctor, Patient, QueueEntry
+from app.models import Appointment, Consultation, Doctor, Patient, QueueEntry
 from app.models.queue import LIVE
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
@@ -26,17 +26,19 @@ class Placed:
     doctor: Doctor
     appointment: Appointment | None
     allergy_count: int
+    consultation_id: uuid.UUID | None = None
 
 
 class QueueRepository(TenantScopedRepository[QueueEntry]):
     model = QueueEntry
 
-    def _joined(self) -> Select[tuple[QueueEntry, Patient, Doctor, Appointment, int]]:
+    def _joined(self) -> Select[Any]:
         return (
-            select(QueueEntry, Patient, Doctor, Appointment, allergy_count())
+            select(QueueEntry, Patient, Doctor, Appointment, allergy_count(), Consultation.id)
             .join(Patient, Patient.id == QueueEntry.patient_id)
             .join(Doctor, Doctor.id == QueueEntry.doctor_id)
             .outerjoin(Appointment, Appointment.id == QueueEntry.appointment_id)
+            .outerjoin(Consultation, Consultation.queue_entry_id == QueueEntry.id)
             .where(QueueEntry.organization_id == self.organization_id)
         )
 
@@ -49,6 +51,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 doctor=row[2],
                 appointment=row[3],
                 allergy_count=row[4],
+                consultation_id=row[5],
             )
             for row in result.all()
         ]

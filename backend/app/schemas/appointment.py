@@ -131,6 +131,9 @@ class EventOut(BaseModel):
 
 class AppointmentDetail(AppointmentOut):
     history: list[EventOut]
+    # The notes written at this visit. Only an id: whether the caller may
+    # read them is for the notes themselves to say.
+    consultation_id: uuid.UUID | None = None
 
 
 class AppointmentDay(BaseModel):
