@@ -41,7 +41,7 @@ organizations ──┬── users ──── user_roles ──── roles �
                 ├── consultations ─┬── vitals
                 │                  ├── consultation_diagnoses ──── diagnoses
                 │                  ├── prescriptions ──── prescription_items
-                │                  ├── lab_orders ──── lab_results
+                │                  ├── lab_orders ──── lab_result_values
                 │                  └── follow_ups
                 │
                 ├── invoices ──┬── invoice_items
@@ -295,12 +295,30 @@ A prescription is written with the visit's notes as a draft and issued when the 
 
 Once issued, a prescription is never changed. A correction is a new prescription, with its own number, that replaces the original; the original stays, marked replaced, because a copy of it may already be with a pharmacy. The printed page is made on request rather than stored, since an issued prescription never changes and every copy comes out the same.
 
-### lab_orders, lab_results
+### lab_orders, lab_result_values
 
-Order: `test_name`, `category`, `priority`, `instructions`, `status` (`pending` / `completed` / `reviewed`).
-Result: `value`, `unit`, `reference_range`, `remarks`, `resulted_at`, `reviewed_by`.
+`lab_orders`: `consultation_id`, `patient_id`, `doctor_id`, `order_number` (`LAB-000001`), `test_code`, `test_name`, `category`, `urgent`, `instructions`, `status` (`ordered` / `resulted` / `reviewed` / `cancelled`), `ordered_at`, `ordered_by_id`, `cancelled_at`, `cancelled_by_id`, `cancel_reason`, `reported_on`, `lab_name`, `findings`, `resulted_at`, `resulted_by_id`, `changed_by_id`, `reviewed_at`, `reviewed_by_id`.
 
-Deliberately simple. Real lab integration is a different product.
+`lab_result_values`: `lab_order_id`, `position`, `name`, `value`, `unit`, `low`, `high`, `expected`.
+
+```
+UNIQUE (consultation_id, lower(test_name)) WHERE status <> 'cancelled'
+UNIQUE (organization_id, order_number)
+CHECK  ((status = 'cancelled') = (cancelled_at IS NOT NULL))
+CHECK  ((status IN ('resulted', 'reviewed')) = (resulted_at IS NOT NULL))
+CHECK  ((status = 'reviewed') = (reviewed_at IS NOT NULL))
+CHECK  (low <= high)
+INDEX  (organization_id, patient_id, ordered_at)
+INDEX  (organization_id, status, ordered_at)
+```
+
+One order is one test on one visit, ordered while the notes are open and numbered as it is made, so the desk sees it at once. A test taken back before the visit is finished is deleted, since nothing was done with it; after that it is cancelled with a reason and kept. The report is typed in when it comes back, usually at the desk, and can be corrected until the doctor who ordered it marks it seen, after which it stays as it was.
+
+Values are kept as written, because many are not numbers: `Negative`, `1:160`, `++`. The range is the one printed on that lab's report, kept as numbers so the value can be judged against it; a word is judged against the word it should be instead. As with vital signs, the judgement is made on read and never stored. `reported_on` is the date on the report, the day the values belong to, whenever they were typed in.
+
+The common tests are a list shipped with the code, `backend/app/data/lab-tests.json`: forty-odd outpatient tests with the parts of each report and the adult ranges most Indian labs print, by sex where they differ. It is not a table, because it is short, the same for every clinic and changes only with the code. It fills in the lines of a report and their ranges, which the lab's own report overrides, and leaves ranges blank for children, whose normal depends on their age. A test the list does not carry is ordered by name and typed in line by line.
+
+Deliberately simple. Receiving results straight from a lab's own system is a different product.
 
 ### patient_documents
 

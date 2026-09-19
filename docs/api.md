@@ -87,6 +87,7 @@ CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER, NOT_IN_ROOM,
               EDITED_ELSEWHERE, STILL_DRAFT
 RX_*          NOT_FOUND, ALREADY_REPLACED, NOT_PRESCRIBER
 VITALS_*      NOT_FOUND, ALREADY_TAKEN, LOCKED
+LAB_*         NOT_FOUND, VISIT_CLOSED, ALREADY_ORDERED, NOT_ORDERER, LOCKED
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED
@@ -213,10 +214,15 @@ vitals        GET    /vitals?patient_id=  | ?queue_entry_id=
               PUT    /vitals/{id}
               DELETE /vitals/{id}
 
-labs          POST   /lab-orders
-              GET    /lab-orders
-              PATCH  /lab-orders/{id}
-              POST   /lab-orders/{id}/result
+labs          GET    /lab-tests
+              GET    /lab-orders?patient_id= | ?consultation_id= | ?show= | ?mine=
+              POST   /lab-orders
+              GET    /lab-orders/{id}
+              DELETE /lab-orders/{id}
+              POST   /lab-orders/{id}/cancel
+              PUT    /lab-orders/{id}/result
+              DELETE /lab-orders/{id}/result
+              POST   /lab-orders/{id}/review
 
 billing       GET    /invoices
               POST   /invoices
@@ -293,6 +299,12 @@ Tokens count from 1 per doctor per clinic day. The line is arrival order with ur
 A prescription is written through the notes: `PATCH /consultations/{id}` carries `medicines`, the whole list of lines, and `prescription_instructions`, the advice printed on it. Lines can be saved without a dose while the doctor is still writing; finishing the visit issues the prescription with the clinic's next `RX-` number, and a line still without a dose stops it with `422` and the field that needs it. Drafts are never listed or printed. `GET /prescriptions/{id}/pdf` answers with the page itself, `application/pdf`, made fresh each time. `POST /prescriptions/{id}/corrections` issues a replacement with a new number and a reason, and marks the original replaced; only the doctor who wrote it may, which is `403 RX_NOT_PRESCRIBER` for anyone else, and a prescription already replaced is `409 RX_ALREADY_REPLACED` naming the newer one. Issued prescriptions are readable across the clinic by anyone holding `prescription:read`, because the desk prints them.
 
 `GET /medicines?q=` offers what this clinic has prescribed before, most used first, then the published list, with tablets and capsules ahead of syrups and injections. It needs two characters, and a near miss still finds the medicine.
+
+`POST /lab-orders` orders one test for a visit whose notes are still open, by the doctor writing them: another doctor's visit is `403 LAB_NOT_ORDERER`, a finished one `409 LAB_VISIT_CLOSED`. It takes a `test_code` from `GET /lab-tests`, or a `test_name` as typed; a typed name the list knows, `cbc` or `hemogram`, is the listed test. Each order takes the clinic's next `LAB-` number and, unless `instructions` is sent, the list's preparation, such as fasting. The same test twice on one visit is `409 LAB_ALREADY_ORDERED`, and thirty is the most one visit takes. `DELETE /lab-orders/{id}` takes a test back while the visit is open and nothing has come back; after that it is `POST /lab-orders/{id}/cancel` with a reason, by the doctor who ordered it or by whoever records results.
+
+`PUT /lab-orders/{id}/result` is the whole report: the date printed on it, the lab, what it says in words, and each value with its unit and the range the lab printed. Sending it again corrects it, until the ordering doctor marks it seen with `POST /lab-orders/{id}/review`; after that it is `409 LAB_LOCKED`. `DELETE /lab-orders/{id}/result` takes a report typed against the wrong order back off. The report cannot be dated after today or before the test was ordered. Each value comes back with a `flag`, worked out on read: `high` or `low` for a number outside its range, with a value written as `<0.5` read as somewhere below half, and `abnormal` for a word that is not the one it should be, where `Nil`, `Negative` and `Not detected` count as the same. `GET /lab-orders/{id}` also carries the lines a report of that test usually has, with the ranges for the patient's sex filled in for adults and left to the lab's report for children, and each value's figure on the patient's last report of the same test, where it was measured in the same units.
+
+Lab work is part of the patient's record, so anyone holding `lab:read` reads every patient's. A doctor acts only on their own orders: typing a report into a colleague's is `404 LAB_NOT_FOUND`, and marking it seen `403 LAB_NOT_ORDERER`. `GET /lab-orders?show=waiting` is oldest first with urgent ones ahead, since the oldest is the one that is late; one visit's tests come in the order they were asked for, anything else newest first. `counts` gives each status for the tabs, and `mine=true` narrows a doctor's list to their own orders.
 
 A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 

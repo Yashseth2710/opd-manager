@@ -51,8 +51,9 @@ The check reads the permission set from the verified access token. It is impossi
 | `prescription:read` | — | ✓ | ✓ | ✓ | — |
 | `vitals:record` | — | ✓ | ✓ | ✓ | — |
 | `vitals:read` | — | ✓ | ✓ | ✓ | ✓ |
+| `lab:read` | — | ✓ | ✓ | ✓ | config |
 | `lab:create` | — | — | ✓ | — | — |
-| `lab:update` | — | ✓ | ✓ | config | config |
+| `lab:update` | — | ✓ | own | ✓ | config |
 | `document:upload` | — | ✓ | ✓ | ✓ | config |
 | `document:read` | — | ✓ | ✓ | ✓ | config |
 | `billing:create` | — | ✓ | — | ✓ | config |
@@ -70,6 +71,7 @@ The check reads the permission set from the verified access token. It is impossi
 The boundaries that get tested explicitly:
 
 - A receptionist cannot create a consultation or a prescription. Clinical documentation belongs to the clinician who is accountable for it.
+- The desk types lab reports in, since that is where the paper arrives, but only the doctor who ordered a test marks its report as seen, and after that nobody changes it.
 - A doctor cannot archive a patient, manage staff, or change clinic settings.
 - A doctor reads and edits their own consultations. Another doctor's clinical notes are readable by the clinic admin, not laterally.
 - A clinic admin has no platform permissions. A super admin has no clinical permissions.
