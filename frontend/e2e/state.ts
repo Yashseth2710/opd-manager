@@ -9,3 +9,8 @@ export const DOCTOR_STATE = "e2e/.auth/doctor.json";
 
 /** The profile that doctor's account is linked to, as the API described it. */
 export const DOCTOR_PROFILE = "e2e/.auth/doctor-profile.json";
+
+/** Whose sign-in each of the files above holds, so it can be renewed. */
+export const ACCOUNTS = "e2e/.auth/accounts.json";
+
+export const PASSWORD = "a properly long password";

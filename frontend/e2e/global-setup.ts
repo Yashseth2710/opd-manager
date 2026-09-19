@@ -2,7 +2,14 @@ import { request, type FullConfig } from "@playwright/test";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { MORNINGS } from "./fixtures";
-import { DOCTOR_PROFILE, DOCTOR_STATE, EMPTY_STATE, SHARED_STATE } from "./state";
+import {
+  ACCOUNTS,
+  DOCTOR_PROFILE,
+  DOCTOR_STATE,
+  EMPTY_STATE,
+  PASSWORD,
+  SHARED_STATE,
+} from "./state";
 
 /**
  * Two clinics, once per run.
@@ -17,17 +24,18 @@ import { DOCTOR_PROFILE, DOCTOR_STATE, EMPTY_STATE, SHARED_STATE } from "./state
  * doctors. The other is never written to, so the screen a clinic sees before
  * it has added anybody can be tested at all.
  */
-async function register(baseURL: string, into: string) {
+async function register(baseURL: string, into: string): Promise<string> {
   const api = await request.newContext({ baseURL });
   const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
+  const email = `priya.${stamp}@sunrisecare.org`;
   const created = await api.post("/api/v1/auth/register", {
     data: {
       clinic_name: `Sunrise Clinic ${stamp}`,
       first_name: "Priya",
       last_name: "Nair",
-      email: `priya.${stamp}@sunrisecare.org`,
-      password: "a properly long password",
+      email,
+      password: PASSWORD,
     },
   });
 
@@ -45,6 +53,7 @@ async function register(baseURL: string, into: string) {
   await mkdir(dirname(into), { recursive: true });
   await writeFile(into, JSON.stringify(await api.storageState(), null, 2));
   await api.dispose();
+  return email;
 }
 
 /**
@@ -71,7 +80,7 @@ async function invitationLink(log: string, email: string): Promise<string> {
  * Notes are only ever written by a doctor, so the screens for them cannot be
  * tested from the administrator's session.
  */
-async function joinAsDoctor(baseURL: string) {
+async function joinAsDoctor(baseURL: string): Promise<string> {
   const log = process.env.E2E_API_LOG;
   if (!log) {
     throw new Error(
@@ -93,7 +102,7 @@ async function joinAsDoctor(baseURL: string) {
   const token = new URL(await invitationLink(log, email)).searchParams.get("token");
   const doctor = await request.newContext({ baseURL });
   const joined = await doctor.post("/api/v1/invitations/accept", {
-    data: { token, password: "a properly long password" },
+    data: { token, password: PASSWORD },
   });
   if (!joined.ok()) throw new Error(`The doctor could not join: ${await joined.text()}`);
 
@@ -128,11 +137,15 @@ async function joinAsDoctor(baseURL: string) {
   );
   await doctor.dispose();
   await admin.dispose();
+  return email;
 }
 
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:3000";
-  await register(baseURL, SHARED_STATE);
-  await register(baseURL, EMPTY_STATE);
-  await joinAsDoctor(baseURL);
+  const accounts = {
+    [SHARED_STATE]: await register(baseURL, SHARED_STATE),
+    [EMPTY_STATE]: await register(baseURL, EMPTY_STATE),
+  };
+  accounts[DOCTOR_STATE] = await joinAsDoctor(baseURL);
+  await writeFile(ACCOUNTS, JSON.stringify(accounts, null, 2));
 }

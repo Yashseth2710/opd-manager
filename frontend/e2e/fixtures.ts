@@ -1,8 +1,42 @@
-import { expect, test as base, type Page } from "@playwright/test";
+import { expect, request, test as base, type Page } from "@playwright/test";
+import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { ACCOUNTS, PASSWORD } from "./state";
 
 let tagged = 0;
 
-export const test = base.extend<{ tag: string }>({
+// An access token lasts fifteen minutes and a run takes longer. A page
+// renews its own, but a test that talks to the API straight from a saved
+// sign-in cannot, so the files are signed in again well before then.
+const RENEW_AFTER_MS = 10 * 60_000;
+
+async function renewSignIns(baseURL: string) {
+  const accounts = JSON.parse(readFileSync(ACCOUNTS, "utf8")) as Record<string, string>;
+  for (const [file, email] of Object.entries(accounts)) {
+    if (Date.now() - statSync(file).mtimeMs < RENEW_AFTER_MS) continue;
+    const api = await request.newContext({ baseURL });
+    const signed = await api.post("/api/v1/auth/login", {
+      data: { email, password: PASSWORD },
+    });
+    if (!signed.ok())
+      throw new Error(`Could not sign ${email} in again: ${await signed.text()}`);
+    writeFileSync(file, JSON.stringify(await api.storageState(), null, 2));
+    await api.dispose();
+  }
+}
+
+export const test = base.extend<{ tag: string; freshSignIns: void }>({
+  freshSignIns: [
+    async ({ baseURL }, use) => {
+      await renewSignIns(baseURL ?? "http://localhost:3000");
+      await use();
+    },
+    { auto: true },
+  ],
+  // Read after the files are renewed, never before.
+  storageState: async ({ storageState, freshSignIns }, use) => {
+    void freshSignIns;
+    await use(storageState);
+  },
   /**
    * A string no other test in this run uses.
    *
