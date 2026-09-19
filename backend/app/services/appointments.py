@@ -333,6 +333,9 @@ async def book(
 ) -> Appointment:
     patient = await registered_patient(session, organization_id, body.patient_id)
     doctor = await bookable_doctor(session, organization_id, body.doctor_id, reach)
+    # Before the slot is looked at, so a second desk booking it at the same
+    # moment waits here and then sees this booking.
+    await AppointmentRepository(session, organization_id).take_turns(doctor.id, patient.id)
     starts, ends = await _place(
         session,
         organization_id=organization_id,
@@ -448,6 +451,9 @@ async def update(
         moved = doctor.id != was_doctor.id or at_clinic(clinic, day, start) != was_start
 
         if moved:
+            await AppointmentRepository(session, organization_id).take_turns(
+                doctor.id, listed.patient.id
+            )
             starts, ends = await _place(
                 session,
                 organization_id=organization_id,

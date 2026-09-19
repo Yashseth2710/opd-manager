@@ -54,6 +54,30 @@ class AppointmentRepository(TenantScopedRepository[Appointment]):
             for row in result.all()
         ]
 
+    async def take_turns(self, doctor_id: uuid.UUID, patient_id: uuid.UUID) -> None:
+        """Holds the doctor and the patient until this booking is written.
+
+        The database refuses two appointments that overlap, but two inserts
+        racing for one slot each wait on the other to find out, and Postgres
+        settles that by killing one as a deadlock. Taking the doctor and then
+        the patient first makes them queue instead, and the second one finds
+        the slot taken the ordinary way. Always doctor before patient, and
+        after any appointment being changed, which is the order the queue
+        locks in too.
+        """
+        await self.session.execute(
+            select(Doctor.id)
+            .where(Doctor.organization_id == self.organization_id)
+            .where(Doctor.id == doctor_id)
+            .with_for_update()
+        )
+        await self.session.execute(
+            select(Patient.id)
+            .where(Patient.organization_id == self.organization_id)
+            .where(Patient.id == patient_id)
+            .with_for_update()
+        )
+
     async def one(self, appointment_id: uuid.UUID, *, lock: bool = False) -> Listed | None:
         """One appointment, locked for the rest of the request when it is about
         to change: a cancel and a check-in landing together then take turns,
