@@ -69,6 +69,9 @@ test.describe("at the desk", () => {
     await expect(page.getByRole("status").filter({ hasText: "removed" })).toBeVisible();
     await expect(row.getByRole("button", { name: /^Take vitals for / })).toBeVisible();
     await expect(row).not.toContainText(/BP\s*150\/95/);
+
+    // Out of the line, so later tests sharing the doctor start clear of them.
+    await page.request.post(`/api/v1/queue/${(await placed.json()).data.id}/no-show`);
   });
 });
 
