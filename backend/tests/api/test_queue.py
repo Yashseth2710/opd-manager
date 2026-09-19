@@ -12,10 +12,12 @@ import datetime as dt
 import uuid
 from typing import Any
 
+import pytest
 from httpx import AsyncClient, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Appointment, QueueEntry
+from app.services import queue as queue_service
 from tests.api.test_appointments import (
     KOLKATA,
     act,
@@ -603,8 +605,12 @@ class TestTheOrderOfTheLine:
         assert refusal(response)["status"] == 409
 
     async def test_the_desk_sees_who_is_still_to_arrive(
-        self, client: AsyncClient, session: AsyncSession
+        self, client: AsyncClient, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        # Midday, so half past midnight has gone by and half past eleven at
+        # night has not, whenever the suite happens to run.
+        noon = dt.datetime.combine(today(), dt.time(12, 0), tzinfo=KOLKATA)
+        monkeypatch.setattr(queue_service, "clinic_now", lambda _clinic: noon)
         await sign_up(client)
         doctor = await doctor_with_hours(client)
         asha = await someone(client, "Asha")
@@ -617,8 +623,7 @@ class TestTheOrderOfTheLine:
             asha["id"],
             bina["id"],
         ]
-        # Half past midnight has always gone by the time anyone runs this.
-        assert lane["expected"][0]["is_late"] is True
+        assert [arrival["is_late"] for arrival in lane["expected"]] == [True, False]
 
         await checked_in(client, early)
         lane = lane_of(await the_queue(client), doctor)

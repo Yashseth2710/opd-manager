@@ -7,12 +7,14 @@ import datetime as dt
 import uuid
 from typing import Any
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Consultation, QueueEntry
-from tests.api.test_appointments import doctor_with_hours
+from app.services import dashboard, queue
+from tests.api.test_appointments import KOLKATA, doctor_with_hours
 from tests.api.test_clinic import AUTH, invite_and_accept, sign_in, sign_up
 from tests.api.test_consultations import a_clinic, become, finished, opened, saved
 from tests.api.test_patients import register
@@ -57,7 +59,14 @@ async def waited(session: AsyncSession, entry: dict[str, Any], minutes: int) -> 
 
 
 class TestTheClinicsDay:
-    async def test_the_counts_add_up(self, client: AsyncClient, session: AsyncSession) -> None:
+    async def test_the_counts_add_up(
+        self, client: AsyncClient, session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Midday, so the booking for late in the evening is still to come
+        # whenever the suite happens to run.
+        noon = dt.datetime.combine(today(), dt.time(12, 0), tzinfo=KOLKATA)
+        for module in (queue, dashboard):
+            monkeypatch.setattr(module, "clinic_now", lambda _clinic: noon)
         await sign_up(client)
         doctor = await doctor_with_hours(client)
         # Booked, half an hour apart since a doctor's bookings may not overlap:
