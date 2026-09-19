@@ -5,11 +5,13 @@ Scoped like everything else, so another clinic's notes read as absent.
 
 from __future__ import annotations
 
+import datetime as dt
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import Select, delete, func, select
+from sqlalchemy.orm import aliased
 
 from app.models import (
     Consultation,
@@ -20,6 +22,7 @@ from app.models import (
     QueueEntry,
     User,
 )
+from app.models.consultation import COMPLETED
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
 
@@ -170,6 +173,40 @@ class ConsultationRepository(TenantScopedRepository[Consultation]):
             .offset(offset)
         )
         return found, total
+
+    async def due_back(
+        self,
+        day: dt.date,
+        *,
+        day_starts: dt.datetime,
+        doctor_id: uuid.UUID | None = None,
+    ) -> list[Written]:
+        """Finished visits whose doctor asked the patient back on this day.
+
+        A visit the patient has had since, before this day, answers the
+        request, so it no longer counts. One today does not: that is the
+        patient coming back as asked.
+        """
+        later = aliased(Consultation)
+        answered = (
+            select(later.id)
+            .where(later.organization_id == self.organization_id)
+            .where(later.patient_id == Consultation.patient_id)
+            .where(later.started_at > Consultation.started_at)
+            .where(later.started_at < day_starts)
+            .exists()
+        )
+        statement = (
+            self._joined()
+            .where(Consultation.status == COMPLETED)
+            .where(Consultation.follow_up_date == day)
+            .where(~answered)
+        )
+        if doctor_id is not None:
+            statement = statement.where(Consultation.doctor_id == doctor_id)
+        return await self._rows(
+            statement.order_by(Consultation.started_at.desc(), Consultation.id.desc())
+        )
 
     async def replace_diagnoses(
         self, consultation_id: uuid.UUID, entries: list[tuple[str, bool]]

@@ -630,7 +630,7 @@ def _average(durations: list[dt.timedelta], fallback: int) -> int:
     return max(1, round(mean.total_seconds() / 60))
 
 
-def _patient_ref(placed_patient: Patient, allergy_count: int, today: dt.date) -> dict[str, Any]:
+def patient_ref(placed_patient: Patient, allergy_count: int, today: dt.date) -> dict[str, Any]:
     return {
         "id": placed_patient.id,
         "patient_number": placed_patient.patient_number,
@@ -644,7 +644,7 @@ def _patient_ref(placed_patient: Patient, allergy_count: int, today: dt.date) ->
     }
 
 
-def _doctor_ref(doctor: Doctor) -> dict[str, Any]:
+def doctor_ref(doctor: Doctor) -> dict[str, Any]:
     return {
         "id": doctor.id,
         "display_name": doctor.display_name,
@@ -677,8 +677,8 @@ def _present(
         "token": entry.token_number,
         "status": entry.status,
         "priority": entry.priority,
-        "patient": _patient_ref(placed.patient, placed.allergy_count, now.date()),
-        "doctor": _doctor_ref(placed.doctor),
+        "patient": patient_ref(placed.patient, placed.allergy_count, now.date()),
+        "doctor": doctor_ref(placed.doctor),
         "appointment": {
             "id": appointment.id,
             "start_time": appointment.scheduled_start.astimezone(zone).time(),
@@ -761,7 +761,7 @@ def _lane(
         ahead += average
 
     return {
-        "doctor": _doctor_ref(doctor),
+        "doctor": doctor_ref(doctor),
         "closed": closed,
         "now_seeing": _present(in_room, clinic=clinic, now=now) if in_room else None,
         "called": _present(called, clinic=clinic, now=now) if called else None,
@@ -780,7 +780,7 @@ def _lane(
         "expected": [
             {
                 "id": row.appointment.id,
-                "patient": _patient_ref(row.patient, row.allergy_count, now.date()),
+                "patient": patient_ref(row.patient, row.allergy_count, now.date()),
                 "start_time": row.appointment.scheduled_start.astimezone(zone).time(),
                 "end_time": row.appointment.scheduled_end.astimezone(zone).time(),
                 "appointment_type": row.appointment.appointment_type,
