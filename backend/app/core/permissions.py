@@ -28,6 +28,7 @@ CATALOGUE: Final[dict[str, str]] = {
     "prescription:read": "View prescriptions",
     "vitals:record": "Take and correct vital signs",
     "vitals:read": "View vital signs",
+    "lab:read": "View lab orders and results",
     "lab:create": "Order lab tests",
     "lab:update": "Record lab results",
     "document:upload": "Upload documents",
@@ -72,6 +73,7 @@ _CLINIC_ADMIN = [
     "prescription:read",
     "vitals:record",
     "vitals:read",
+    "lab:read",
     "lab:update",
     "document:upload",
     "document:read",
@@ -104,6 +106,7 @@ _DOCTOR = [
     "prescription:read",
     "vitals:record",
     "vitals:read",
+    "lab:read",
     "lab:create",
     "lab:update",
     "document:upload",
@@ -112,6 +115,8 @@ _DOCTOR = [
     "doctor:read",
 ]
 
+# The desk types lab reports in as they come back. Marking one as seen is
+# left to the doctor who ordered the test.
 _RECEPTIONIST = [
     "patient:create",
     "patient:read",
@@ -125,6 +130,8 @@ _RECEPTIONIST = [
     "prescription:read",
     "vitals:record",
     "vitals:read",
+    "lab:read",
+    "lab:update",
     "document:upload",
     "document:read",
     "billing:create",

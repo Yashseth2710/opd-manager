@@ -3,6 +3,7 @@ from app.models.consultation import Consultation, ConsultationAddendum, Consulta
 from app.models.counter import TenantCounter
 from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
 from app.models.invitation import Invitation
+from app.models.lab import LabOrder, LabResultValue
 from app.models.organization import DEFAULT_SETTINGS, Organization
 from app.models.patient import Patient, PatientAllergy
 from app.models.prescription import Medicine, Prescription, PrescriptionItem
@@ -22,6 +23,8 @@ __all__ = [
     "DoctorLeave",
     "DoctorSchedule",
     "Invitation",
+    "LabOrder",
+    "LabResultValue",
     "Medicine",
     "Organization",
     "Patient",

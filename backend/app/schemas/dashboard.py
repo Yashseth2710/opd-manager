@@ -88,6 +88,18 @@ class Unfinished(BaseModel):
     chief_complaint: str | None
 
 
+class ResultIn(BaseModel):
+    """A lab report back for one of the doctor's patients, not yet looked at."""
+
+    order_id: uuid.UUID
+    patient: PatientRef
+    test_name: str
+    reported_on: dt.date
+    urgent: bool
+    # Values on it outside their range.
+    flagged: int
+
+
 class Today(BaseModel):
     date: dt.date
     day_name: str
@@ -106,3 +118,6 @@ class Today(BaseModel):
     due_back: list[DueBack]
     unfinished: list[Unfinished]
     unfinished_total: int
+    # Oldest first, for a doctor's own day.
+    results: list[ResultIn]
+    results_total: int

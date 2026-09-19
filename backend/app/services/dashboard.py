@@ -2,8 +2,8 @@
 
 Built from the same queue the desk works from, so the numbers here and the
 lines on the queue page never disagree. A doctor sees their own day: their
-line, their next patient, the notes they have not finished and the patients
-they asked back. Everyone else sees the clinic's.
+line, their next patient, the notes they have not finished, the lab reports
+back for them to look at, and the patients they asked back. Everyone else sees the clinic's.
 
 Nothing here is stored. It is worked out on each request, and the page asks
 again every half a minute while it is open.
@@ -24,7 +24,8 @@ from app.models import consultation as notes
 from app.models import queue as line
 from app.repositories.appointments import AppointmentRepository
 from app.repositories.consultations import ConsultationRepository
-from app.services import queue
+from app.repositories.lab import LabRepository
+from app.services import lab, queue
 from app.services.appointments import Reach
 from app.services.doctors import clinic_now, clinic_zone, day_bounds
 
@@ -143,6 +144,8 @@ async def today(
         "due_back": [],
         "unfinished": [],
         "unfinished_total": 0,
+        "results": [],
+        "results_total": 0,
     }
     if reach.unlinked:
         return shape
@@ -277,5 +280,20 @@ async def today(
             for written in drafts[:SHOWN]
         ]
         shape["unfinished_total"] = total - len(writing)
+
+        reports, shape["results_total"] = await LabRepository(
+            session, organization_id
+        ).to_review(reach.doctor_id, limit=SHOWN)
+        shape["results"] = [
+            {
+                "order_id": report.order.id,
+                "patient": queue.patient_ref(report.patient, report.allergy_count, date),
+                "test_name": report.order.test_name,
+                "reported_on": report.order.reported_on,
+                "urgent": report.order.urgent,
+                "flagged": lab.flagged(report.values),
+            }
+            for report in reports
+        ]
 
     return shape

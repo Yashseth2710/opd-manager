@@ -1,0 +1,395 @@
+{
+  "note": "Common outpatient tests and the adult reference ranges most Indian labs print. The range on the lab's own report is the one that counts, and can be changed when the result is typed in.",
+  "categories": {
+    "blood": "Blood counts",
+    "sugar": "Sugar",
+    "chemistry": "Kidney, liver and lipids",
+    "hormones": "Hormones and vitamins",
+    "urine": "Urine and stool",
+    "infection": "Infections",
+    "imaging": "Scans and ECG"
+  },
+  "tests": [
+    {
+      "code": "cbc",
+      "name": "Complete blood count",
+      "also": ["CBC", "Hemogram", "Haemogram"],
+      "category": "blood",
+      "values": [
+        {"name": "Haemoglobin", "unit": "g/dL", "male": [13, 17], "female": [12, 15]},
+        {"name": "Total leucocyte count", "unit": "×10³/µL", "range": [4, 11]},
+        {"name": "Neutrophils", "unit": "%", "range": [40, 80]},
+        {"name": "Lymphocytes", "unit": "%", "range": [20, 40]},
+        {"name": "Eosinophils", "unit": "%", "range": [1, 6]},
+        {"name": "Monocytes", "unit": "%", "range": [2, 10]},
+        {"name": "Basophils", "unit": "%", "range": [0, 2]},
+        {"name": "Platelet count", "unit": "×10³/µL", "range": [150, 410]},
+        {"name": "RBC count", "unit": "×10⁶/µL", "male": [4.5, 5.5], "female": [3.8, 4.8]},
+        {"name": "Haematocrit (PCV)", "unit": "%", "male": [40, 50], "female": [36, 46]},
+        {"name": "MCV", "unit": "fL", "range": [83, 101]},
+        {"name": "MCH", "unit": "pg", "range": [27, 32]},
+        {"name": "MCHC", "unit": "g/dL", "range": [31.5, 34.5]},
+        {"name": "RDW", "unit": "%", "range": [11.6, 14]}
+      ]
+    },
+    {
+      "code": "hb",
+      "name": "Haemoglobin",
+      "also": ["Hb", "Hemoglobin"],
+      "category": "blood",
+      "values": [{"name": "Haemoglobin", "unit": "g/dL", "male": [13, 17], "female": [12, 15]}]
+    },
+    {
+      "code": "esr",
+      "name": "ESR",
+      "also": ["Erythrocyte sedimentation rate"],
+      "category": "blood",
+      "values": [{"name": "ESR", "unit": "mm/hr", "male": [0, 15], "female": [0, 20]}]
+    },
+    {
+      "code": "platelets",
+      "name": "Platelet count",
+      "also": ["Platelets"],
+      "category": "blood",
+      "values": [{"name": "Platelet count", "unit": "×10³/µL", "range": [150, 410]}]
+    },
+    {
+      "code": "blood_group",
+      "name": "Blood group and Rh",
+      "also": ["Blood grouping", "ABO"],
+      "category": "blood",
+      "values": [{"name": "Blood group"}]
+    },
+    {
+      "code": "smear",
+      "name": "Peripheral smear",
+      "also": ["PS", "Blood smear"],
+      "category": "blood",
+      "values": []
+    },
+    {
+      "code": "pt_inr",
+      "name": "PT and INR",
+      "also": ["Prothrombin time", "INR"],
+      "category": "blood",
+      "values": [
+        {"name": "Prothrombin time", "unit": "s"},
+        {"name": "INR", "range": [0.8, 1.2]}
+      ]
+    },
+    {
+      "code": "fbs",
+      "name": "Fasting blood sugar",
+      "also": ["FBS", "Fasting glucose", "FBG"],
+      "category": "sugar",
+      "prepare": "Nothing to eat for 8 to 10 hours before. Water is fine.",
+      "values": [{"name": "Glucose, fasting", "unit": "mg/dL", "range": [70, 100]}]
+    },
+    {
+      "code": "ppbs",
+      "name": "Post-meal blood sugar",
+      "also": ["PPBS", "Post prandial blood sugar", "PP sugar", "PPBG"],
+      "category": "sugar",
+      "prepare": "Two hours after a normal meal.",
+      "values": [{"name": "Glucose, 2 hours after a meal", "unit": "mg/dL", "range": [70, 140]}]
+    },
+    {
+      "code": "rbs",
+      "name": "Random blood sugar",
+      "also": ["RBS", "Random glucose"],
+      "category": "sugar",
+      "values": [{"name": "Glucose, random", "unit": "mg/dL", "range": [70, 140]}]
+    },
+    {
+      "code": "hba1c",
+      "name": "HbA1c",
+      "also": ["Glycated haemoglobin", "Glycosylated hemoglobin", "A1c"],
+      "category": "sugar",
+      "values": [{"name": "HbA1c", "unit": "%", "range": [4, 5.6]}]
+    },
+    {
+      "code": "kft",
+      "name": "Kidney function test",
+      "also": ["KFT", "RFT", "Renal function test"],
+      "category": "chemistry",
+      "values": [
+        {"name": "Urea", "unit": "mg/dL", "range": [17, 43]},
+        {"name": "Creatinine", "unit": "mg/dL", "male": [0.7, 1.3], "female": [0.6, 1.1]},
+        {"name": "Uric acid", "unit": "mg/dL", "male": [3.5, 7.2], "female": [2.6, 6]},
+        {"name": "Sodium", "unit": "mmol/L", "range": [136, 145]},
+        {"name": "Potassium", "unit": "mmol/L", "range": [3.5, 5.1]},
+        {"name": "Chloride", "unit": "mmol/L", "range": [98, 107]}
+      ]
+    },
+    {
+      "code": "creatinine",
+      "name": "Serum creatinine",
+      "also": ["Creatinine", "S. creatinine"],
+      "category": "chemistry",
+      "values": [{"name": "Creatinine", "unit": "mg/dL", "male": [0.7, 1.3], "female": [0.6, 1.1]}]
+    },
+    {
+      "code": "electrolytes",
+      "name": "Serum electrolytes",
+      "also": ["Electrolytes", "Na K Cl"],
+      "category": "chemistry",
+      "values": [
+        {"name": "Sodium", "unit": "mmol/L", "range": [136, 145]},
+        {"name": "Potassium", "unit": "mmol/L", "range": [3.5, 5.1]},
+        {"name": "Chloride", "unit": "mmol/L", "range": [98, 107]}
+      ]
+    },
+    {
+      "code": "uric_acid",
+      "name": "Serum uric acid",
+      "also": ["Uric acid"],
+      "category": "chemistry",
+      "values": [{"name": "Uric acid", "unit": "mg/dL", "male": [3.5, 7.2], "female": [2.6, 6]}]
+    },
+    {
+      "code": "lft",
+      "name": "Liver function test",
+      "also": ["LFT"],
+      "category": "chemistry",
+      "values": [
+        {"name": "Bilirubin, total", "unit": "mg/dL", "range": [0.3, 1.2]},
+        {"name": "Bilirubin, direct", "unit": "mg/dL", "range": [null, 0.3]},
+        {"name": "SGOT (AST)", "unit": "U/L", "range": [null, 40]},
+        {"name": "SGPT (ALT)", "unit": "U/L", "male": [null, 41], "female": [null, 33]},
+        {"name": "Alkaline phosphatase", "unit": "U/L", "range": [44, 147]},
+        {"name": "GGT", "unit": "U/L", "male": [null, 55], "female": [null, 38]},
+        {"name": "Total protein", "unit": "g/dL", "range": [6.4, 8.3]},
+        {"name": "Albumin", "unit": "g/dL", "range": [3.5, 5.2]},
+        {"name": "Globulin", "unit": "g/dL", "range": [2, 3.5]}
+      ]
+    },
+    {
+      "code": "lipid",
+      "name": "Lipid profile",
+      "also": ["Lipids", "Cholesterol"],
+      "category": "chemistry",
+      "prepare": "Nothing to eat for 10 to 12 hours before. Water is fine.",
+      "values": [
+        {"name": "Total cholesterol", "unit": "mg/dL", "range": [null, 200]},
+        {"name": "Triglycerides", "unit": "mg/dL", "range": [null, 150]},
+        {"name": "HDL cholesterol", "unit": "mg/dL", "male": [40, null], "female": [50, null]},
+        {"name": "LDL cholesterol", "unit": "mg/dL", "range": [null, 100]},
+        {"name": "VLDL cholesterol", "unit": "mg/dL", "range": [null, 30]}
+      ]
+    },
+    {
+      "code": "calcium",
+      "name": "Serum calcium",
+      "also": ["Calcium"],
+      "category": "chemistry",
+      "values": [{"name": "Calcium", "unit": "mg/dL", "range": [8.6, 10.3]}]
+    },
+    {
+      "code": "crp",
+      "name": "C-reactive protein",
+      "also": ["CRP"],
+      "category": "chemistry",
+      "values": [{"name": "CRP", "unit": "mg/L", "range": [null, 5]}]
+    },
+    {
+      "code": "ferritin",
+      "name": "Serum ferritin",
+      "also": ["Ferritin"],
+      "category": "chemistry",
+      "values": [{"name": "Ferritin", "unit": "ng/mL", "male": [30, 400], "female": [13, 150]}]
+    },
+    {
+      "code": "thyroid",
+      "name": "Thyroid profile",
+      "also": ["TFT", "T3 T4 TSH", "Thyroid function test"],
+      "category": "hormones",
+      "values": [
+        {"name": "T3, total", "unit": "ng/dL", "range": [80, 200]},
+        {"name": "T4, total", "unit": "µg/dL", "range": [5.1, 14.1]},
+        {"name": "TSH", "unit": "µIU/mL", "range": [0.27, 4.2]}
+      ]
+    },
+    {
+      "code": "tsh",
+      "name": "TSH",
+      "also": ["Thyroid stimulating hormone"],
+      "category": "hormones",
+      "values": [{"name": "TSH", "unit": "µIU/mL", "range": [0.27, 4.2]}]
+    },
+    {
+      "code": "vitamin_d",
+      "name": "Vitamin D (25-OH)",
+      "also": ["Vit D", "25 hydroxy vitamin D"],
+      "category": "hormones",
+      "values": [{"name": "Vitamin D (25-OH)", "unit": "ng/mL", "range": [30, 100]}]
+    },
+    {
+      "code": "vitamin_b12",
+      "name": "Vitamin B12",
+      "also": ["Vit B12", "Cobalamin"],
+      "category": "hormones",
+      "values": [{"name": "Vitamin B12", "unit": "pg/mL", "range": [211, 911]}]
+    },
+    {
+      "code": "psa",
+      "name": "PSA",
+      "also": ["Prostate specific antigen"],
+      "category": "hormones",
+      "values": [{"name": "PSA, total", "unit": "ng/mL", "range": [null, 4]}]
+    },
+    {
+      "code": "urine_routine",
+      "name": "Urine routine",
+      "also": ["Urine R/M", "Urine routine and microscopy", "Urinalysis", "Urine analysis"],
+      "category": "urine",
+      "prepare": "A mid-stream sample, first thing in the morning if possible.",
+      "values": [
+        {"name": "Colour"},
+        {"name": "Appearance", "expected": "Clear"},
+        {"name": "pH", "range": [5, 8]},
+        {"name": "Specific gravity", "range": [1.005, 1.03]},
+        {"name": "Protein", "expected": "Nil"},
+        {"name": "Sugar", "expected": "Nil"},
+        {"name": "Ketones", "expected": "Nil"},
+        {"name": "Pus cells", "unit": "/hpf", "range": [0, 5]},
+        {"name": "Red cells", "unit": "/hpf", "range": [0, 2]},
+        {"name": "Epithelial cells", "unit": "/hpf", "range": [0, 5]},
+        {"name": "Casts", "expected": "Nil"},
+        {"name": "Crystals", "expected": "Nil"}
+      ]
+    },
+    {
+      "code": "urine_culture",
+      "name": "Urine culture and sensitivity",
+      "also": ["Urine C/S", "Urine culture"],
+      "category": "urine",
+      "prepare": "A mid-stream sample in a sterile container, before any antibiotic.",
+      "values": []
+    },
+    {
+      "code": "upt",
+      "name": "Urine pregnancy test",
+      "also": ["UPT", "Pregnancy test"],
+      "category": "urine",
+      "values": [{"name": "Result"}]
+    },
+    {
+      "code": "stool_routine",
+      "name": "Stool routine",
+      "also": ["Stool R/M", "Stool examination"],
+      "category": "urine",
+      "values": []
+    },
+    {
+      "code": "dengue_ns1",
+      "name": "Dengue NS1 antigen",
+      "also": ["NS1", "Dengue"],
+      "category": "infection",
+      "values": [{"name": "NS1 antigen", "expected": "Negative"}]
+    },
+    {
+      "code": "dengue_antibodies",
+      "name": "Dengue IgM and IgG",
+      "also": ["Dengue serology", "Dengue antibodies"],
+      "category": "infection",
+      "values": [
+        {"name": "Dengue IgM", "expected": "Negative"},
+        {"name": "Dengue IgG", "expected": "Negative"}
+      ]
+    },
+    {
+      "code": "malaria",
+      "name": "Malaria antigen",
+      "also": ["MP", "Malaria parasite", "Malaria rapid test"],
+      "category": "infection",
+      "values": [
+        {"name": "P. falciparum", "expected": "Negative"},
+        {"name": "P. vivax", "expected": "Negative"}
+      ]
+    },
+    {
+      "code": "widal",
+      "name": "Widal test",
+      "also": ["Widal"],
+      "category": "infection",
+      "values": [
+        {"name": "S. Typhi O"},
+        {"name": "S. Typhi H"},
+        {"name": "S. Paratyphi AH"},
+        {"name": "S. Paratyphi BH"}
+      ]
+    },
+    {
+      "code": "typhoid_igm",
+      "name": "Typhoid IgM",
+      "also": ["Typhidot"],
+      "category": "infection",
+      "values": [{"name": "Typhoid IgM", "expected": "Negative"}]
+    },
+    {
+      "code": "hiv",
+      "name": "HIV 1 and 2",
+      "also": ["HIV"],
+      "category": "infection",
+      "values": [{"name": "HIV 1 and 2 antibodies", "expected": "Non-reactive"}]
+    },
+    {
+      "code": "hbsag",
+      "name": "HBsAg",
+      "also": ["Hepatitis B surface antigen", "Hepatitis B"],
+      "category": "infection",
+      "values": [{"name": "HBsAg", "expected": "Non-reactive"}]
+    },
+    {
+      "code": "hcv",
+      "name": "Anti-HCV",
+      "also": ["Hepatitis C", "HCV"],
+      "category": "infection",
+      "values": [{"name": "Anti-HCV", "expected": "Non-reactive"}]
+    },
+    {
+      "code": "vdrl",
+      "name": "VDRL",
+      "also": ["Syphilis test"],
+      "category": "infection",
+      "values": [{"name": "VDRL", "expected": "Non-reactive"}]
+    },
+    {
+      "code": "sputum_afb",
+      "name": "Sputum for AFB",
+      "also": ["Sputum AFB", "Sputum smear"],
+      "category": "infection",
+      "prepare": "Two samples: one on the spot and one first thing the next morning.",
+      "values": [{"name": "Acid-fast bacilli", "expected": "Not seen"}]
+    },
+    {
+      "code": "xray_chest",
+      "name": "X-ray chest PA view",
+      "also": ["CXR", "Chest X-ray", "Chest radiograph"],
+      "category": "imaging",
+      "values": []
+    },
+    {
+      "code": "usg_abdomen",
+      "name": "Ultrasound abdomen and pelvis",
+      "also": ["USG abdomen", "Sonography", "Ultrasound"],
+      "category": "imaging",
+      "prepare": "Nothing to eat for 6 hours before, and come with a full bladder.",
+      "values": []
+    },
+    {
+      "code": "ecg",
+      "name": "ECG",
+      "also": ["Electrocardiogram", "EKG"],
+      "category": "imaging",
+      "values": []
+    },
+    {
+      "code": "echo",
+      "name": "Echocardiogram",
+      "also": ["2D echo", "Echo"],
+      "category": "imaging",
+      "values": []
+    }
+  ]
+}

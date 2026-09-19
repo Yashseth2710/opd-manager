@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     dashboard,
     doctors,
     health,
+    lab,
     patients,
     prescriptions,
     queue,
@@ -25,4 +26,5 @@ router.include_router(queue.router)
 router.include_router(consultations.router)
 router.include_router(prescriptions.router)
 router.include_router(vitals.router)
+router.include_router(lab.router)
 router.include_router(dashboard.router)
