@@ -44,6 +44,20 @@ class BookedFor(BaseModel):
     status: Status
 
 
+class VitalsBrief(BaseModel):
+    """What the queue shows of the readings taken for a place."""
+
+    id: uuid.UUID
+    systolic_mmhg: int | None
+    diastolic_mmhg: int | None
+    pulse_bpm: int | None
+    temperature_c: float | None
+    spo2_percent: int | None
+    weight_kg: float | None
+    glucose_mg_dl: int | None
+    flags: dict[str, Literal["high", "low"]]
+
+
 class QueueEntryOut(BaseModel):
     id: uuid.UUID
     token: int
@@ -70,6 +84,7 @@ class QueueEntryOut(BaseModel):
     consultation_id: uuid.UUID | None = None
     # The prescription issued at this visit, for the desk to print.
     prescription_id: uuid.UUID | None = None
+    vitals: VitalsBrief | None = None
 
 
 class Arrival(BaseModel):

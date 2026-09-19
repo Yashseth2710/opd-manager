@@ -26,6 +26,8 @@ CATALOGUE: Final[dict[str, str]] = {
     "consultation:update": "Edit consultation notes",
     "prescription:create": "Write prescriptions",
     "prescription:read": "View prescriptions",
+    "vitals:record": "Take and correct vital signs",
+    "vitals:read": "View vital signs",
     "lab:create": "Order lab tests",
     "lab:update": "Record lab results",
     "document:upload": "Upload documents",
@@ -52,7 +54,9 @@ DOCTOR: Final[str] = "doctor"
 
 # Clinical documentation is deliberately absent from the admin role. An
 # administrator can read a consultation but never author one, because the
-# clinician who signs a note is the one accountable for it.
+# clinician who signs a note is the one accountable for it. Vital signs are
+# a measurement rather than a judgement, and in a small clinic the person
+# running it is often the one with the cuff, so the admin can take them.
 _CLINIC_ADMIN = [
     "patient:create",
     "patient:read",
@@ -66,6 +70,8 @@ _CLINIC_ADMIN = [
     "queue:manage",
     "consultation:read",
     "prescription:read",
+    "vitals:record",
+    "vitals:read",
     "lab:update",
     "document:upload",
     "document:read",
@@ -96,6 +102,8 @@ _DOCTOR = [
     "consultation:update",
     "prescription:create",
     "prescription:read",
+    "vitals:record",
+    "vitals:read",
     "lab:create",
     "lab:update",
     "document:upload",
@@ -115,6 +123,8 @@ _RECEPTIONIST = [
     "queue:checkin",
     "queue:manage",
     "prescription:read",
+    "vitals:record",
+    "vitals:read",
     "document:upload",
     "document:read",
     "billing:create",
@@ -129,6 +139,7 @@ _RECEPTIONIST = [
 _STAFF = [
     "patient:read",
     "appointment:read",
+    "vitals:read",
     "document:read",
     "doctor:read",
 ]

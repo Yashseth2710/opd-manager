@@ -50,7 +50,8 @@ from app.services.doctors import (
     effective_slot_minutes,
     plan_day,
 )
-from app.services.patients import PatientArchived, age_label
+from app.services.patients import PatientArchived, age_in_years, age_label
+from app.services.vitals import assess
 
 # How many of a doctor's latest consultations the expected wait is drawn from.
 # Enough to smooth out one long one, few enough to follow the day as it goes.
@@ -698,6 +699,25 @@ def _present(
         "expected_wait_minutes": expected,
         "consultation_id": placed.consultation_id,
         "prescription_id": placed.prescription_id,
+        "vitals": _vitals_brief(placed),
+    }
+
+
+def _vitals_brief(placed: Placed) -> dict[str, Any] | None:
+    taken = placed.vitals
+    if taken is None:
+        return None
+    age = age_in_years(placed.patient.date_of_birth, taken.taken_on)
+    return {
+        "id": taken.id,
+        "systolic_mmhg": taken.systolic_mmhg,
+        "diastolic_mmhg": taken.diastolic_mmhg,
+        "pulse_bpm": taken.pulse_bpm,
+        "temperature_c": taken.temperature_c,
+        "spo2_percent": taken.spo2_percent,
+        "weight_kg": taken.weight_kg,
+        "glucose_mg_dl": taken.glucose_mg_dl,
+        "flags": assess(taken, age)["flags"],
     }
 
 

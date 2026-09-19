@@ -13,7 +13,15 @@ from typing import Any
 
 from sqlalchemy import Select, and_, func, select
 
-from app.models import Appointment, Consultation, Doctor, Patient, Prescription, QueueEntry
+from app.models import (
+    Appointment,
+    Consultation,
+    Doctor,
+    Patient,
+    Prescription,
+    QueueEntry,
+    Vitals,
+)
 from app.models.queue import LIVE
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
@@ -28,6 +36,7 @@ class Placed:
     allergy_count: int
     consultation_id: uuid.UUID | None = None
     prescription_id: uuid.UUID | None = None
+    vitals: Vitals | None = None
 
 
 class QueueRepository(TenantScopedRepository[QueueEntry]):
@@ -43,6 +52,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 allergy_count(),
                 Consultation.id,
                 Prescription.id,
+                Vitals,
             )
             .join(Patient, Patient.id == QueueEntry.patient_id)
             .join(Doctor, Doctor.id == QueueEntry.doctor_id)
@@ -56,6 +66,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                     Prescription.status == "issued",
                 ),
             )
+            .outerjoin(Vitals, Vitals.queue_entry_id == QueueEntry.id)
             .where(QueueEntry.organization_id == self.organization_id)
         )
 
@@ -70,6 +81,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 allergy_count=row[4],
                 consultation_id=row[5],
                 prescription_id=row[6],
+                vitals=row[7],
             )
             for row in result.all()
         ]

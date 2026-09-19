@@ -10,6 +10,7 @@ from app.api.v1.endpoints import (
     patients,
     prescriptions,
     queue,
+    vitals,
 )
 
 router = APIRouter(prefix="/api/v1")
@@ -22,3 +23,4 @@ router.include_router(appointments.router)
 router.include_router(queue.router)
 router.include_router(consultations.router)
 router.include_router(prescriptions.router)
+router.include_router(vitals.router)

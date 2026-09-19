@@ -9,6 +9,7 @@ from app.models.prescription import Medicine, Prescription, PrescriptionItem
 from app.models.queue import QueueEntry
 from app.models.role import Permission, Role, RolePermission, UserRole
 from app.models.user import User
+from app.models.vitals import Vitals
 
 __all__ = [
     "DEFAULT_SETTINGS",
@@ -34,4 +35,5 @@ __all__ = [
     "TenantCounter",
     "User",
     "UserRole",
+    "Vitals",
 ]
