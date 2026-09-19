@@ -29,6 +29,7 @@ import {
   type EditableLine,
 } from "@/components/prescriptions/lines";
 import { Token } from "@/components/queue/token";
+import { VisitVitals } from "@/components/vitals/visit-vitals";
 import { ApiFailure } from "@/lib/api";
 import { bookingHref, shortDate, whenItHappened } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
@@ -171,6 +172,7 @@ function BackLink({ record }: { record: Consultation }) {
 // --- Who is in front of the doctor ------------------------------------------
 
 function PatientBar({ record }: { record: Consultation }) {
+  const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
   const patient = useQuery({
     queryKey: ["patient", record.patient.id],
     queryFn: () => getPatient(record.patient.id),
@@ -223,6 +225,14 @@ function PatientBar({ record }: { record: Consultation }) {
         allergies={patient.data?.allergies}
         failed={patient.isError}
       />
+      {record.queue_entry_id && session.data?.permissions.includes("vitals:read") && (
+        <VisitVitals
+          entryId={record.queue_entry_id}
+          patientName={record.patient.full_name}
+          mayRecord={session.data.permissions.includes("vitals:record")}
+          open={record.status === "draft"}
+        />
+      )}
     </header>
   );
 }
@@ -522,6 +532,8 @@ function Editor({
         "appointments",
         "appointment",
         "patient-appointments",
+        // Finishing the visit closes its readings to correction.
+        "vitals",
       ])
         void queries.invalidateQueries({ queryKey: [key] });
     },

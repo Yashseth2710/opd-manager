@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   ChevronDown,
   DoorOpen,
+  HeartPulse,
   Loader2,
   Megaphone,
   MonitorPlay,
@@ -23,6 +24,8 @@ import { PatientPicker } from "@/components/appointments/patient-picker";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
 import { Token } from "@/components/queue/token";
+import { VitalsForm } from "@/components/vitals/form";
+import { ReadingsLine } from "@/components/vitals/readings";
 import { ApiFailure } from "@/lib/api";
 import { longDate, TYPE_LABELS } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
@@ -92,6 +95,7 @@ function Queue() {
     write: may("consultation:create"),
     read: may("consultation:read"),
     prescriptions: may("prescription:read"),
+    vitals: may("vitals:record"),
   };
 
   const queue = useQuery({
@@ -279,7 +283,7 @@ function Queue() {
   );
 }
 
-type NotesAccess = { write: boolean; read: boolean; prescriptions: boolean };
+type NotesAccess = { write: boolean; read: boolean; prescriptions: boolean; vitals: boolean };
 
 function LaneView({
   lane,
@@ -298,6 +302,8 @@ function LaneView({
 }) {
   const router = useRouter();
   const [problem, setProblem] = useState<string | null>(null);
+  // Whose readings are being taken, one at a time per line.
+  const [measuring, setMeasuring] = useState<string | null>(null);
   const next = lane.waiting[0];
 
   // Most refusals here mean the line moved on under this screen, and the
@@ -383,7 +389,7 @@ function LaneView({
         )}
 
         {(lane.now_seeing || lane.called) && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {lane.now_seeing && (
               <Spotlight
                 entry={lane.now_seeing}
@@ -405,6 +411,17 @@ function LaneView({
                 )}
                 {!notes.write && notes.read && lane.now_seeing.consultation_id && (
                   <NotesLink id={lane.now_seeing.consultation_id}>Read notes</NotesLink>
+                )}
+                {notes.vitals && (
+                  <VitalsButton
+                    entry={lane.now_seeing}
+                    open={measuring === lane.now_seeing.id}
+                    onToggle={() =>
+                      setMeasuring((now) =>
+                        now === lane.now_seeing!.id ? null : lane.now_seeing!.id,
+                      )
+                    }
+                  />
                 )}
                 {mayManage && (
                   <ActionButton
@@ -431,6 +448,15 @@ function LaneView({
                 since={lane.called.called_at}
                 sinceAfter=" ago"
               >
+                {notes.vitals && (
+                  <VitalsButton
+                    entry={lane.called}
+                    open={measuring === lane.called.id}
+                    onToggle={() =>
+                      setMeasuring((now) => (now === lane.called!.id ? null : lane.called!.id))
+                    }
+                  />
+                )}
                 {mayManage && (
                   <>
                     <ActionButton
@@ -464,6 +490,22 @@ function LaneView({
               </Spotlight>
             )}
           </div>
+        )}
+        {[lane.now_seeing, lane.called].map(
+          (entry) =>
+            entry &&
+            measuring === entry.id && (
+              <VitalsForm
+                key={entry.id}
+                entryId={entry.id}
+                patientName={entry.patient.full_name}
+                onClose={() => setMeasuring(null)}
+                onSaved={(text) => {
+                  setMeasuring(null);
+                  onNotice({ text });
+                }}
+              />
+            ),
         )}
 
         {mayManage && next && !lane.called && (
@@ -511,6 +553,9 @@ function LaneView({
                   onChanged={onChanged}
                   onProblem={setProblem}
                   onNotice={onNotice}
+                  mayMeasure={notes.vitals}
+                  measuring={measuring === entry.id}
+                  onMeasure={() => setMeasuring((now) => (now === entry.id ? null : entry.id))}
                 />
               ))}
             </ul>
@@ -679,6 +724,7 @@ function Who({ entry }: { entry: QueueEntry }) {
       <p className="truncate text-[13px] text-[var(--text-muted)]">
         {[how, why].filter(Boolean).join(", ")}
       </p>
+      {entry.vitals && <ReadingsLine vitals={entry.vitals} className="mt-0.5" />}
       {entry.patient.allergy_count > 0 && (
         <p className="inline-flex items-center gap-1 text-[12px] text-[var(--color-state-noshow)]">
           <AlertTriangle className="size-3" />
@@ -701,6 +747,9 @@ function WaitingRow({
   onChanged,
   onProblem,
   onNotice,
+  mayMeasure,
+  measuring,
+  onMeasure,
 }: {
   entry: QueueEntry;
   lane: Lane;
@@ -711,6 +760,9 @@ function WaitingRow({
   onChanged: () => void;
   onProblem: (text: string | null) => void;
   onNotice: (notice: Notice) => void;
+  mayMeasure: boolean;
+  measuring: boolean;
+  onMeasure: () => void;
 }) {
   const [confirmingLeft, setConfirmingLeft] = useState(false);
   const urgent = entry.priority === "urgent";
@@ -766,6 +818,11 @@ function WaitingRow({
           <p className="tabular">Waited {spokenMinutes(entry.waited_minutes)}</p>
           <p className="text-[var(--text-muted)]">{roughly(entry.expected_wait_minutes)}</p>
         </div>
+        {mayMeasure && (
+          <span className="hidden sm:contents">
+            <VitalsButton entry={entry} open={measuring} onToggle={onMeasure} />
+          </span>
+        )}
         {working ? (
           <Loader2 className="size-4 shrink-0 animate-spin text-[var(--text-subtle)]" />
         ) : (
@@ -774,10 +831,27 @@ function WaitingRow({
           )
         )}
       </div>
-      <p className="mt-1 pl-[3.25rem] text-[13px] text-[var(--text-muted)] tabular sm:hidden">
-        Waited {spokenMinutes(entry.waited_minutes)},{" "}
-        {roughly(entry.expected_wait_minutes)?.toLowerCase()}
-      </p>
+      {/* On a phone the vitals button comes down here, leaving the name its width. */}
+      <div className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 pl-[3.25rem] sm:hidden">
+        <p className="text-[13px] text-[var(--text-muted)] tabular">
+          Waited {spokenMinutes(entry.waited_minutes)},{" "}
+          {roughly(entry.expected_wait_minutes)?.toLowerCase()}
+        </p>
+        {mayMeasure && <VitalsButton entry={entry} open={measuring} onToggle={onMeasure} />}
+      </div>
+      {measuring && (
+        <div className="mt-2.5">
+          <VitalsForm
+            entryId={entry.id}
+            patientName={entry.patient.full_name}
+            onClose={onMeasure}
+            onSaved={(text) => {
+              onMeasure();
+              onNotice({ text });
+            }}
+          />
+        </div>
+      )}
       {confirmingLeft && (
         <div
           role="group"
@@ -873,6 +947,36 @@ function ArrivalRow({
         </button>
       )}
     </li>
+  );
+}
+
+function VitalsButton({
+  entry,
+  open,
+  onToggle,
+}: {
+  entry: QueueEntry;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const taken = Boolean(entry.vitals);
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label={`${taken ? "Correct" : "Take"} vitals for ${entry.patient.full_name}`}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-[var(--radius-field)] border px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+        open
+          ? "border-[var(--primary)] bg-[var(--surface-sunken)]"
+          : taken
+            ? "border-transparent text-[var(--text-muted)] hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+            : "border-[var(--border-strong)] bg-[var(--surface)] hover:border-[var(--color-marigold-400)] hover:bg-[var(--accent-wash)]"
+      }`}
+    >
+      <HeartPulse className="size-3.5" />
+      {taken ? "Vitals" : "Take vitals"}
+    </button>
   );
 }
 

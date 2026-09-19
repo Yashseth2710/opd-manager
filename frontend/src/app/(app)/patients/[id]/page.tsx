@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { PatientAppointments } from "@/components/appointments/patient-appointments";
 import { PatientVisits } from "@/components/consultations/patient-visits";
 import { PatientPrescriptions } from "@/components/prescriptions/patient-prescriptions";
+import { PatientVitals } from "@/components/vitals/patient-vitals";
 import { Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -122,8 +123,11 @@ function Record() {
       {editing ? (
         <EditForm record={record} onDone={() => setEditing(false)} />
       ) : (
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_20rem]">
-          <Details record={record} />
+        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <Details record={record} />
+            {may("vitals:read") && <PatientVitals patientId={record.id} />}
+          </div>
           <div className="flex flex-col gap-6">
             {may("appointment:read") && (
               <PatientAppointments
