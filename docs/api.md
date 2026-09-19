@@ -86,6 +86,7 @@ QUEUE_*       NOT_FOUND, ALREADY_CHECKED_IN, HAS_APPOINTMENT, NOT_TODAY,
 CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER, NOT_IN_ROOM,
               EDITED_ELSEWHERE, STILL_DRAFT
 RX_*          NOT_FOUND, ALREADY_REPLACED, NOT_PRESCRIBER
+VITALS_*      NOT_FOUND, ALREADY_TAKEN, LOCKED
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED
@@ -205,6 +206,12 @@ prescriptions GET    /prescriptions?patient_id=
               GET    /prescriptions/{id}/pdf
               POST   /prescriptions/{id}/corrections
               GET    /medicines?q=
+
+vitals        GET    /vitals?patient_id=  | ?queue_entry_id=
+              POST   /vitals
+              GET    /vitals/{id}
+              PUT    /vitals/{id}
+              DELETE /vitals/{id}
 
 labs          POST   /lab-orders
               GET    /lab-orders

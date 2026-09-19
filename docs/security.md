@@ -49,6 +49,8 @@ The check reads the permission set from the verified access token. It is impossi
 | `consultation:update` | — | — | own | — | — |
 | `prescription:create` | — | — | ✓ | — | — |
 | `prescription:read` | — | ✓ | ✓ | ✓ | — |
+| `vitals:record` | — | ✓ | ✓ | ✓ | — |
+| `vitals:read` | — | ✓ | ✓ | ✓ | ✓ |
 | `lab:create` | — | — | ✓ | — | — |
 | `lab:update` | — | ✓ | ✓ | config | config |
 | `document:upload` | — | ✓ | ✓ | ✓ | config |

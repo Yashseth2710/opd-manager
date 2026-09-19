@@ -237,9 +237,23 @@ What comes to light after the notes were finished: a result, a phone call. Added
 
 ### vitals
 
-`consultation_id`, `systolic_bp`, `diastolic_bp`, `pulse`, `temperature_c`, `respiratory_rate`, `spo2`, `weight_kg`, `height_cm`, `recorded_by`, `recorded_at`.
+`queue_entry_id`, `patient_id`, `systolic_mmhg`, `diastolic_mmhg`, `pulse_bpm`, `temperature_c`, `spo2_percent`, `respiratory_rate`, `weight_kg`, `height_cm`, `glucose_mg_dl`, `glucose_timing` (`fasting` / `random` / `after_meal`), `note`, `taken_at`, `taken_on` (the clinic's date), `taken_by_id`, `changed_by_id`.
 
-BMI is derived. Every field is nullable — a clinic taking only blood pressure and weight is normal, and forcing a full vitals panel produces fabricated numbers.
+```
+UNIQUE (queue_entry_id)
+CHECK  (at least one reading)
+CHECK  ((systolic_mmhg IS NULL) = (diastolic_mmhg IS NULL))
+CHECK  (diastolic_mmhg < systolic_mmhg)
+CHECK  ((glucose_mg_dl IS NULL) = (glucose_timing IS NULL))
+CHECK  (each reading within a range no patient falls outside)
+INDEX  (organization_id, patient_id, taken_at)
+```
+
+Taken for a place in the queue, usually at the desk while the patient waits, and one set per visit: taking them again corrects the first set. Every reading is optional, since a clinic taking only blood pressure and weight is normal and a required full panel produces made-up numbers. The range checks are wide on purpose, 50 to 300 for the upper pressure, 30 to 45 °C: they catch 120 typed as 1200, not an unusual patient.
+
+Temperature is held in Celsius to two places, so a Fahrenheit reading typed to one place reads back exactly as it was typed. Whoever can take vital signs can correct them on the day, until the visit is finished; after that they are part of what the doctor saw and stay as they were. Undoing a check-in, which is how the desk takes back checking in the wrong person, removes them with the place.
+
+BMI, and whether a reading is out of range, are worked out when read rather than stored. Pressure, pulse, breathing and BMI are judged against adult ranges and only for adults, since a child's normal depends on their age; BMI uses the cut-offs agreed for Indian adults (23 and 25 rather than 25 and 30). Temperature, oxygen and blood sugar are judged at any age, sugar against when it was taken.
 
 ### consultation_diagnoses
 
