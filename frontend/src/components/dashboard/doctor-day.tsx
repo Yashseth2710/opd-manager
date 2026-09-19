@@ -6,6 +6,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DueBackList, Figures, Late, Panel, Quiet, Shown } from "@/components/dashboard/parts";
+import { FlaggedCount, Urgent } from "@/components/labs/parts";
 import { Token } from "@/components/queue/token";
 import { ReadingsLine } from "@/components/vitals/readings";
 import { ApiFailure } from "@/lib/api";
@@ -62,6 +63,43 @@ export function DoctorDay({ today, mayBook }: { today: Today; mayBook: boolean }
         <InTheRoom entry={lane?.now_seeing ?? null} />
         <NextUp entry={next} called={lane?.called ?? null} doctorId={lane?.doctor.id} />
       </div>
+
+      {today.results_total > 0 && (
+        <Panel
+          id="results"
+          title="Reports back for you"
+          count={today.results_total}
+          more={{ href: "/lab?show=to_review" as Route, label: "All reports" }}
+        >
+          <ul className="divide-y divide-[var(--border)]">
+            {today.results.map((item) => (
+              <li key={item.order_id}>
+                <Link
+                  href={`/lab/${item.order_id}` as Route}
+                  className="flex flex-wrap items-baseline gap-x-4 gap-y-1 px-5 py-2.5 transition-colors hover:bg-[var(--surface-sunken)]"
+                >
+                  <span className="w-24 shrink-0 text-[13px] text-[var(--text-muted)] tabular">
+                    {shortDate(item.reported_on)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-medium">
+                      {item.patient.full_name}
+                    </span>
+                    <span className="block truncate text-[13px] text-[var(--text-muted)]">
+                      {item.test_name}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {item.urgent && <Urgent />}
+                    <FlaggedCount count={item.flagged} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <Shown shown={today.results.length} total={today.results_total} />
+        </Panel>
+      )}
 
       <Panel
         id="unfinished"

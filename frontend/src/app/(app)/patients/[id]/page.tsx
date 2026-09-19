@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PatientAppointments } from "@/components/appointments/patient-appointments";
 import { PatientVisits } from "@/components/consultations/patient-visits";
+import { PatientLabs } from "@/components/labs/patient-labs";
 import { PatientPrescriptions } from "@/components/prescriptions/patient-prescriptions";
 import { PatientVitals } from "@/components/vitals/patient-vitals";
 import { Problem } from "@/components/auth/form";
@@ -127,6 +128,7 @@ function Record() {
           <div className="flex min-w-0 flex-col gap-6">
             <Details record={record} />
             {may("vitals:read") && <PatientVitals patientId={record.id} />}
+            {may("lab:read") && <PatientLabs patientId={record.id} />}
           </div>
           <div className="flex flex-col gap-6">
             {may("appointment:read") && (

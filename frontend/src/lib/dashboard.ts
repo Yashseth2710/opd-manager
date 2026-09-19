@@ -71,6 +71,15 @@ export type Unfinished = {
   chief_complaint: string | null;
 };
 
+export type ResultIn = {
+  order_id: string;
+  patient: PatientRef;
+  test_name: string;
+  reported_on: string;
+  urgent: boolean;
+  flagged: number;
+};
+
 export type Today = {
   date: string;
   day_name: string;
@@ -85,6 +94,8 @@ export type Today = {
   due_back: DueBack[];
   unfinished: Unfinished[];
   unfinished_total: number;
+  results: ResultIn[];
+  results_total: number;
 };
 
 /** Asked again this often while the page is open. */

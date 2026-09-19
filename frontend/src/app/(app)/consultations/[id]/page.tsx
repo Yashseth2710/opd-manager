@@ -18,6 +18,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { VisitTests } from "@/components/labs/visit-tests";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
 import { IssuedPrescription, MedicineTable } from "@/components/prescriptions/card";
@@ -401,6 +402,7 @@ function Editor({
   const id = initial.id;
   const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
   const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
+  const mayOrder = session.data?.permissions.includes("lab:create") ?? false;
 
   const [draft, setDraft] = useState<Draft>(() => draftOf(initial));
   const [state, setState] = useState<SaveState>({ kind: "saved", at: initial.updated_at });
@@ -534,6 +536,8 @@ function Editor({
         "patient-appointments",
         // Finishing the visit closes its readings to correction.
         "vitals",
+        // And turns taking a test back into cancelling it.
+        "lab-orders",
       ])
         void queries.invalidateQueries({ queryKey: [key] });
     },
@@ -678,6 +682,9 @@ function Editor({
           }
           onChange={(value) => set("diagnoses", value)}
         />
+        {mayOrder && (
+          <VisitTests visitId={initial.id} canOrder disabled={locked || finish.isPending} />
+        )}
         <Section
           section="advice"
           value={draft.advice}
@@ -1110,6 +1117,7 @@ function Finished({ record }: { record: Consultation }) {
   const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
   const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
   const mayPrescribe = session.data?.permissions.includes("prescription:create") ?? false;
+  const mayReadLab = session.data?.permissions.includes("lab:read") ?? false;
   const draft = record.status === "draft";
   const today = todayISO();
   const standing = record.prescriptions.find((each) => each.status === "issued");
@@ -1155,6 +1163,8 @@ function Finished({ record }: { record: Consultation }) {
           )}
         </section>
       )}
+
+      {mayReadLab && <VisitTests visitId={record.id} canOrder={false} />}
 
       {record.follow_up_date && (
         <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-field)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
