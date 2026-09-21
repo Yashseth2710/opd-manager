@@ -700,6 +700,13 @@ def _present(
         "consultation_id": placed.consultation_id,
         "prescription_id": placed.prescription_id,
         "vitals": _vitals_brief(placed),
+        "invoice": {
+            "id": placed.invoice.id,
+            "invoice_number": placed.invoice.invoice_number,
+            "status": placed.invoice.status,
+        }
+        if placed.invoice is not None
+        else None,
     }
 
 

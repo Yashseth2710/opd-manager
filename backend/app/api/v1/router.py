@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     appointments,
     auth,
+    billing,
     clinic,
     consultations,
     dashboard,
@@ -29,4 +30,5 @@ router.include_router(prescriptions.router)
 router.include_router(vitals.router)
 router.include_router(lab.router)
 router.include_router(documents.router)
+router.include_router(billing.router)
 router.include_router(dashboard.router)

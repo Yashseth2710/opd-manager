@@ -1,4 +1,5 @@
 from app.models.appointment import Appointment, AppointmentEvent
+from app.models.billing import Invoice, InvoiceItem, Payment
 from app.models.consultation import Consultation, ConsultationAddendum, ConsultationDiagnosis
 from app.models.counter import TenantCounter
 from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
@@ -24,6 +25,8 @@ __all__ = [
     "DoctorLeave",
     "DoctorSchedule",
     "Invitation",
+    "Invoice",
+    "InvoiceItem",
     "LabOrder",
     "LabResultValue",
     "Medicine",
@@ -31,6 +34,7 @@ __all__ = [
     "Patient",
     "PatientAllergy",
     "PatientDocument",
+    "Payment",
     "Permission",
     "Prescription",
     "PrescriptionItem",

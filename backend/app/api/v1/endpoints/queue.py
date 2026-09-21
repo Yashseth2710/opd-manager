@@ -43,11 +43,24 @@ async def _entry(
     clinic: Organization,
     reach: appointments.Reach,
     entry_id: uuid.UUID,
+    caller: Caller,
 ) -> QueueEntryOut:
     found = await service.one(
         session, organization_id=organization_id, clinic=clinic, reach=reach, entry_id=entry_id
     )
-    return QueueEntryOut.model_validate(found)
+    shown = QueueEntryOut.model_validate(found)
+    if not caller.may("billing:read"):
+        shown.invoice = None
+    return shown
+
+
+def _without_bills(day: QueueDay) -> QueueDay:
+    """The day as somebody who does not read bills sees it."""
+    for lane in day.lanes:
+        for entry in (lane.now_seeing, lane.called, *lane.waiting, *lane.skipped, *lane.done):
+            if entry is not None:
+                entry.invoice = None
+    return day
 
 
 @router.get("/queue")
@@ -67,7 +80,8 @@ async def read_queue(
         reach=await _reach(session, organization_id, caller),
         doctor_id=doctor_id,
     )
-    return QueueDay.model_validate(found)
+    day = QueueDay.model_validate(found)
+    return day if caller.may("billing:read") else _without_bills(day)
 
 
 @router.post("/appointments/{appointment_id}/check-in", status_code=201)
@@ -89,7 +103,7 @@ async def check_in(
         appointment_id=appointment_id,
         priority=body.priority,
     )
-    return await _entry(session, organization_id, clinic, reach, entry.id)
+    return await _entry(session, organization_id, clinic, reach, entry.id, caller)
 
 
 @router.post("/queue/walk-in", status_code=201)
@@ -109,7 +123,7 @@ async def walk_in(
         actor_id=caller.user_id,
         body=body,
     )
-    return await _entry(session, organization_id, clinic, reach, entry.id)
+    return await _entry(session, organization_id, clinic, reach, entry.id, caller)
 
 
 @router.get("/queue/{entry_id}")
@@ -121,7 +135,7 @@ async def read_entry(
 ) -> QueueEntryOut:
     clinic = await _clinic(session, organization_id)
     reach = await _reach(session, organization_id, caller)
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/call")
@@ -136,7 +150,7 @@ async def call(
     await service.call(
         session, organization_id=organization_id, clinic=clinic, reach=reach, entry_id=entry_id
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/start")
@@ -156,7 +170,7 @@ async def start(
         actor_id=caller.user_id,
         entry_id=entry_id,
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/complete")
@@ -175,7 +189,7 @@ async def complete(
         actor_id=caller.user_id,
         entry_id=entry_id,
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/skip")
@@ -188,7 +202,7 @@ async def skip(
     clinic = await _clinic(session, organization_id)
     reach = await _reach(session, organization_id, caller)
     await service.skip(session, organization_id=organization_id, reach=reach, entry_id=entry_id)
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/recall")
@@ -203,7 +217,7 @@ async def recall(
     await service.recall(
         session, organization_id=organization_id, clinic=clinic, reach=reach, entry_id=entry_id
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.post("/queue/{entry_id}/no-show")
@@ -222,7 +236,7 @@ async def mark_gone(
         actor_id=caller.user_id,
         entry_id=entry_id,
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.patch("/queue/{entry_id}")
@@ -242,7 +256,7 @@ async def set_priority(
         entry_id=entry_id,
         priority=body.priority,
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id)
+    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
 
 
 @router.delete("/queue/{entry_id}")

@@ -58,6 +58,12 @@ class VitalsBrief(BaseModel):
     flags: dict[str, Literal["high", "low"]]
 
 
+class BillRef(BaseModel):
+    id: uuid.UUID
+    invoice_number: str | None
+    status: Literal["draft", "unpaid", "partly_paid", "paid", "refunded", "void"]
+
+
 class QueueEntryOut(BaseModel):
     id: uuid.UUID
     token: int
@@ -85,6 +91,8 @@ class QueueEntryOut(BaseModel):
     # The prescription issued at this visit, for the desk to print.
     prescription_id: uuid.UUID | None = None
     vitals: VitalsBrief | None = None
+    # The visit's bill, for anyone who reads bills.
+    invoice: BillRef | None = None
 
 
 class Arrival(BaseModel):

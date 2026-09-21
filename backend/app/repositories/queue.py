@@ -17,6 +17,7 @@ from app.models import (
     Appointment,
     Consultation,
     Doctor,
+    Invoice,
     Patient,
     Prescription,
     QueueEntry,
@@ -37,6 +38,8 @@ class Placed:
     consultation_id: uuid.UUID | None = None
     prescription_id: uuid.UUID | None = None
     vitals: Vitals | None = None
+    # The bill standing for the visit, for the desk to see it is settled.
+    invoice: Invoice | None = None
 
 
 class QueueRepository(TenantScopedRepository[QueueEntry]):
@@ -53,6 +56,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 Consultation.id,
                 Prescription.id,
                 Vitals,
+                Invoice,
             )
             .join(Patient, Patient.id == QueueEntry.patient_id)
             .join(Doctor, Doctor.id == QueueEntry.doctor_id)
@@ -67,6 +71,10 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 ),
             )
             .outerjoin(Vitals, Vitals.queue_entry_id == QueueEntry.id)
+            .outerjoin(
+                Invoice,
+                and_(Invoice.queue_entry_id == QueueEntry.id, Invoice.status != "void"),
+            )
             .where(QueueEntry.organization_id == self.organization_id)
         )
 
@@ -82,6 +90,7 @@ class QueueRepository(TenantScopedRepository[QueueEntry]):
                 consultation_id=row[5],
                 prescription_id=row[6],
                 vitals=row[7],
+                invoice=row[8],
             )
             for row in result.all()
         ]

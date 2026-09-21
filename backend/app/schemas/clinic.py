@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import re
 import uuid
 from decimal import Decimal
 from typing import Annotated, Any
@@ -11,6 +12,12 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 # Money crosses the wire as a string. A JSON number is a double, and a double
 # cannot hold 0.1 + 0.2, which is not a property to give a clinic's fees.
+# Two digits for the state, the PAN, then an entity number, a Z and a check
+# character.
+GSTIN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
+
+PREFIX = re.compile(r"^[A-Z0-9-]+$")
+
 Money = Annotated[Decimal, Field(max_digits=12, decimal_places=2, ge=0)]
 
 
@@ -48,8 +55,31 @@ class ClinicSettingsUpdate(_Trimmed):
     follow_up_fee: Money | None = None
     follow_up_window_days: int | None = Field(default=None, ge=0, le=365)
     tax_percent: Annotated[Decimal, Field(ge=0, le=100, decimal_places=2)] | None = None
+    # Printed at the front of every bill number, as in INV/2026-27/0001.
     invoice_prefix: str | None = Field(default=None, min_length=1, max_length=8)
     token_prefix: str | None = Field(default=None, min_length=1, max_length=4)
+    # Printed on bills when the clinic is registered for GST. Sent empty, it
+    # comes off.
+    gstin: str | None = Field(default=None, max_length=15)
+
+    @field_validator("invoice_prefix", "gstin")
+    @classmethod
+    def _capitals(cls, value: str | None) -> str | None:
+        return value.upper() if value else value
+
+    @field_validator("invoice_prefix")
+    @classmethod
+    def _prefix(cls, value: str | None) -> str | None:
+        if value and not PREFIX.fullmatch(value):
+            raise ValueError("Use letters, digits and dashes only, like INV or LC-1.")
+        return value
+
+    @field_validator("gstin")
+    @classmethod
+    def _gstin(cls, value: str | None) -> str | None:
+        if value and not GSTIN.fullmatch(value):
+            raise ValueError("A GSTIN is 15 characters, like 27ABCDE1234F1Z5.")
+        return value
 
 
 class ClinicSettingsOut(BaseModel):
@@ -60,6 +90,7 @@ class ClinicSettingsOut(BaseModel):
     tax_percent: str
     invoice_prefix: str
     token_prefix: str
+    gstin: str
 
 
 class ClinicOut(BaseModel):

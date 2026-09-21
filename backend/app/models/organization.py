@@ -22,6 +22,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "consultation_fee": "0.00",
     "follow_up_fee": "0.00",
     "follow_up_window_days": 7,
+    "gstin": "",
 }
 
 
