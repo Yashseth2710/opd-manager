@@ -30,6 +30,7 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env.test", override=True)
 
 from app.core import email as email_module  # noqa: E402
 from app.core import redis as redis_module  # noqa: E402
+from app.core import storage as storage_module  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.db.base import Base  # noqa: E402
 from app.db.session import get_engine  # noqa: E402
@@ -143,6 +144,46 @@ def outbox(monkeypatch: pytest.MonkeyPatch) -> Iterator[Outbox]:
     yield box
 
 
+class FakeStore:
+    """Files kept in memory, with a switch to make the store refuse, so a
+    test can see what the application does when the real one is down."""
+
+    def __init__(self) -> None:
+        self.files: dict[str, bytes] = {}
+        self.down = False
+        self.puts = 0
+
+    def _check(self) -> None:
+        if self.down:
+            raise storage_module.StorageUnavailable
+
+    async def put(self, pathname: str, content: bytes, content_type: str) -> str:
+        self._check()
+        self.puts += 1
+        url = f"https://store.test/{pathname}"
+        self.files[url] = content
+        return url
+
+    async def read(self, url: str) -> bytes:
+        self._check()
+        if url not in self.files:
+            raise storage_module.Missing
+        return self.files[url]
+
+    async def delete(self, url: str) -> None:
+        self._check()
+        self.files.pop(url, None)
+
+
+@pytest.fixture
+def store(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeStore]:
+    double = FakeStore()
+    monkeypatch.setattr(storage_module, "put", double.put)
+    monkeypatch.setattr(storage_module, "read", double.read)
+    monkeypatch.setattr(storage_module, "delete", double.delete)
+    yield double
+
+
 def _refuse_to_run_against_anything_real() -> None:
     """The schema fixture drops every table. That is fine against a database
     kept for the suite and catastrophic anywhere else, so the suite will not
@@ -162,6 +203,10 @@ def _refuse_to_run_against_anything_real() -> None:
         raise RuntimeError(
             "Blank BREVO_API_KEY and RESEND_API_KEY for the suite. Tests that "
             "need a provider configured say so for themselves."
+        )
+    if settings.blob_read_write_token:
+        raise RuntimeError(
+            "Blank BLOB_READ_WRITE_TOKEN for the suite, or it uploads to a real store."
         )
 
 

@@ -27,6 +27,8 @@ LOGIN_PER_IP = Limit(attempts=10, seconds=15 * 60)
 RESET_PER_ADDRESS = Limit(attempts=3, seconds=60 * 60)
 VERIFY_PER_ADDRESS = Limit(attempts=3, seconds=60 * 60)
 REGISTER_PER_IP = Limit(attempts=5, seconds=60 * 60)
+# A report photographed page by page is a dozen uploads in a minute.
+UPLOAD_PER_USER = Limit(attempts=60, seconds=60 * 60)
 
 
 async def check(bucket: str, identifier: str, limit: Limit) -> None:

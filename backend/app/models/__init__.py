@@ -2,6 +2,7 @@ from app.models.appointment import Appointment, AppointmentEvent
 from app.models.consultation import Consultation, ConsultationAddendum, ConsultationDiagnosis
 from app.models.counter import TenantCounter
 from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
+from app.models.document import PatientDocument
 from app.models.invitation import Invitation
 from app.models.lab import LabOrder, LabResultValue
 from app.models.organization import DEFAULT_SETTINGS, Organization
@@ -29,6 +30,7 @@ __all__ = [
     "Organization",
     "Patient",
     "PatientAllergy",
+    "PatientDocument",
     "Permission",
     "Prescription",
     "PrescriptionItem",

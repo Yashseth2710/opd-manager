@@ -37,6 +37,9 @@ htmlcov/
 .coverage
 coverage.xml
 
+# Patient files kept on disk when no Blob store is configured.
+backend/.files/
+
 # Environment
 .env
 .env.*

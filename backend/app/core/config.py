@@ -69,6 +69,19 @@ class Settings(BaseSettings):
     resend_api_key: str = Field(default="")
     mail_from: str = "OPD Manager <onboarding@resend.dev>"
 
+    # Patient documents. Vercel Blob in any deployed environment; with no token
+    # in development they are written under local_files_dir instead, so the
+    # browser suite runs without an account.
+    blob_read_write_token: str = Field(default="")
+    blob_api_url: str = "https://vercel.com/api/blob"
+    local_files_dir: Path = ROOT / ".files"
+
+    @property
+    def storage(self) -> Literal["blob", "local", "none"]:
+        if self.blob_read_write_token:
+            return "blob"
+        return "local" if self.environment == "development" else "none"
+
     @property
     def email_configured(self) -> bool:
         """With no provider the application says so rather than reporting a

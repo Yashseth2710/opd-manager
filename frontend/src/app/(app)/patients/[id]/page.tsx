@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PatientAppointments } from "@/components/appointments/patient-appointments";
 import { PatientVisits } from "@/components/consultations/patient-visits";
+import { DocumentsPanel } from "@/components/documents/files";
 import { PatientLabs } from "@/components/labs/patient-labs";
 import { PatientPrescriptions } from "@/components/prescriptions/patient-prescriptions";
 import { PatientVitals } from "@/components/vitals/patient-vitals";
@@ -129,6 +130,20 @@ function Record() {
             <Details record={record} />
             {may("vitals:read") && <PatientVitals patientId={record.id} />}
             {may("lab:read") && <PatientLabs patientId={record.id} />}
+            {may("document:read") && (
+              <DocumentsPanel
+                destination={{ patientId: record.id, patientName: record.full_name }}
+                heading="Documents"
+                mayUpload={may("document:upload")}
+                closedBecause={
+                  record.status === "archived"
+                    ? "This record is archived, so nothing new can be added until it is restored."
+                    : null
+                }
+                emptyWords="Add a report, a scan or a letter the patient brought in"
+                filters
+              />
+            )}
           </div>
           <div className="flex flex-col gap-6">
             {may("appointment:read") && (

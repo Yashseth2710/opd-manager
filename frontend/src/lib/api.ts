@@ -45,7 +45,7 @@ type Envelope<T> = { success: true; data: T } | { success: false; error: ApiErro
  */
 let refreshing: Promise<boolean> | null = null;
 
-function refreshOnce(): Promise<boolean> {
+export function refreshOnce(): Promise<boolean> {
   refreshing ??= fetch(`${BASE}/auth/refresh`, {
     method: "POST",
     credentials: "include",

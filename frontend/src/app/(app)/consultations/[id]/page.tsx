@@ -18,6 +18,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DocumentsPanel } from "@/components/documents/files";
 import { VisitTests } from "@/components/labs/visit-tests";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -403,6 +404,8 @@ function Editor({
   const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
   const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
   const mayOrder = session.data?.permissions.includes("lab:create") ?? false;
+  const mayReadFiles = session.data?.permissions.includes("document:read") ?? false;
+  const mayAddFiles = session.data?.permissions.includes("document:upload") ?? false;
 
   const [draft, setDraft] = useState<Draft>(() => draftOf(initial));
   const [state, setState] = useState<SaveState>({ kind: "saved", at: initial.updated_at });
@@ -684,6 +687,20 @@ function Editor({
         />
         {mayOrder && (
           <VisitTests visitId={initial.id} canOrder disabled={locked || finish.isPending} />
+        )}
+        {mayReadFiles && (
+          <DocumentsPanel
+            destination={{
+              patientId: initial.patient.id,
+              patientName: initial.patient.full_name,
+              visit: initial.id,
+            }}
+            heading="Files from this visit"
+            description="Reports, scans or letters the patient brought in. They go on the record too."
+            mayUpload={mayAddFiles}
+            emptyWords="Add a report or a letter the patient brought in"
+            plain
+          />
         )}
         <Section
           section="advice"
@@ -1118,6 +1135,8 @@ function Finished({ record }: { record: Consultation }) {
   const mayBook = session.data?.permissions.includes("appointment:create") ?? false;
   const mayPrescribe = session.data?.permissions.includes("prescription:create") ?? false;
   const mayReadLab = session.data?.permissions.includes("lab:read") ?? false;
+  const mayReadFiles = session.data?.permissions.includes("document:read") ?? false;
+  const mayAddFiles = session.data?.permissions.includes("document:upload") ?? false;
   const draft = record.status === "draft";
   const today = todayISO();
   const standing = record.prescriptions.find((each) => each.status === "issued");
@@ -1165,6 +1184,20 @@ function Finished({ record }: { record: Consultation }) {
       )}
 
       {mayReadLab && <VisitTests visitId={record.id} canOrder={false} />}
+      {mayReadFiles && (
+        <DocumentsPanel
+          destination={{
+            patientId: record.patient.id,
+            patientName: record.patient.full_name,
+            visit: record.id,
+          }}
+          heading="Files from this visit"
+          mayUpload={mayAddFiles}
+          emptyWords="Add a report or a letter that came in for this visit"
+          hideWhenEmpty={!mayAddFiles}
+          plain
+        />
+      )}
 
       {record.follow_up_date && (
         <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius-field)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3">

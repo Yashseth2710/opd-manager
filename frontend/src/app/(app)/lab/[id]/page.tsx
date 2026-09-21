@@ -14,6 +14,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { DocumentsPanel } from "@/components/documents/files";
 import { FlaggedCount, LabStatusChip, ResultTable, Urgent } from "@/components/labs/parts";
 import { ResultForm } from "@/components/labs/result-form";
 import { Permitted } from "@/components/layout/permitted";
@@ -96,6 +97,7 @@ function Order() {
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
         <div className="flex min-w-0 flex-col gap-6">
           <Report order={order} onChanged={changed} />
+          <LabFile order={order} />
         </div>
         <Aside order={order} />
       </div>
@@ -495,6 +497,30 @@ function TakeBack({
     >
       Not being done? Cancel the test
     </button>
+  );
+}
+
+/**
+ * The lab's own copy of the report, kept beside the figures typed in from it
+ * so anyone reading them can check them against the paper.
+ */
+function LabFile({ order }: { order: LabOrder }) {
+  const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
+  const permissions = session.data?.permissions ?? [];
+  if (!permissions.includes("document:read")) return null;
+  const cancelled = order.status === "cancelled";
+  return (
+    <DocumentsPanel
+      destination={{
+        patientId: order.patient.id,
+        patientName: order.patient.full_name,
+        labOrder: order.id,
+      }}
+      heading="The lab's copy"
+      mayUpload={permissions.includes("document:upload") && !cancelled}
+      emptyWords="Attach the report as the lab sent it, a PDF or a photo"
+      hideWhenEmpty={cancelled}
+    />
   );
 }
 
