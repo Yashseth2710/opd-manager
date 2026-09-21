@@ -91,8 +91,9 @@ RX_*          NOT_FOUND, ALREADY_REPLACED, NOT_PRESCRIBER
 VITALS_*      NOT_FOUND, ALREADY_TAKEN, LOCKED
 LAB_*         NOT_FOUND, VISIT_CLOSED, ALREADY_ORDERED, NOT_ORDERER, LOCKED
 DOC_*         NOT_FOUND, ALREADY_UPLOADED, NOT_UPLOADER
-BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
-              PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
+BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, ALREADY_BILLED, INVALID_TOTAL,
+              PAYMENT_EXCEEDS_BALANCE, REFUND_EXCEEDS_PAID, INVOICE_VOIDED,
+              LOCKED, REFUNDED, HAS_PAYMENTS
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED, UPLOAD_INTERRUPTED,
               MISSING
 PLAN_*        LIMIT_REACHED, FEATURE_NOT_AVAILABLE
@@ -235,13 +236,20 @@ documents     GET    /patients/{id}/documents?category= | ?consultation_id= | ?l
               PATCH  /documents/{id}
               DELETE /documents/{id}
 
-billing       GET    /invoices
+billing       GET    /invoices?show= | ?patient_id= | ?q= | ?from=&to=
+              GET    /invoices/summary?date=
+              GET    /invoices/unbilled?date=
+              GET    /invoices/start?queue_entry_id= | ?patient_id=
+              GET    /invoices/lines?q=
               POST   /invoices
               GET    /invoices/{id}
               PATCH  /invoices/{id}
+              DELETE /invoices/{id}
+              POST   /invoices/{id}/issue
               POST   /invoices/{id}/void
               GET    /invoices/{id}/pdf
               POST   /invoices/{id}/payments
+              POST   /invoices/{id}/refunds
 
 reports       GET    /reports/revenue
               GET    /reports/patients
@@ -319,6 +327,14 @@ Lab work is part of the patient's record, so anyone holding `lab:read` reads eve
 
 `POST /patients/{id}/documents` takes the file as the whole request body, with its name, `category` and optionally `title`, `dated`, `consultation_id` or `lab_order_id` in the query, so the size is checked while the file is still arriving rather than after a form has been unpacked. Four megabytes is the most it takes, `413 FILE_TOO_LARGE` past that, because a Vercel function refuses a body much over 4.5 MB before the API sees it; the web app makes a large photo smaller before sending it. What the file is comes from its first bytes: a PDF, or a JPEG, PNG or WebP image, and anything else is `415 FILE_UNSUPPORTED_TYPE`, including an iPhone photo still in HEIC, which only Safari can show. The same file twice on one record is `409 DOC_ALREADY_UPLOADED`, and `candidates` carries the one already there. A file sent with `lab_order_id` is that test's report as the lab printed it, filed as a lab report and on the visit the test was ordered at; `PATCH /documents/{id}` with a `lab_order_id` puts a file already on the record with a test the same way. `GET /documents/{id}/file` sends the file itself, `?download=true` as an attachment, fetched from the store for a caller allowed to see it: the store's address never reaches the browser. Only whoever uploaded a file, or the clinic admin, can change or remove it, `403 DOC_NOT_UPLOADER` for anyone else, and removing it deletes the file from the store before the answer comes back.
 
+`GET /invoices/start` is what a new bill begins from. For a visit it offers the doctor's fee, or their follow-up fee when the visit was booked as a follow-up or, for a walk-in, when the same doctor saw the patient within the clinic's follow-up window; the clinic's fee stands in for a doctor with none of their own. It lists the tests ordered at the visit, and names the bill already raised for it if there is one. `GET /invoices/lines` offers what the clinic has charged for before, most often first, at the price it last charged.
+
+`POST /invoices` takes the lines, a discount with its reason, and a note, and keeps the bill as a draft unless `issue` is sent. The server works out every sum; a discount larger than the bill, or a bill over a crore, is `422 BILLING_INVALID_TOTAL`. A visit billed twice is `409 BILLING_ALREADY_BILLED`, and `candidates` carries the bill already there. A draft is changed with `PATCH` and thrown away with `DELETE`; once issued it is `409 BILLING_LOCKED` to both, and is put right by `POST /invoices/{id}/void` with a reason and a new bill. A void is refused with `409 BILLING_HAS_PAYMENTS` while money taken on the bill has not been given back.
+
+`POST /invoices/{id}/payments` takes part of what is owed or all of it, and issues a draft first if it has to. More than the balance is `422 BILLING_PAYMENT_EXCEEDS_BALANCE`, with the balance in the sentence; a paid bill is `409 BILLING_ALREADY_PAID`. `POST /invoices/{id}/refunds` gives money back with a reason, never more than was taken, and only the clinic admin makes it. After a refund the bill takes no more payments, `409 BILLING_REFUNDED`.
+
+`GET /invoices/summary` is the day's takings at the clinic by how they were paid, net of refunds, with the bills issued that day and what is still owed across every day. `GET /invoices/unbilled` lists patients seen that day with no live bill. `GET /invoices/{id}/pdf` is the bill as printed, which doubles as the receipt; a draft has none. Doctors and the staff role have no part in billing, and the queue leaves a visit's bill off for anyone who cannot read bills.
+
 A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 
 Money is a **string**:
@@ -327,13 +343,13 @@ Money is a **string**:
 { "subtotal": "1600.00", "tax_amount": "80.00", "total": "1680.00", "currency": "INR" }
 ```
 
-JSON numbers become doubles in JavaScript, and a rounding error in a bill is not an acceptable class of bug. The client formats and never computes.
+JSON numbers become doubles in JavaScript, and a rounding error in a bill is not an acceptable class of bug. The server's figures are the ones kept. While a bill is being typed the web app shows a running total, worked in whole paise with the same half-up rounding on tax, so what it shows is what comes back.
 
 ## Idempotency
 
-Endpoints that create money accept an `Idempotency-Key` header. The key is held in Redis for 24 hours against the response. A retry after a timeout returns the original result instead of creating a second invoice.
+Endpoints that move money accept an `Idempotency-Key` header, 8 to 64 letters, digits, dashes or underscores. The key is kept on the row it made, under a unique index, rather than in a cache that could forget it: the same key again answers with the bill the first request made, `200` rather than `201`, or leaves a payment already taken as it was. Two requests with one key arriving together are settled by the index.
 
-Applies to invoice creation and payment recording. Check-in and walk-ins need no key: a patient can only hold one live place in the queue, which the database enforces, so a retried check-in is refused with the token the first one was given rather than handing out a second.
+Applies to raising a bill, taking a payment and giving money back. Check-in and walk-ins need no key: a patient can only hold one live place in the queue, which the database enforces, so a retried check-in is refused with the token the first one was given rather than handing out a second.
 
 ## Authentication
 

@@ -73,6 +73,7 @@ The boundaries that get tested explicitly:
 - A receptionist cannot create a consultation or a prescription. Clinical documentation belongs to the clinician who is accountable for it.
 - The desk types lab reports in, since that is where the paper arrives, but only the doctor who ordered a test marks its report as seen, and after that nobody changes it.
 - A doctor cannot archive a patient, manage staff, or change clinic settings.
+- Billing belongs to the desk and the clinic admin. A doctor has no route to bills, and the queue leaves them off for anyone who cannot read them. Money goes back only through the clinic admin, and a bill is voided only once nothing taken on it is still held.
 - A file on the record is changed or removed only by whoever put it there or the clinic admin. Reading it needs `document:read`; the staff role has that and nothing more.
 - A doctor reads and edits their own consultations. Another doctor's clinical notes are readable by the clinic admin, not laterally.
 - A clinic admin has no platform permissions. A super admin has no clinical permissions.

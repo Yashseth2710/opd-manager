@@ -334,26 +334,44 @@ The client-supplied MIME type is kept in `declared_type` and never trusted; `con
 
 ### invoices
 
-`invoice_number` (`INV-000124`), `patient_id`, `appointment_id`, `consultation_id`, `subtotal`, `discount_amount`, `tax_amount`, `total`, `amount_paid`, `balance`, `status`, `notes`, `issued_at`, `voided_at`.
+`invoice_number`, `patient_id`, `queue_entry_id` (the visit it is for, if any), `doctor_id`, `status`, `subtotal`, `discount_amount`, `discount_reason`, `tax_percent`, `tax_amount`, `total`, `amount_paid`, `refunded_amount`, `balance`, `notes`, `created_by_id`, `issued_at`, `issued_by_id`, `voided_at`, `voided_by_id`, `void_reason`, `request_key`.
 
-Status: `draft` → `pending` → `partially_paid` → `paid`, plus `void` and `refunded`.
+Status: `draft` → `unpaid` → `partly_paid` → `paid`, plus `refunded` and `void`.
 
-The invariant, enforced by a check constraint rather than trusted to application code:
+A draft has no number. Issuing gives it the clinic's next one for the financial year, `INV/2026-27/0001`, from a counter keyed on the year, so a draft thrown away leaves no gap and numbering starts again each April. The prefix is the clinic's setting. The tax rate is copied onto the bill when it is made, so changing the clinic's rate later does not rewrite old bills.
+
+The sums are held by check constraints rather than trusted to application code:
 
 ```
 total = subtotal - discount_amount + tax_amount
 balance = total - amount_paid
+0 <= discount_amount <= subtotal
+0 <= amount_paid <= total
+0 <= refunded_amount <= amount_paid
 ```
+
+Status and its dates agree by constraint too: a draft has neither number nor `issued_at` and has taken nothing, a paid bill owes nothing, and a void bill has `voided_at` and has given back everything it took.
+
+`amount_paid` is everything received; `refunded_amount` is what has since gone back. Money given back does not make the bill owe more, and once any has gone back the bill takes no further payments.
+
+```
+UNIQUE (organization_id, invoice_number)
+UNIQUE (queue_entry_id) WHERE queue_entry_id IS NOT NULL AND status <> 'void'
+UNIQUE (organization_id, request_key) WHERE request_key IS NOT NULL
+INDEX  (organization_id, issued_at) WHERE status IN ('unpaid', 'partly_paid')
+```
+
+One live bill per visit, so two desks billing the same patient at once make one bill between them. Voiding it frees the visit for the bill that replaces it.
 
 ### invoice_items
 
-`description`, `item_type` (`consultation` / `lab` / `procedure` / `medicine` / `other`), `quantity`, `unit_price`, `amount`, `sort_order`.
+`position`, `item_type` (`consultation` / `procedure` / `lab` / `medicine` / `other`), `description`, `quantity` (1 to 999), `unit_price`, `amount`. `amount = quantity * unit_price` by constraint. Replaced as a whole while the bill is a draft, and fixed once it is issued.
 
 ### payments
 
-`invoice_id`, `amount`, `method`, `reference_number`, `notes`, `received_by`, `received_at`.
+`invoice_id`, `kind` (`payment` / `refund`), `amount`, `method` (`cash` / `upi` / `card` / `bank_transfer` / `cheque` / `other`), `reference`, `note`, `received_at`, `received_by_id`, `request_key`.
 
-Partial payments are the normal case. `invoices.amount_paid` is maintained by the service inside the same transaction as the payment insert, so the two cannot drift. Payments are append-only; a correction is a negative adjustment, not an edit.
+Partial payments are the normal case. The bill's row is locked, the payment inserted and `amount_paid` moved in one transaction, so two desks taking the last of a bill at once cannot both take it. Payments are never edited or removed; money given back is a `refund` row with its reason in `note`, which the database requires.
 
 ## Platform
 
