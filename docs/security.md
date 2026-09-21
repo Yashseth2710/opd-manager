@@ -73,6 +73,7 @@ The boundaries that get tested explicitly:
 - A receptionist cannot create a consultation or a prescription. Clinical documentation belongs to the clinician who is accountable for it.
 - The desk types lab reports in, since that is where the paper arrives, but only the doctor who ordered a test marks its report as seen, and after that nobody changes it.
 - A doctor cannot archive a patient, manage staff, or change clinic settings.
+- A file on the record is changed or removed only by whoever put it there or the clinic admin. Reading it needs `document:read`; the staff role has that and nothing more.
 - A doctor reads and edits their own consultations. Another doctor's clinical notes are readable by the clinic admin, not laterally.
 - A clinic admin has no platform permissions. A super admin has no clinical permissions.
 
@@ -126,12 +127,14 @@ SQL injection is structurally excluded — everything goes through SQLAlchemy wi
 
 The riskiest surface in the application.
 
-- Extension checked against an allowlist: `pdf`, `jpg`, `jpeg`, `png`, `webp`, `heic`.
-- Content type determined by reading magic bytes. The client's `Content-Type` is recorded and ignored.
-- Size capped at 10MB per file, with per-clinic storage counted against the plan limit.
+- Extension checked against an allowlist: `pdf`, `jpg`, `jpeg`, `jfif`, `png`, `webp`, and `heic` or `heif` only so they can be refused with a reason.
+- Content type determined by reading magic bytes: a PDF, or a JPEG, PNG or WebP image. The client's `Content-Type` is recorded and ignored, and the file is always served back with the type its bytes gave and `nosniff`.
+- HEIC is refused even though it is a real image. No browser but Safari can show it, and a record nobody at the desk can open is not a record.
+- Size capped at 4 MB per file, because a Vercel function refuses a larger body before the API sees it. The body is read no further than the limit. The web app makes a large photo smaller before sending it; a PDF it cannot, so one over the limit is refused with what to do instead. Storage per clinic is not counted yet; that arrives with plans.
 - Stored filenames are generated. The original is kept as metadata and never used as a path.
-- Upload requires `document:upload` **and** the target patient must resolve inside the caller's organisation.
-- Blob URLs are unguessable and served through an API route that checks tenancy and permission before redirecting. No blob is publicly listable.
+- Upload requires `document:upload` **and** the target patient must resolve inside the caller's organisation. A visit or a lab order named alongside it must be that patient's.
+- Files live in a private Vercel Blob store, which answers nobody without the store's token. The API fetches the file for a caller it has checked and sends it on; the store's address never reaches the browser, and no blob is listable.
+- Only whoever uploaded a file, or the clinic admin, can rename, refile or remove it. Removing deletes the file from the store before the caller is told it is gone.
 - SVG is not accepted. SVG is executable.
 
 ## Rate limiting
@@ -144,7 +147,7 @@ Redis-backed, since serverless instances share nothing in memory.
 | Password reset request | 3 per hour per address |
 | Registration | 3 per hour per IP |
 | Search | 30 per minute per user |
-| File upload | 20 per hour per user |
+| File upload | 60 per hour per user |
 | General API | 300 per minute per user |
 
 Exceeding a limit returns `429` with `Retry-After`.

@@ -62,6 +62,8 @@ The frontend maps `code` to its own copy. `message` is a readable fallback, not 
 | 403 | Authenticated, but not permitted |
 | 404 | Not found, **or** exists in another clinic |
 | 409 | Conflict — double booking, duplicate number |
+| 413 | Upload larger than the limit |
+| 415 | Upload of a kind of file that is not accepted |
 | 422 | Validation failed |
 | 429 | Rate limited |
 | 500 | Unhandled fault |
@@ -88,9 +90,11 @@ CONSULT_*     NOT_FOUND, ALREADY_COMPLETED, NOT_OWNER, NOT_IN_ROOM,
 RX_*          NOT_FOUND, ALREADY_REPLACED, NOT_PRESCRIBER
 VITALS_*      NOT_FOUND, ALREADY_TAKEN, LOCKED
 LAB_*         NOT_FOUND, VISIT_CLOSED, ALREADY_ORDERED, NOT_ORDERER, LOCKED
+DOC_*         NOT_FOUND, ALREADY_UPLOADED, NOT_UPLOADER
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, INVOICE_VOIDED
-FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED
+FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED, UPLOAD_INTERRUPTED,
+              MISSING
 PLAN_*        LIMIT_REACHED, FEATURE_NOT_AVAILABLE
 VALIDATION_ERROR, RATE_LIMITED, INTERNAL_ERROR
 ```
@@ -224,6 +228,13 @@ labs          GET    /lab-tests
               DELETE /lab-orders/{id}/result
               POST   /lab-orders/{id}/review
 
+documents     GET    /patients/{id}/documents?category= | ?consultation_id= | ?lab_order_id=
+              POST   /patients/{id}/documents?name=&category=
+              GET    /documents/{id}
+              GET    /documents/{id}/file
+              PATCH  /documents/{id}
+              DELETE /documents/{id}
+
 billing       GET    /invoices
               POST   /invoices
               GET    /invoices/{id}
@@ -305,6 +316,8 @@ A prescription is written through the notes: `PATCH /consultations/{id}` carries
 `PUT /lab-orders/{id}/result` is the whole report: the date printed on it, the lab, what it says in words, and each value with its unit and the range the lab printed. Sending it again corrects it, until the ordering doctor marks it seen with `POST /lab-orders/{id}/review`; after that it is `409 LAB_LOCKED`. `DELETE /lab-orders/{id}/result` takes a report typed against the wrong order back off. The report cannot be dated after today or before the test was ordered. Each value comes back with a `flag`, worked out on read: `high` or `low` for a number outside its range, with a value written as `<0.5` read as somewhere below half, and `abnormal` for a word that is not the one it should be, where `Nil`, `Negative` and `Not detected` count as the same. `GET /lab-orders/{id}` also carries the lines a report of that test usually has, with the ranges for the patient's sex filled in for adults and left to the lab's report for children, and each value's figure on the patient's last report of the same test, where it was measured in the same units.
 
 Lab work is part of the patient's record, so anyone holding `lab:read` reads every patient's. A doctor acts only on their own orders: typing a report into a colleague's is `404 LAB_NOT_FOUND`, and marking it seen `403 LAB_NOT_ORDERER`. `GET /lab-orders?show=waiting` is oldest first with urgent ones ahead, since the oldest is the one that is late; one visit's tests come in the order they were asked for, anything else newest first. `counts` gives each status for the tabs, and `mine=true` narrows a doctor's list to their own orders.
+
+`POST /patients/{id}/documents` takes the file as the whole request body, with its name, `category` and optionally `title`, `dated`, `consultation_id` or `lab_order_id` in the query, so the size is checked while the file is still arriving rather than after a form has been unpacked. Four megabytes is the most it takes, `413 FILE_TOO_LARGE` past that, because a Vercel function refuses a body much over 4.5 MB before the API sees it; the web app makes a large photo smaller before sending it. What the file is comes from its first bytes: a PDF, or a JPEG, PNG or WebP image, and anything else is `415 FILE_UNSUPPORTED_TYPE`, including an iPhone photo still in HEIC, which only Safari can show. The same file twice on one record is `409 DOC_ALREADY_UPLOADED`, and `candidates` carries the one already there. A file sent with `lab_order_id` is that test's report as the lab printed it, filed as a lab report and on the visit the test was ordered at; `PATCH /documents/{id}` with a `lab_order_id` puts a file already on the record with a test the same way. `GET /documents/{id}/file` sends the file itself, `?download=true` as an attachment, fetched from the store for a caller allowed to see it: the store's address never reaches the browser. Only whoever uploaded a file, or the clinic admin, can change or remove it, `403 DOC_NOT_UPLOADER` for anyone else, and removing it deletes the file from the store before the answer comes back.
 
 A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 

@@ -322,11 +322,13 @@ Deliberately simple. Receiving results straight from a lab's own system is a dif
 
 ### patient_documents
 
-Metadata only — files live in Vercel Blob.
+What a file on the record is. The file itself lives in a private Vercel Blob store.
 
-`patient_id`, `file_name` (sanitised), `original_name`, `content_type` (sniffed server-side), `size_bytes`, `blob_url`, `category`, `uploaded_by`.
+`patient_id`, `consultation_id` (the visit it came in for), `lab_order_id` (the test it is the lab's report for), `category` (`lab_report` / `scan` / `prescription` / `referral` / `discharge` / `insurance` / `other`), `title`, `dated` (the date on the paper), `original_name` (sanitised), `content_type` (sniffed server-side), `declared_type`, `size_bytes`, `sha256`, `blob_url`, `uploaded_by_id`.
 
-The client-supplied MIME type is recorded but never trusted; the content type is determined from the file's magic bytes. Blob URLs are unguessable and access is brokered through the API, which checks tenancy and permission before redirecting.
+The client-supplied MIME type is kept in `declared_type` and never trusted; `content_type` comes from the file's magic bytes, and a check constraint holds it to the four kinds accepted. A file tied to a lab order is always a lab report, by constraint. `(patient_id, sha256)` is unique, so the same file cannot go on one record twice, even from two tabs at once.
+
+`blob_url` is an address in a store that refuses anyone without its token, and it is never sent to a client: the API reads the file and passes it on. A visit or lab order that goes away leaves the file on the record with the link cleared. Removing a document deletes the row and the file together.
 
 ## Billing
 
