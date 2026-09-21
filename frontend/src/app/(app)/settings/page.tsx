@@ -7,6 +7,7 @@ import { Field, Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
 import { ApiFailure } from "@/lib/api";
+import { financialYear } from "@/lib/billing";
 import {
   completeSetup,
   getClinic,
@@ -69,6 +70,7 @@ function SettingsScreen() {
       <div className="flex flex-col gap-10">
         <ClinicDetails clinic={clinic.data} />
         <FeesAndTiming settings={settings.data} currency={clinic.data.currency} />
+        <Bills settings={settings.data} />
       </div>
     </Page>
   );
@@ -233,7 +235,6 @@ function FeesAndTiming({ settings, currency }: { settings: ClinicSettings; curre
     follow_up_fee: settings.follow_up_fee,
     consultation_duration_minutes: String(settings.consultation_duration_minutes),
     follow_up_window_days: String(settings.follow_up_window_days),
-    invoice_prefix: settings.invoice_prefix,
   });
   const [fields, setFields] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
@@ -245,7 +246,6 @@ function FeesAndTiming({ settings, currency }: { settings: ClinicSettings; curre
         follow_up_fee: form.follow_up_fee,
         consultation_duration_minutes: Number(form.consultation_duration_minutes),
         follow_up_window_days: Number(form.follow_up_window_days),
-        invoice_prefix: form.invoice_prefix,
       }),
     onSuccess: (updated) => {
       setSaved(true);
@@ -255,7 +255,6 @@ function FeesAndTiming({ settings, currency }: { settings: ClinicSettings; curre
         follow_up_fee: updated.follow_up_fee,
         consultation_duration_minutes: String(updated.consultation_duration_minutes),
         follow_up_window_days: String(updated.follow_up_window_days),
-        invoice_prefix: updated.invoice_prefix,
       });
       void queries.invalidateQueries({ queryKey: ["clinic-settings"] });
     },
@@ -296,7 +295,7 @@ function FeesAndTiming({ settings, currency }: { settings: ClinicSettings; curre
             error={fields.follow_up_fee}
           />
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Appointment length"
             name="consultation_duration_minutes"
@@ -313,13 +312,84 @@ function FeesAndTiming({ settings, currency }: { settings: ClinicSettings; curre
             error={fields.follow_up_window_days}
             hint="Days"
           />
+        </div>
+        <SaveRow busy={save.isPending} saved={saved} />
+      </form>
+    </Section>
+  );
+}
+
+function Bills({ settings }: { settings: ClinicSettings }) {
+  const queries = useQueryClient();
+  const [form, setForm] = useState({
+    invoice_prefix: settings.invoice_prefix,
+    tax_percent: settings.tax_percent,
+    gstin: settings.gstin,
+  });
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+
+  const save = useMutation({
+    mutationFn: () =>
+      saveSettings({
+        invoice_prefix: form.invoice_prefix,
+        tax_percent: form.tax_percent || "0",
+        gstin: form.gstin,
+      }),
+    onSuccess: (updated) => {
+      setSaved(true);
+      setFields({});
+      setForm({
+        invoice_prefix: updated.invoice_prefix,
+        tax_percent: updated.tax_percent,
+        gstin: updated.gstin,
+      });
+      void queries.invalidateQueries({ queryKey: ["clinic-settings"] });
+    },
+    onError: (error) => {
+      setSaved(false);
+      if (error instanceof ApiFailure && error.fields) setFields(error.fields);
+    },
+  });
+
+  return (
+    <Section
+      title="Bills"
+      blurb="How bills are numbered, and the tax on them. Most outpatient care carries no GST, so leave the rate at 0 unless yours does."
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          setSaved(false);
+          save.mutate();
+        }}
+        noValidate
+        className="flex flex-col gap-4"
+      >
+        <div className="grid gap-4 sm:grid-cols-3">
           <Field
-            label="Invoice prefix"
+            label="Bill number prefix"
             name="invoice_prefix"
             value={form.invoice_prefix}
             onChange={(v) => setForm({ ...form, invoice_prefix: v })}
             error={fields.invoice_prefix}
-            hint="On every invoice number"
+            hint={`Bills read ${form.invoice_prefix.trim().toUpperCase() || "INV"}/${financialYear()}/0001.`}
+          />
+          <Field
+            label="Tax rate"
+            name="tax_percent"
+            value={form.tax_percent}
+            onChange={(v) => setForm({ ...form, tax_percent: v })}
+            error={fields.tax_percent}
+            hint="Percent, on new bills only"
+          />
+          <Field
+            label="GSTIN"
+            name="gstin"
+            value={form.gstin}
+            onChange={(v) => setForm({ ...form, gstin: v })}
+            error={fields.gstin}
+            hint="Printed on bills. Leave empty if not registered."
           />
         </div>
         <SaveRow busy={save.isPending} saved={saved} />

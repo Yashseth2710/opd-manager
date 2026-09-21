@@ -32,6 +32,7 @@ export type ClinicSettings = {
   tax_percent: string;
   invoice_prefix: string;
   token_prefix: string;
+  gstin: string;
 };
 
 export type Role = {

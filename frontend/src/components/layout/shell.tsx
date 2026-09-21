@@ -9,6 +9,7 @@ import {
   ListOrdered,
   Loader2,
   NotebookPen,
+  ReceiptIndianRupee,
   Settings,
   Stethoscope,
   UserRound,
@@ -52,6 +53,7 @@ const DESTINATIONS: Destination[] = [
     permission: "consultation:read",
   },
   { href: "/lab", label: "Lab", icon: FlaskConical, permission: "lab:read" },
+  { href: "/billing", label: "Billing", icon: ReceiptIndianRupee, permission: "billing:read" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];

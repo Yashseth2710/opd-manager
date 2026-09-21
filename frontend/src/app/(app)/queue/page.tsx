@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   NotebookPen,
   Pill,
+  ReceiptIndianRupee,
   Siren,
   UserPlus,
   X,
@@ -29,6 +30,7 @@ import { ReadingsLine } from "@/components/vitals/readings";
 import { ApiFailure } from "@/lib/api";
 import { longDate, TYPE_LABELS } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
+import type { InvoiceStatus } from "@/lib/billing";
 import { openNotes } from "@/lib/consultations";
 import { readableTime } from "@/lib/doctors";
 import type { PatientSummary } from "@/lib/patients";
@@ -96,6 +98,8 @@ function Queue() {
     read: may("consultation:read"),
     prescriptions: may("prescription:read"),
     vitals: may("vitals:record"),
+    bills: may("billing:read"),
+    billing: may("billing:create"),
   };
 
   const queue = useQuery({
@@ -283,7 +287,14 @@ function Queue() {
   );
 }
 
-type NotesAccess = { write: boolean; read: boolean; prescriptions: boolean; vitals: boolean };
+type NotesAccess = {
+  write: boolean;
+  read: boolean;
+  prescriptions: boolean;
+  vitals: boolean;
+  bills: boolean;
+  billing: boolean;
+};
 
 function LaneView({
   lane,
@@ -992,6 +1003,45 @@ function NotesLink({ id, children }: { id: string; children: React.ReactNode }) 
   );
 }
 
+/** The visit's bill, or a way to raise one. */
+function BillLink({ entry, notes }: { entry: QueueEntry; notes: NotesAccess }) {
+  const shared =
+    "inline-flex items-center gap-1.5 rounded-[var(--radius-field)] border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-medium transition hover:bg-[var(--surface-sunken)]";
+  if (entry.invoice && notes.bills) {
+    return (
+      <span className="col-start-2 sm:col-start-auto">
+        <Link href={`/billing/${entry.invoice.id}` as Route} className={shared}>
+          <ReceiptIndianRupee className="size-3.5" />
+          {BILL_WORDS[entry.invoice.status]}
+        </Link>
+      </span>
+    );
+  }
+  if (!entry.invoice && notes.billing) {
+    return (
+      <span className="col-start-2 sm:col-start-auto">
+        <Link
+          href={`/billing/new?visit=${entry.id}` as Route}
+          className="inline-flex items-center gap-1.5 rounded-[var(--radius-field)] bg-[var(--accent)] px-3 py-1.5 text-[13px] font-semibold text-[var(--accent-fg)] transition hover:brightness-105"
+        >
+          <ReceiptIndianRupee className="size-3.5" />
+          Bill
+        </Link>
+      </span>
+    );
+  }
+  return null;
+}
+
+const BILL_WORDS: Record<InvoiceStatus, string> = {
+  draft: "Bill, draft",
+  unpaid: "Bill, unpaid",
+  partly_paid: "Bill, part paid",
+  paid: "Paid",
+  refunded: "Refunded",
+  void: "Bill void",
+};
+
 function Done({
   entries,
   notes,
@@ -1016,7 +1066,7 @@ function Done({
         {entries.map((entry) => (
           <li
             key={entry.id}
-            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[14px] sm:grid-cols-[auto_1fr_auto_auto_auto]"
+            className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5 px-4 py-2 text-[14px] sm:grid-cols-[auto_1fr_auto_auto_auto_auto]"
           >
             <Token number={entry.token} status={entry.status} />
             <span className="min-w-0 truncate">{entry.patient.full_name}</span>
@@ -1053,6 +1103,7 @@ function Done({
                 </Link>
               </span>
             )}
+            {entry.status === "completed" && <BillLink entry={entry} notes={notes} />}
           </li>
         ))}
       </ul>

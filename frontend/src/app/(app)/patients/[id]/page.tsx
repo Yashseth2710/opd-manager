@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { PatientAppointments } from "@/components/appointments/patient-appointments";
+import { PatientBills } from "@/components/billing/patient-bills";
 import { PatientVisits } from "@/components/consultations/patient-visits";
 import { DocumentsPanel } from "@/components/documents/files";
 import { PatientLabs } from "@/components/labs/patient-labs";
@@ -156,6 +157,13 @@ function Record() {
               <PatientVisits patientId={record.id} ownOnly={session.data?.role === "doctor"} />
             )}
             {may("prescription:read") && <PatientPrescriptions patientId={record.id} />}
+            {may("billing:read") && (
+              <PatientBills
+                patientId={record.id}
+                currency={session.data?.organization?.currency ?? "INR"}
+                mayRaise={may("billing:create") && record.status === "active"}
+              />
+            )}
             <Allergies
               patientId={record.id}
               allergies={record.allergies}

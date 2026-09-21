@@ -1,4 +1,5 @@
 import { post, request } from "@/lib/api";
+import type { InvoiceStatus } from "@/lib/billing";
 import type { VitalsBrief } from "@/lib/vitals";
 import type {
   AppointmentDetail,
@@ -42,6 +43,8 @@ export type QueueEntry = {
   /** The prescription issued at this visit, for the desk to print. */
   prescription_id: string | null;
   vitals: VitalsBrief | null;
+  /** The visit's bill, for anyone who reads bills. */
+  invoice: { id: string; invoice_number: string | null; status: InvoiceStatus } | null;
 };
 
 export type Arrival = {
