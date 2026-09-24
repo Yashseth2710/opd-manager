@@ -297,6 +297,8 @@ Standard query parameters across every collection:
 
 Search is debounced at 300ms client-side and always executed server-side. No endpoint returns an unbounded collection.
 
+`GET /search?q=` is the search box in the rail, and answers with up to five of each kind of record at once: `patients`, `appointments`, `bills`, `doctors` and `staff`. A kind is searched only when the caller holds the permission its own pages need (`patient:read`, `appointment:read`, `billing:read`, `doctor:read`, `staff:manage`), and `searched` lists the kinds that were, so an empty answer can say where it looked. Patients match the way the register matches them, misspelt names included, and a patient's bills and bookings are found through the same match. Bookings are the ones still ahead, from the start of the clinic's day, and a doctor only ever gets their own. Runs of spaces are squeezed, a term shorter than two characters finds nothing, and one longer than 100 is `422`. The box waits 160ms after the last key before asking, and nothing it reads is written to the audit log.
+
 `GET /doctors/specialities` is the one collection with no paging, because it returns the distinct specialities a single clinic offers and that is a list of a dozen at most. It exists so the filter on the list is built from what a clinic actually does rather than from a fixed set every clinic has to pick the wrong answer from. It takes the same `status` as `/doctors` and defaults to the same value, so the two always agree — a clinic whose only orthopaedist has been stood down is not offering orthopaedics, and a filter that can only come back empty is worse than no filter.
 
 ## Dates and money

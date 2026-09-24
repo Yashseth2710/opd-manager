@@ -165,6 +165,12 @@ The day book is a CSV, and a CSV is a program as far as Excel and Sheets are con
 
 The stretch asked for is capped at a year. Left open, a request for a decade would be a cheap way to make the database do expensive work from a single session.
 
+## Search
+
+The search box reaches five kinds of record from one route, so it is gated kind by kind rather than as a whole: each is searched only when the caller holds the permission that kind's own pages need, and never lists a record whose page would refuse them. Every query goes through a repository scoped to the caller's clinic, and a doctor's bookings are narrowed to their own list exactly as the appointments page narrows them. Typed text is escaped before it reaches `LIKE`, so `%` and `_` match only themselves.
+
+The browser keeps the last few records somebody opened from the box, by name, so they are one keystroke away next time. Clinic computers are shared, so the list is kept per account, holds names and nothing clinical, and is cleared on signing out.
+
 ## Rate limiting
 
 Redis-backed, since serverless instances share nothing in memory.
