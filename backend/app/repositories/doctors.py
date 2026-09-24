@@ -10,7 +10,7 @@ import datetime as dt
 import uuid
 from dataclasses import dataclass
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import ColumnElement, Select, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Doctor, DoctorLeave, DoctorSchedule, User
@@ -37,6 +37,21 @@ def _literal(term: str) -> str:
     for character in _LIKE_WILDCARDS:
         escaped = escaped.replace(character, LIKE_ESCAPE + character)
     return escaped
+
+
+def matching(query: str) -> ColumnElement[bool]:
+    lowered = query.strip().lower()
+    like = f"%{_literal(lowered)}%"
+    return or_(
+        FULL_NAME.like(like, escape=LIKE_ESCAPE),
+        func.lower(Doctor.speciality).like(like, escape=LIKE_ESCAPE),
+        func.lower(Doctor.qualifications).like(like, escape=LIKE_ESCAPE),
+        func.lower(Doctor.room).like(like, escape=LIKE_ESCAPE),
+        # Tolerates the spelling a name was heard rather than read in.
+        # word_similarity scores the term against the closest run of
+        # words, so a surname alone still matches a full name.
+        func.word_similarity(lowered, FULL_NAME) > SIMILARITY,
+    )
 
 
 @dataclass
@@ -96,22 +111,9 @@ class DoctorRepository(TenantScopedRepository[Doctor]):
             statement = statement.where(matches)
             counting = counting.where(matches)
 
-        term = query.strip()
-        if term:
-            lowered = term.lower()
-            like = f"%{_literal(lowered)}%"
-            alternatives = [
-                FULL_NAME.like(like, escape=LIKE_ESCAPE),
-                func.lower(Doctor.speciality).like(like, escape=LIKE_ESCAPE),
-                func.lower(Doctor.qualifications).like(like, escape=LIKE_ESCAPE),
-                func.lower(Doctor.room).like(like, escape=LIKE_ESCAPE),
-                # Tolerates the spelling a name was heard rather than read in.
-                # word_similarity scores the term against the closest run of
-                # words, so a surname alone still matches a full name.
-                func.word_similarity(lowered, FULL_NAME) > SIMILARITY,
-            ]
-            statement = statement.where(or_(*alternatives))
-            counting = counting.where(or_(*alternatives))
+        if query.strip():
+            statement = statement.where(matching(query))
+            counting = counting.where(matching(query))
 
         statement = statement.order_by(
             Doctor.status,
@@ -128,6 +130,23 @@ class DoctorRepository(TenantScopedRepository[Doctor]):
             [Listed(doctor=row[0], working_days=int(row[1])) for row in found.all()],
             int(total.scalar_one()),
         )
+
+    async def closest(self, query: str, *, limit: int) -> list[Doctor]:
+        """The few doctors a typed term most likely means, working ones first."""
+        lowered = query.strip().lower()
+        result = await self.session.execute(
+            self.query()
+            .where(matching(query))
+            .order_by(
+                Doctor.status,
+                func.word_similarity(lowered, FULL_NAME).desc(),
+                Doctor.last_name,
+                Doctor.first_name,
+                Doctor.id,
+            )
+            .limit(limit)
+        )
+        return list(result.scalars().all())
 
     async def with_working_days(self, doctor_id: uuid.UUID) -> Listed | None:
         result = await self.session.execute(

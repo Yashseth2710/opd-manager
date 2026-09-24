@@ -56,6 +56,33 @@ def _literal(term: str) -> str:
     return escaped
 
 
+def matching(query: str) -> ColumnElement[bool]:
+    """A patient the typed term could mean: by name, number, phone or email.
+
+    Shared with anything else that finds records by the patient on them, so
+    the search box and the register agree on who "Kapor" is.
+    """
+    term = query.strip()
+    lowered = term.lower()
+    like = f"%{_literal(lowered)}%"
+    alternatives: list[ColumnElement[bool]] = [
+        FULL_NAME.like(like, escape="\\"),
+        func.lower(Patient.preferred_name).like(like, escape="\\"),
+        Patient.patient_number.ilike(f"%{_literal(term)}%", escape="\\"),
+        func.word_similarity(lowered, FULL_NAME) > SEARCH_SIMILARITY,
+    ]
+
+    digits = _NON_DIGITS.sub("", term)
+    # Four is where a run of numbers stops being a fragment of every
+    # record and starts being somebody's phone number.
+    if len(digits) >= 4:
+        alternatives.append(Patient.phone.like(f"%{digits}%"))
+        alternatives.append(Patient.alternate_phone.like(f"%{digits}%"))
+    if "@" in term:
+        alternatives.append(func.lower(Patient.email).like(like, escape="\\"))
+    return or_(*alternatives)
+
+
 @dataclass(frozen=True)
 class Listed:
     patient: Patient
@@ -79,30 +106,8 @@ class PatientRepository(TenantScopedRepository[Patient]):
         conditions: list[ColumnElement[bool]] = []
         if status in (ACTIVE, ARCHIVED):
             conditions.append(Patient.status == status)
-
-        term = query.strip()
-        if not term:
-            return conditions
-
-        lowered = term.lower()
-        like = f"%{_literal(lowered)}%"
-        alternatives: list[ColumnElement[bool]] = [
-            FULL_NAME.like(like, escape="\\"),
-            func.lower(Patient.preferred_name).like(like, escape="\\"),
-            Patient.patient_number.ilike(f"%{_literal(term)}%", escape="\\"),
-            func.word_similarity(lowered, FULL_NAME) > SEARCH_SIMILARITY,
-        ]
-
-        digits = _NON_DIGITS.sub("", term)
-        # Four is where a run of numbers stops being a fragment of every
-        # record and starts being somebody's phone number.
-        if len(digits) >= 4:
-            alternatives.append(Patient.phone.like(f"%{digits}%"))
-            alternatives.append(Patient.alternate_phone.like(f"%{digits}%"))
-        if "@" in term:
-            alternatives.append(func.lower(Patient.email).like(like, escape="\\"))
-
-        conditions.append(or_(*alternatives))
+        if query.strip():
+            conditions.append(matching(query))
         return conditions
 
     async def search(
@@ -151,6 +156,24 @@ class PatientRepository(TenantScopedRepository[Patient]):
 
         rows = await self.session.execute(statement.limit(limit).offset(offset))
         return [Listed(patient=row[0], allergy_count=row[1]) for row in rows.all()], total
+
+    async def closest(self, query: str, *, limit: int) -> list[Patient]:
+        """The few patients a typed term most likely means, archived ones
+        included, since the person at the desk may be looking for exactly
+        that record."""
+        lowered = query.strip().lower()
+        result = await self.session.execute(
+            self.query()
+            .where(matching(query))
+            .order_by(
+                func.word_similarity(lowered, FULL_NAME).desc(),
+                Patient.last_name,
+                Patient.first_name,
+                Patient.id.desc(),
+            )
+            .limit(limit)
+        )
+        return list(result.scalars().all())
 
     async def with_allergy_count(self, patient_id: uuid.UUID) -> Listed | None:
         result = await self.session.execute(

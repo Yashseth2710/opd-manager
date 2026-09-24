@@ -10,12 +10,13 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Invitation, Role, User, UserRole
 from app.models.invitation import PENDING
 from app.repositories.base import TenantScopedRepository
+from app.repositories.prescriptions import _as_typed
 
 
 class InvitationRepository(TenantScopedRepository[Invitation]):
@@ -66,6 +67,27 @@ class StaffRepository:
             .outerjoin(Role, Role.id == UserRole.role_id)
             .where(User.organization_id == self.organization_id)
             .order_by(User.created_at)
+        )
+        return [(row[0], row[1]) for row in result.all()]
+
+    async def named(self, typed: str, *, limit: int) -> list[tuple[User, Role | None]]:
+        """Colleagues whose name or email has the typed text in it."""
+        needle = f"%{_as_typed(typed.strip().lower())}%"
+        result = await self.session.execute(
+            select(User, Role)
+            .outerjoin(UserRole, UserRole.user_id == User.id)
+            .outerjoin(Role, Role.id == UserRole.role_id)
+            .where(User.organization_id == self.organization_id)
+            .where(
+                or_(
+                    func.lower(User.first_name + " " + User.last_name).like(
+                        needle, escape="\\"
+                    ),
+                    func.lower(User.email).like(needle, escape="\\"),
+                )
+            )
+            .order_by(User.status, User.first_name, User.last_name, User.id)
+            .limit(limit)
         )
         return [(row[0], row[1]) for row in result.all()]
 

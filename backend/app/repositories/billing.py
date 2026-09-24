@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy import ColumnElement, Select, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -23,7 +23,19 @@ from app.models import (
 )
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
+from app.repositories.patients import matching as patient_matching
 from app.repositories.prescriptions import _as_typed
+
+
+def _typed(text: str) -> ColumnElement[bool]:
+    """A bill by its number, or by the name, number or phone of its patient."""
+    needle = f"%{_as_typed(text.strip().lower())}%"
+    return or_(
+        func.lower(Patient.first_name + " " + Patient.last_name).like(needle, escape="\\"),
+        func.lower(Patient.patient_number).like(needle, escape="\\"),
+        Patient.phone.like(needle, escape="\\"),
+        func.lower(Invoice.invoice_number).like(needle, escape="\\"),
+    )
 
 
 @dataclass
@@ -127,17 +139,7 @@ class InvoiceRepository(TenantScopedRepository[Invoice]):
         if until is not None:
             conditions.append(placed < until)
         if typed:
-            needle = f"%{_as_typed(typed.lower())}%"
-            conditions.append(
-                or_(
-                    func.lower(Patient.first_name + " " + Patient.last_name).like(
-                        needle, escape="\\"
-                    ),
-                    func.lower(Patient.patient_number).like(needle, escape="\\"),
-                    Patient.phone.like(needle, escape="\\"),
-                    func.lower(Invoice.invoice_number).like(needle, escape="\\"),
-                )
-            )
+            conditions.append(_typed(typed))
 
         counted = (
             select(func.count())
@@ -154,6 +156,30 @@ class InvoiceRepository(TenantScopedRepository[Invoice]):
             .offset(offset)
         )
         return found, total
+
+    async def latest_matching(self, typed: str, *, limit: int) -> list[tuple[Invoice, Patient]]:
+        """The newest few bills a typed term picks out, without their lines.
+
+        The patient is matched the way the register matches them, misspelt
+        names included, so a search that finds somebody also finds their
+        bills.
+        """
+        placed = func.coalesce(Invoice.issued_at, Invoice.created_at)
+        number = f"%{_as_typed(typed.strip().lower())}%"
+        result = await self.session.execute(
+            select(Invoice, Patient)
+            .join(Patient, Patient.id == Invoice.patient_id)
+            .where(Invoice.organization_id == self.organization_id)
+            .where(
+                or_(
+                    patient_matching(typed),
+                    func.lower(Invoice.invoice_number).like(number, escape="\\"),
+                )
+            )
+            .order_by(placed.desc(), Invoice.id.desc())
+            .limit(limit)
+        )
+        return [(row[0], row[1]) for row in result.all()]
 
     async def counts(self, *, patient_id: uuid.UUID | None = None) -> dict[str, int]:
         statement = (

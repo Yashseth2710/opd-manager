@@ -18,6 +18,7 @@ from app.api.v1.endpoints import (
     prescriptions,
     queue,
     reports,
+    search,
     vitals,
 )
 
@@ -40,3 +41,4 @@ router.include_router(dashboard.router)
 router.include_router(reports.router)
 router.include_router(notifications.router)
 router.include_router(audit.router)
+router.include_router(search.router)

@@ -14,7 +14,7 @@ from typing import Any
 from sqlalchemy import ColumnElement, Select, func, select
 
 from app.models import Appointment, AppointmentEvent, Doctor, Patient, PatientAllergy
-from app.models.appointment import RELEASED
+from app.models.appointment import COMPLETED, RELEASED
 from app.repositories.base import TenantScopedRepository
 
 
@@ -131,6 +131,29 @@ class AppointmentRepository(TenantScopedRepository[Appointment]):
             statement.order_by(Appointment.scheduled_start.desc(), Appointment.id.desc()).limit(
                 limit
             )
+        )
+
+    async def coming_up(
+        self,
+        patients: ColumnElement[bool],
+        since: dt.datetime,
+        *,
+        doctor_id: uuid.UUID | None = None,
+        limit: int = 5,
+    ) -> list[Listed]:
+        """Bookings still ahead for the patients a condition picks out, soonest
+        first. Finished and released ones are history, which the patient's
+        own page already tells in full."""
+        statement = (
+            self._joined()
+            .where(patients)
+            .where(Appointment.scheduled_start >= since)
+            .where(Appointment.status.not_in((*RELEASED, COMPLETED)))
+        )
+        if doctor_id is not None:
+            statement = statement.where(Appointment.doctor_id == doctor_id)
+        return await self._rows(
+            statement.order_by(Appointment.scheduled_start, Appointment.id).limit(limit)
         )
 
     async def held(
