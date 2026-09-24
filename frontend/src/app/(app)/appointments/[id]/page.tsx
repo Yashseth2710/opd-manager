@@ -44,7 +44,7 @@ import {
   type Source,
 } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
-import { listDoctors, readableTime, todayISO } from "@/lib/doctors";
+import { listDoctors, readableTime, todayISO, refreshFreeTimes } from "@/lib/doctors";
 import { initials, readablePhone } from "@/lib/patients";
 import { checkIn } from "@/lib/queue";
 
@@ -300,7 +300,7 @@ function Actions({
   const settle = (next: AppointmentDetail) => {
     queries.setQueryData(["appointment", record.id], next);
     void queries.invalidateQueries({ queryKey: ["appointments"] });
-    void queries.invalidateQueries({ queryKey: ["availability"] });
+    void refreshFreeTimes(queries);
     void queries.invalidateQueries({ queryKey: ["patient-appointments", record.patient.id] });
     setProblem(null);
     setMode(null);
@@ -581,7 +581,7 @@ function Move({
       inFlight.current = false;
     },
     onSuccess: (next) => {
-      void queries.invalidateQueries({ queryKey: ["availability", record.doctor.id] });
+      void refreshFreeTimes(queries, record.doctor.id);
       onDone(next);
     },
     onError: (error) => {

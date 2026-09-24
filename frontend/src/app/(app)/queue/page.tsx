@@ -32,7 +32,7 @@ import { longDate, TYPE_LABELS } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
 import type { InvoiceStatus } from "@/lib/billing";
 import { openNotes } from "@/lib/consultations";
-import { readableTime } from "@/lib/doctors";
+import { readableTime, refreshFreeTimes } from "@/lib/doctors";
 import type { PatientSummary } from "@/lib/patients";
 import {
   addWalkIn,
@@ -131,7 +131,7 @@ function Queue() {
     void queries.invalidateQueries({ queryKey: ["queue"] });
     void queries.invalidateQueries({ queryKey: ["appointments"] });
     void queries.invalidateQueries({ queryKey: ["appointment"] });
-    void queries.invalidateQueries({ queryKey: ["availability"] });
+    void refreshFreeTimes(queries);
     void queries.invalidateQueries({ queryKey: ["patient-appointments"] });
   };
 

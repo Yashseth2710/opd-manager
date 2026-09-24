@@ -25,6 +25,7 @@ import {
   saveDoctor,
   type Doctor,
   type DoctorDraft,
+  refreshFreeTimes,
 } from "@/lib/doctors";
 import { readablePhone } from "@/lib/patients";
 
@@ -151,7 +152,7 @@ function Header({
       // holding the whole screen for them means one slow panel can keep a
       // change that already happened off the screen entirely.
       await queries.invalidateQueries({ queryKey: ["doctor", record.id] });
-      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
+      void refreshFreeTimes(queries, record.id);
       void queries.invalidateQueries({ queryKey: ["doctors"] });
     },
     onError: (error) =>
@@ -352,7 +353,7 @@ function EditForm({ record, onDone }: { record: Doctor; onDone: () => void }) {
       // The details behind the form are drawn from the record, so that one
       // is waited for. The rest can land in their own time.
       await queries.invalidateQueries({ queryKey: ["doctor", record.id] });
-      void queries.invalidateQueries({ queryKey: ["availability", record.id] });
+      void refreshFreeTimes(queries, record.id);
       void queries.invalidateQueries({ queryKey: ["doctors"] });
       void queries.invalidateQueries({ queryKey: ["specialities"] });
       onDone();

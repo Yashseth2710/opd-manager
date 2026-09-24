@@ -27,7 +27,13 @@ import {
 } from "@/lib/appointments";
 import { currentSession } from "@/lib/auth";
 import { getSettings } from "@/lib/clinic";
-import { getDoctor, listDoctors, readableTime, todayISO } from "@/lib/doctors";
+import {
+  getDoctor,
+  listDoctors,
+  readableTime,
+  todayISO,
+  refreshFreeTimes,
+} from "@/lib/doctors";
 import { getPatient, type PatientSummary } from "@/lib/patients";
 
 const TYPES: AppointmentType[] = ["consultation", "follow_up"];
@@ -181,7 +187,7 @@ function Booking() {
     },
     onSuccess: (made) => {
       queries.setQueryData(["appointment", made.id], made);
-      void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
+      void refreshFreeTimes(queries, doctorId);
       void queries.invalidateQueries({ queryKey: ["appointments"] });
       void queries.invalidateQueries({ queryKey: ["patient-appointments", made.patient.id] });
       router.replace(`/appointments/${made.id}` as Route);

@@ -4,7 +4,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plane, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { ApiFailure } from "@/lib/api";
-import { cancelLeave, describeLeave, recordLeave, todayISO, type Leave } from "@/lib/doctors";
+import {
+  cancelLeave,
+  describeLeave,
+  recordLeave,
+  todayISO,
+  type Leave,
+  refreshFreeTimes,
+} from "@/lib/doctors";
 
 const BLANK = {
   starts_on: "",
@@ -41,7 +48,7 @@ export function Leaves({
   // their own skeleton, and waiting on them would let one slow panel hold
   // up a change that has already happened.
   const refresh = () => {
-    void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
+    void refreshFreeTimes(queries, doctorId);
     return queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
   };
 

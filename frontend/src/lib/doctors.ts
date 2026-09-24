@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { post, request } from "@/lib/api";
 
 export type Title = "Dr" | "Prof" | "Mr" | "Ms" | "Mrs";
@@ -169,6 +170,20 @@ export const saveSchedule = (id: string, blocks: Omit<ScheduleBlock, "id">[]) =>
     method: "PUT",
     body: JSON.stringify({ blocks }),
   });
+
+/**
+ * Asks for the free times again after something changed them.
+ *
+ * A day first asked for while the change was still on its way can be read
+ * before it lands, and a plain refresh hands that same answer back rather
+ * than asking again, because the question was never answered before. So
+ * whatever is still on its way is dropped first and asked again.
+ */
+export async function refreshFreeTimes(queries: QueryClient, doctorId?: string) {
+  const queryKey = doctorId ? ["availability", doctorId] : ["availability"];
+  await queries.cancelQueries({ queryKey });
+  await queries.invalidateQueries({ queryKey });
+}
 
 export const getAvailability = (id: string, date: string) =>
   request<Availability>(`/doctors/${id}/availability?date=${date}`);

@@ -12,6 +12,7 @@ import {
   saveSchedule,
   type BlockDraft,
   type ScheduleBlock,
+  refreshFreeTimes,
 } from "@/lib/doctors";
 
 let counter = 0;
@@ -100,7 +101,7 @@ export function Schedule({
       // show that they are loading, and waiting on them as well would let
       // one slow panel hold up a change that has already happened.
       await queries.invalidateQueries({ queryKey: ["doctor", doctorId] });
-      void queries.invalidateQueries({ queryKey: ["availability", doctorId] });
+      void refreshFreeTimes(queries, doctorId);
       void queries.invalidateQueries({ queryKey: ["doctors"] });
       setEditing(false);
     },
