@@ -19,6 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import PermissionDenied, SessionExpired
 from app.core.security import read_access_token
 from app.db.session import get_factory
+from app.models import User
+from app.services import events
 
 ACCESS_COOKIE = "opd_access"
 REFRESH_COOKIE = "opd_refresh"
@@ -39,8 +41,11 @@ async def db_session() -> AsyncIterator[AsyncSession]:
             yield session
             await session.commit()
         except Exception:
+            session.info.pop(events.OUTBOX, None)
             await session.rollback()
             raise
+        # Email about a change goes out only once the change is certain.
+        await events.deliver(session)
 
 
 # Routes take the session through this rather than Depends(db_session).
@@ -144,3 +149,76 @@ def requires(
         return caller
 
     return dependency
+
+
+class Recorder:
+    """The audit log and the notices, from inside a route.
+
+    Knows who is asking and from where, so a route says only what happened.
+    """
+
+    def __init__(
+        self,
+        session: AsyncSession,
+        caller: Caller,
+        organization_id: uuid.UUID,
+        ip: str,
+        agent: str | None,
+    ) -> None:
+        self.session = session
+        self.caller = caller
+        self.organization_id = organization_id
+        self._ip = ip
+        self._agent = agent
+        self._actor: events.Actor | None = None
+
+    async def actor(self) -> events.Actor:
+        if self._actor is None:
+            user = await self.session.get(User, self.caller.user_id)
+            name = user.full_name if user else "Unknown account"
+            self._actor = events.Actor(
+                id=self.caller.user_id, name=name, ip=self._ip, agent=self._agent
+            )
+        return self._actor
+
+    async def __call__(
+        self,
+        action: str,
+        resource_type: str,
+        resource_id: uuid.UUID | None = None,
+        label: str | None = None,
+        changes: dict[str, Any] | None = None,
+    ) -> None:
+        await events.record(
+            self.session,
+            organization_id=self.organization_id,
+            actor=await self.actor(),
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            label=label,
+            changes=changes,
+        )
+
+    async def tell(self, users: list[uuid.UUID], notice: events.Notice) -> None:
+        await events.tell(
+            self.session,
+            organization_id=self.organization_id,
+            users=users,
+            notice=notice,
+            besides=self.caller.user_id,
+        )
+
+
+async def recorder(
+    request: Request,
+    session: DbSession,
+    caller: Caller = Depends(current_caller),
+    organization_id: uuid.UUID = Depends(current_tenant),
+) -> Recorder:
+    return Recorder(
+        session, caller, organization_id, client_ip(request), request.headers.get("user-agent")
+    )
+
+
+Trail = Annotated[Recorder, Depends(recorder)]

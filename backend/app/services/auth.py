@@ -12,6 +12,7 @@ import datetime as dt
 import logging
 from dataclasses import dataclass, field
 
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import email as mail
@@ -35,9 +36,11 @@ from app.core.security import (
     password_problem,
     verify_password,
 )
+from app.db.session import get_factory
 from app.models import Organization, User, UserRole
+from app.models import notification as kinds
 from app.repositories.users import OrganizationRepository, UserRepository, seed_roles
-from app.services import sessions
+from app.services import events, sessions
 
 logger = logging.getLogger("opd.auth")
 
@@ -203,26 +206,68 @@ async def register(
     return Registration(session=await start_session(session, user))
 
 
-async def _mirror_lockout(session: AsyncSession, candidates: list[User], used: int) -> None:
-    """Writes the lockout onto the account rows once it actually trips.
+async def _count_failure(
+    email: str, candidates: list[User], client_ip: str, user_agent: str | None
+) -> None:
+    """Counts the attempt, and keeps a durable record of it for the clinic.
 
     The counting itself lives in Redis so a failed attempt costs the same for
-    a real address as for one that does not exist. These columns are the
-    durable record an administrator reads, so they are brought up to date at
-    the moment the lock happens rather than on every attempt.
+    a real address as for one that does not exist. What the clinic keeps is
+    written apart from the request, because the request is about to fail and
+    everything it wrote goes with it: the attempt in the audit log, and the
+    lock on the account row once it actually trips, with a notice to the
+    person whose account it is.
     """
-    if used < MAX_FAILED_ATTEMPTS:
-        return
-    locked_until = _now() + dt.timedelta(minutes=LOCKOUT_MINUTES)
-    for user in candidates:
-        user.failed_login_count = used
-        user.locked_until = locked_until
-    await session.flush()
-
-
-async def _count_failure(session: AsyncSession, email: str, candidates: list[User]) -> None:
     used = await sessions.count_failure(email, MAX_FAILED_ATTEMPTS, LOCKOUT_MINUTES * 60)
-    await _mirror_lockout(session, candidates, used)
+    locked = used >= MAX_FAILED_ATTEMPTS
+    staff = [user for user in candidates if user.organization_id is not None]
+    if not staff:
+        return
+    async with get_factory()() as apart:
+        for candidate in staff:
+            organization_id = candidate.organization_id
+            if organization_id is None:
+                continue
+            if locked:
+                await apart.execute(
+                    update(User)
+                    .where(User.id == candidate.id)
+                    .values(
+                        failed_login_count=used,
+                        locked_until=_now() + dt.timedelta(minutes=LOCKOUT_MINUTES),
+                    )
+                )
+            await events.record(
+                apart,
+                organization_id=organization_id,
+                actor=events.Actor(
+                    id=None, name="Someone signing in", ip=client_ip, agent=user_agent
+                ),
+                action="signin.locked" if locked else "signin.failed",
+                resource_type="account",
+                resource_id=candidate.id,
+                label=f"{candidate.full_name} ({candidate.email})",
+                changes={"attempt": f"{used} of {MAX_FAILED_ATTEMPTS}"},
+            )
+            if locked:
+                await events.tell(
+                    apart,
+                    organization_id=organization_id,
+                    users=[candidate.id],
+                    notice=events.Notice(
+                        kind=kinds.ACCOUNT_LOCKED,
+                        title="Your account was locked after wrong passwords",
+                        body=(
+                            f"Somebody got your password wrong {used} times, so signing in "
+                            f"was stopped for {LOCKOUT_MINUTES} minutes. If it was not you, "
+                            "change your password."
+                        ),
+                        link=None,
+                    ),
+                    besides=None,
+                )
+        await apart.commit()
+        await events.deliver(apart)
 
 
 async def sign_in(
@@ -232,6 +277,7 @@ async def sign_in(
     password: str,
     organization_slug: str | None,
     client_ip: str,
+    user_agent: str | None = None,
 ) -> SignedIn:
     await rate_limit.check("login", client_ip, rate_limit.LOGIN_PER_IP)
 
@@ -248,13 +294,13 @@ async def sign_in(
         # Pay for a hash anyway, so a missing account and a wrong password
         # take about the same time to answer.
         verify_password(password, _DECOY_HASH)
-        await _count_failure(session, email, [])
+        await _count_failure(email, [], client_ip, user_agent)
         raise InvalidCredentials
 
     matched = [c for c in candidates if verify_password(password, c.password_hash)]
 
     if not matched:
-        await _count_failure(session, email, candidates)
+        await _count_failure(email, candidates, client_ip, user_agent)
         raise InvalidCredentials
 
     # Clinics are looked up only once the password is proven, so the failure

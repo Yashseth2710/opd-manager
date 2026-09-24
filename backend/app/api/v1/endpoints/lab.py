@@ -8,9 +8,10 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound
 from app.models import Organization
+from app.models import notification as kinds
 from app.schemas.lab import (
     LabCancel,
     LabCatalogue,
@@ -20,11 +21,18 @@ from app.schemas.lab import (
     LabResultIn,
     Removed,
 )
-from app.services import appointments
+from app.services import appointments, events
 from app.services import lab as service
 from app.services.appointments import Reach
 
 router = APIRouter(tags=["lab"])
+
+
+def _named(order: LabOrderOut) -> str:
+    return (
+        f"{order.test_name}, {order.order_number}, for "
+        f"{order.patient.full_name} ({order.patient.patient_number})"
+    )
 
 
 async def _clinic(session: AsyncSession, organization_id: uuid.UUID) -> Organization:
@@ -114,6 +122,7 @@ async def list_orders(
 async def order_test(
     session: DbSession,
     body: LabOrderIn,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LabOrderOut:
@@ -124,7 +133,15 @@ async def order_test(
         actor_id=caller.user_id,
         body=body,
     )
-    return await _answer(session, organization_id, caller, order_id)
+    found = await _answer(session, organization_id, caller, order_id)
+    await trail(
+        "lab.ordered",
+        "lab_order",
+        found.id,
+        _named(found),
+        {"urgent": True} if found.urgent else None,
+    )
+    return found
 
 
 @router.get("/lab-orders/{order_id}")
@@ -141,16 +158,19 @@ async def read_order(
 async def remove_order(
     session: DbSession,
     order_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
     """Only while the visit is open and nothing has come back."""
+    removed = await _answer(session, organization_id, caller, order_id)
     await service.remove(
         session,
         organization_id=organization_id,
         reach=await _reach(session, organization_id, caller),
         order_id=order_id,
     )
+    await trail("lab.removed", "lab_order", removed.id, _named(removed))
     return Removed()
 
 
@@ -159,6 +179,7 @@ async def cancel_order(
     session: DbSession,
     order_id: uuid.UUID,
     body: LabCancel,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:read")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LabOrderOut:
@@ -173,7 +194,11 @@ async def cancel_order(
         order_id=order_id,
         reason=body.reason,
     )
-    return await _answer(session, organization_id, caller, order_id)
+    found = await _answer(session, organization_id, caller, order_id)
+    await trail(
+        "lab.cancelled", "lab_order", found.id, _named(found), {"reason": found.cancel_reason}
+    )
+    return found
 
 
 @router.put("/lab-orders/{order_id}/result")
@@ -181,10 +206,12 @@ async def record_result(
     session: DbSession,
     order_id: uuid.UUID,
     body: LabResultIn,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LabOrderOut:
     """The whole report. A value left out is taken off."""
+    before = await _answer(session, organization_id, caller, order_id)
     await service.record(
         session,
         organization_id=organization_id,
@@ -194,13 +221,34 @@ async def record_result(
         order_id=order_id,
         body=body,
     )
-    return await _answer(session, organization_id, caller, order_id)
+    found = await _answer(session, organization_id, caller, order_id)
+    first_time = before.status == "ordered"
+    await trail(
+        "lab.resulted" if first_time else "lab.result_changed",
+        "lab_order",
+        found.id,
+        _named(found),
+        {"flagged": found.flagged} if found.flagged else None,
+    )
+    if first_time:
+        flagged = f", {found.flagged} outside range" if found.flagged else ""
+        await trail.tell(
+            await events.doctor_account(session, organization_id, found.doctor.id),
+            events.Notice(
+                kind=kinds.LAB_RESULT,
+                title=f"{found.test_name} result in for {found.patient.full_name}{flagged}",
+                body=f"{found.order_number}. Mark it as seen once you have read it.",
+                link=f"/lab/{found.id}",
+            ),
+        )
+    return found
 
 
 @router.delete("/lab-orders/{order_id}/result")
 async def clear_result(
     session: DbSession,
     order_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LabOrderOut:
@@ -211,13 +259,16 @@ async def clear_result(
         reach=await _reach(session, organization_id, caller),
         order_id=order_id,
     )
-    return await _answer(session, organization_id, caller, order_id)
+    found = await _answer(session, organization_id, caller, order_id)
+    await trail("lab.result_cleared", "lab_order", found.id, _named(found))
+    return found
 
 
 @router.post("/lab-orders/{order_id}/review")
 async def review_result(
     session: DbSession,
     order_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("lab:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LabOrderOut:
@@ -228,4 +279,6 @@ async def review_result(
         actor_id=caller.user_id,
         order_id=order_id,
     )
-    return await _answer(session, organization_id, caller, order_id)
+    found = await _answer(session, organization_id, caller, order_id)
+    await trail("lab.reviewed", "lab_order", found.id, _named(found))
+    return found

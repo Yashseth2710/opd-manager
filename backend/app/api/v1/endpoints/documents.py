@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import ClientDisconnect
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core import rate_limit
 from app.core.exceptions import NotFound
 from app.models import Organization
@@ -25,7 +25,7 @@ from app.schemas.document import (
     Removed,
 )
 from app.services import documents as service
-from app.services import file_checks
+from app.services import events, file_checks
 
 router = APIRouter(tags=["documents"])
 
@@ -105,6 +105,7 @@ async def upload_document(
     session: DbSession,
     request: Request,
     patient_id: uuid.UUID,
+    trail: Trail,
     name: str = Query(min_length=1, max_length=255),
     category: Category = Query(),
     title: str | None = Query(default=None, max_length=120),
@@ -134,7 +135,15 @@ async def upload_document(
         consultation_id=consultation_id,
         lab_order_id=lab_order_id,
     )
-    return await _answer(session, organization_id, caller, document_id)
+    found = await _answer(session, organization_id, caller, document_id)
+    await trail(
+        "document.uploaded",
+        "document",
+        found.patient_id,
+        await events.patient_named(session, organization_id, found.patient_id),
+        {"title": found.title, "category": found.category},
+    )
+    return found
 
 
 @router.get("/documents/{document_id}")
@@ -190,9 +199,11 @@ async def change_document(
     session: DbSession,
     document_id: uuid.UUID,
     body: DocumentChange,
+    trail: Trail,
     caller: Caller = Depends(requires("document:upload")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> DocumentOut:
+    before = await _answer(session, organization_id, caller, document_id)
     await service.change(
         session,
         organization_id=organization_id,
@@ -202,21 +213,41 @@ async def change_document(
         document_id=document_id,
         body=body,
     )
-    return await _answer(session, organization_id, caller, document_id)
+    after = await _answer(session, organization_id, caller, document_id)
+    shown = ("title", "category", "dated")
+    moved = events.difference(events.snapshot(before, shown), events.snapshot(after, shown))
+    if moved:
+        await trail(
+            "document.changed",
+            "document",
+            after.patient_id,
+            await events.patient_named(session, organization_id, after.patient_id),
+            moved,
+        )
+    return after
 
 
 @router.delete("/documents/{document_id}")
 async def remove_document(
     session: DbSession,
     document_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("document:upload")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
+    removed = await _answer(session, organization_id, caller, document_id)
     await service.remove(
         session,
         organization_id=organization_id,
         user_id=caller.user_id,
         role=caller.role,
         document_id=document_id,
+    )
+    await trail(
+        "document.removed",
+        "document",
+        removed.patient_id,
+        await events.patient_named(session, organization_id, removed.patient_id),
+        {"title": removed.title},
     )
     return Removed()

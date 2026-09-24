@@ -147,6 +147,7 @@ async def login(
         password=body.password,
         organization_slug=body.organization_slug,
         client_ip=client_ip(request),
+        user_agent=request.headers.get("user-agent"),
     )
     set_session_cookies(response, signed_in)
     return session_payload(signed_in)

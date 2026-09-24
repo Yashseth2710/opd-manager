@@ -10,7 +10,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound
 from app.models import Organization
 from app.schemas.prescription import (
@@ -127,6 +127,7 @@ async def correct_prescription(
     session: DbSession,
     prescription_id: uuid.UUID,
     body: Correction,
+    trail: Trail,
     caller: Caller = Depends(requires("prescription:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> PrescriptionDetail:
@@ -145,4 +146,15 @@ async def correct_prescription(
         instructions=body.instructions,
         reason=body.reason,
     )
-    return await _detail(session, organization_id, caller, replacement.id)
+    found = await _detail(session, organization_id, caller, replacement.id)
+    await trail(
+        "prescription.corrected",
+        "prescription",
+        found.id,
+        f"{found.number} for {found.patient.full_name} ({found.patient.patient_number})",
+        {
+            "replaces": found.replaces.number if found.replaces else None,
+            "reason": body.reason,
+        },
+    )
+    return found

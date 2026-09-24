@@ -13,7 +13,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.models.patient import ACTIVE
 from app.repositories.patients import AllergyRepository, Listed, PatientRepository, names_of
 from app.schemas.patient import (
@@ -28,9 +28,14 @@ from app.schemas.patient import (
     PatientUpdate,
     Removed,
 )
+from app.services import events
 from app.services import patients as service
 
 router = APIRouter(tags=["patients"])
+
+
+def _named(patient: PatientOut | PatientSummary) -> str:
+    return f"{patient.full_name} ({patient.patient_number})"
 
 
 def _summary(row: Listed) -> PatientSummary:
@@ -143,13 +148,16 @@ async def check_duplicates(
 async def register_patient(
     session: DbSession,
     body: PatientCreate,
+    trail: Trail,
     caller: Caller = Depends(requires("patient:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> PatientOut:
     patient = await service.register(
         session, organization_id=organization_id, actor_id=caller.user_id, body=body
     )
-    return _detail(Listed(patient=patient, allergy_count=0), [], None)
+    registered = _detail(Listed(patient=patient, allergy_count=0), [], None)
+    await trail("patient.registered", "patient", patient.id, _named(registered))
+    return registered
 
 
 @router.get("/patients/{patient_id}")
@@ -167,19 +175,27 @@ async def update_patient(
     session: DbSession,
     patient_id: uuid.UUID,
     body: PatientUpdate,
+    trail: Trail,
     _: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> PatientOut:
+    fields = body.model_dump(exclude_unset=True)
+    before = await _read(session, organization_id, patient_id)
     await service.update(
         session, organization_id=organization_id, patient_id=patient_id, body=body
     )
-    return await _read(session, organization_id, patient_id)
+    after = await _read(session, organization_id, patient_id)
+    moved = events.difference(events.snapshot(before, fields), events.snapshot(after, fields))
+    if moved:
+        await trail("patient.updated", "patient", patient_id, _named(after), moved)
+    return after
 
 
 @router.post("/patients/{patient_id}/archive")
 async def archive_patient(
     session: DbSession,
     patient_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("patient:archive")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> PatientOut:
@@ -188,20 +204,25 @@ async def archive_patient(
     await service.set_archived(
         session, organization_id=organization_id, patient_id=patient_id, archived=True
     )
-    return await _read(session, organization_id, patient_id)
+    found = await _read(session, organization_id, patient_id)
+    await trail("patient.archived", "patient", patient_id, _named(found))
+    return found
 
 
 @router.post("/patients/{patient_id}/restore")
 async def restore_patient(
     session: DbSession,
     patient_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("patient:archive")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> PatientOut:
     await service.set_archived(
         session, organization_id=organization_id, patient_id=patient_id, archived=False
     )
-    return await _read(session, organization_id, patient_id)
+    found = await _read(session, organization_id, patient_id)
+    await trail("patient.restored", "patient", patient_id, _named(found))
+    return found
 
 
 @router.post("/patients/{patient_id}/allergies", status_code=201)
@@ -209,6 +230,7 @@ async def record_allergy(
     session: DbSession,
     patient_id: uuid.UUID,
     body: AllergyWrite,
+    trail: Trail,
     caller: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AllergyOut:
@@ -219,6 +241,14 @@ async def record_allergy(
         actor_id=caller.user_id,
         body=body,
     )
+    found = await _read(session, organization_id, patient_id)
+    await trail(
+        "allergy.added",
+        "allergy",
+        patient_id,
+        _named(found),
+        {"substance": allergy.substance, "severity": allergy.severity},
+    )
     return AllergyOut.model_validate(allergy)
 
 
@@ -227,13 +257,20 @@ async def remove_allergy(
     session: DbSession,
     patient_id: uuid.UUID,
     allergy_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("patient:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
+    allergy = await AllergyRepository(session, organization_id).get(allergy_id)
+    substance = allergy.substance if allergy else None
     await service.remove_allergy(
         session,
         organization_id=organization_id,
         patient_id=patient_id,
         allergy_id=allergy_id,
+    )
+    found = await _read(session, organization_id, patient_id)
+    await trail(
+        "allergy.removed", "allergy", patient_id, _named(found), {"substance": substance}
     )
     return Removed()

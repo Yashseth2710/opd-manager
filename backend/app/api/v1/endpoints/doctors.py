@@ -14,7 +14,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.models import Organization
 from app.models.doctor import ACTIVE
 from app.repositories.doctors import (
@@ -38,8 +38,11 @@ from app.schemas.doctor import (
     ScheduleWrite,
 )
 from app.services import doctors as service
+from app.services import events
 
 router = APIRouter(tags=["doctors"])
+
+_DAYS = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
 
 
 async def _clinic(session: AsyncSession, organization_id: uuid.UUID) -> Organization:
@@ -172,11 +175,14 @@ async def list_specialities(
 async def add_doctor(
     session: DbSession,
     body: DoctorCreate,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> DoctorOut:
     doctor = await service.add(session, organization_id=organization_id, body=body)
-    return await _read(session, organization_id, doctor.id)
+    found = await _read(session, organization_id, doctor.id)
+    await trail("doctor.added", "doctor", found.id, found.display_name)
+    return found
 
 
 @router.get("/doctors/{doctor_id}")
@@ -194,19 +200,29 @@ async def update_doctor(
     session: DbSession,
     doctor_id: uuid.UUID,
     body: DoctorUpdate,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> DoctorOut:
+    fields = body.model_dump(exclude_unset=True)
+    current = await DoctorRepository(session, organization_id).get(doctor_id)
+    before = events.snapshot(current, fields) if current else {}
     await service.update(
         session, organization_id=organization_id, doctor_id=doctor_id, body=body
     )
-    return await _read(session, organization_id, doctor_id)
+    found = await _read(session, organization_id, doctor_id)
+    changed = await DoctorRepository(session, organization_id).get(doctor_id)
+    moved = events.difference(before, events.snapshot(changed, fields)) if changed else None
+    if moved:
+        await trail("doctor.changed", "doctor", found.id, found.display_name, moved)
+    return found
 
 
 @router.post("/doctors/{doctor_id}/deactivate")
 async def deactivate_doctor(
     session: DbSession,
     doctor_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> DoctorOut:
@@ -215,20 +231,25 @@ async def deactivate_doctor(
     await service.set_active(
         session, organization_id=organization_id, doctor_id=doctor_id, active=False
     )
-    return await _read(session, organization_id, doctor_id)
+    found = await _read(session, organization_id, doctor_id)
+    await trail("doctor.deactivated", "doctor", found.id, found.display_name)
+    return found
 
 
 @router.post("/doctors/{doctor_id}/restore")
 async def restore_doctor(
     session: DbSession,
     doctor_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> DoctorOut:
     await service.set_active(
         session, organization_id=organization_id, doctor_id=doctor_id, active=True
     )
-    return await _read(session, organization_id, doctor_id)
+    found = await _read(session, organization_id, doctor_id)
+    await trail("doctor.restored", "doctor", found.id, found.display_name)
+    return found
 
 
 @router.get("/doctors/{doctor_id}/schedule")
@@ -248,6 +269,7 @@ async def write_schedule(
     session: DbSession,
     doctor_id: uuid.UUID,
     body: ScheduleWrite,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> list[ScheduleBlockOut]:
@@ -255,7 +277,20 @@ async def write_schedule(
     blocks = await service.replace_schedule(
         session, organization_id=organization_id, doctor_id=doctor_id, body=body
     )
-    return [ScheduleBlockOut.model_validate(block) for block in blocks]
+    written = [ScheduleBlockOut.model_validate(block) for block in blocks]
+    found = await _read(session, organization_id, doctor_id)
+    week = [
+        f"{_DAYS[block.day_of_week]} {block.start_time:%H:%M}-{block.end_time:%H:%M}"
+        for block in written
+    ]
+    await trail(
+        "doctor.hours_set",
+        "doctor",
+        found.id,
+        found.display_name,
+        {"week": ", ".join(week) or "No hours"},
+    )
+    return written
 
 
 @router.get("/doctors/{doctor_id}/availability")
@@ -283,6 +318,7 @@ async def record_leave(
     session: DbSession,
     doctor_id: uuid.UUID,
     body: LeaveWrite,
+    trail: Trail,
     caller: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LeaveOut:
@@ -293,7 +329,16 @@ async def record_leave(
         actor_id=caller.user_id,
         body=body,
     )
-    return LeaveOut.model_validate(leave)
+    written = LeaveOut.model_validate(leave)
+    found = await _read(session, organization_id, doctor_id)
+    await trail(
+        "doctor.leave_added",
+        "doctor",
+        found.id,
+        found.display_name,
+        {"from": written.starts_on, "to": written.ends_on, "reason": written.reason},
+    )
+    return written
 
 
 @router.delete("/doctors/{doctor_id}/leaves/{leave_id}")
@@ -301,13 +346,18 @@ async def cancel_leave(
     session: DbSession,
     doctor_id: uuid.UUID,
     leave_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("doctor:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
+    found = await _read(session, organization_id, doctor_id)
+    leave = await LeaveRepository(session, organization_id).get(leave_id)
+    held = {"from": leave.starts_on, "to": leave.ends_on} if leave else None
     await service.remove_leave(
         session,
         organization_id=organization_id,
         doctor_id=doctor_id,
         leave_id=leave_id,
     )
+    await trail("doctor.leave_removed", "doctor", found.id, found.display_name, held)
     return Removed()

@@ -1,4 +1,5 @@
 from app.models.appointment import Appointment, AppointmentEvent
+from app.models.audit import AuditEntry
 from app.models.billing import Invoice, InvoiceItem, Payment, PaymentLink
 from app.models.consultation import Consultation, ConsultationAddendum, ConsultationDiagnosis
 from app.models.counter import TenantCounter
@@ -6,6 +7,7 @@ from app.models.doctor import Doctor, DoctorLeave, DoctorSchedule
 from app.models.document import PatientDocument
 from app.models.invitation import Invitation
 from app.models.lab import LabOrder, LabResultValue
+from app.models.notification import Notification, NotificationPreference
 from app.models.organization import DEFAULT_SETTINGS, Organization
 from app.models.patient import Patient, PatientAllergy
 from app.models.prescription import Medicine, Prescription, PrescriptionItem
@@ -18,6 +20,7 @@ __all__ = [
     "DEFAULT_SETTINGS",
     "Appointment",
     "AppointmentEvent",
+    "AuditEntry",
     "Consultation",
     "ConsultationAddendum",
     "ConsultationDiagnosis",
@@ -30,6 +33,8 @@ __all__ = [
     "LabOrder",
     "LabResultValue",
     "Medicine",
+    "Notification",
+    "NotificationPreference",
     "Organization",
     "Patient",
     "PatientAllergy",

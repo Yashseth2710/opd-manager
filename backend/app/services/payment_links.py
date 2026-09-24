@@ -31,6 +31,7 @@ from app.core.config import get_settings
 from app.core.exceptions import AppError, NotFound, ValidationFailed
 from app.core.security import hash_token, new_opaque_token
 from app.models import Invoice, Organization, Payment, PaymentLink, User, billing
+from app.models import notification as kinds
 from app.repositories.billing import (
     Billed,
     InvoiceRepository,
@@ -39,6 +40,7 @@ from app.repositories.billing import (
     link_by_order,
     link_by_token,
 )
+from app.services import events
 from app.services.billing import ZERO, InvoiceNotFound, link_ref, link_status, rupees
 from app.services.doctors import clinic_zone
 
@@ -393,6 +395,54 @@ async def settle(session: AsyncSession, *, link: PaymentLink, payment_id: str) -
     if written is not None:
         link.payment_id = written.id
     await session.flush()
+    if written is not None or excess > 0:
+        await _announce(
+            session, invoice, takeable if written else ZERO, excess, gateway.our_method
+        )
+
+
+async def _announce(
+    session: AsyncSession, invoice: Invoice, taken: Decimal, excess: Decimal, method: str
+) -> None:
+    """Into the log, and to everyone who reads bills: the desk will want to
+    know the patient has paid, and above all when there is money to give back."""
+    organization_id = invoice.organization_id
+    patient = await events.patient_named(session, organization_id, invoice.patient_id)
+    number = invoice.invoice_number or "a bill"
+    await events.record(
+        session,
+        organization_id=organization_id,
+        actor=events.PATIENT_ONLINE,
+        action="payment.online",
+        resource_type="invoice",
+        resource_id=invoice.id,
+        label=f"{number} for {patient}",
+        changes={
+            "amount": taken,
+            "method": method,
+            "balance": invoice.balance,
+            "excess": excess or None,
+        },
+    )
+    if excess > 0:
+        title = f"{rupees(excess)} paid online on {number} with nothing owing"
+        body = "The bill was settled before the payment arrived. Give the money back."
+    else:
+        title = f"{rupees(taken)} paid online on {number}"
+        body = f"{patient}. " + (
+            "Nothing more is owed."
+            if invoice.balance <= 0
+            else f"{rupees(invoice.balance)} still owed."
+        )
+    await events.tell(
+        session,
+        organization_id=organization_id,
+        users=await events.holding(session, organization_id, "billing:read"),
+        notice=events.Notice(
+            kind=kinds.PAID_ONLINE, title=title, body=body, link=f"/billing/{invoice.id}"
+        ),
+        besides=None,
+    )
 
 
 def _takeable(invoice: Invoice, amount: Decimal) -> Decimal:

@@ -473,14 +473,15 @@ async def pay(
     invoice_id: uuid.UUID,
     body: PaymentIn,
     key: str | None,
-) -> None:
+) -> bool:
+    """Whether a payment was written. A retry of one already taken is not."""
     found = await _locked(session, organization_id, invoice_id)
     invoice = found.invoice
     payments = PaymentRepository(session, organization_id)
     # Looked for after the lock, so a retry arriving on the heels of the
     # first waits for it and then finds what it took.
     if key is not None and await payments.by_request(key) is not None:
-        return
+        return False
 
     if invoice.status == billing.VOID:
         raise Voided
@@ -518,12 +519,13 @@ async def pay(
             await payments.add(payment)
     except IntegrityError:
         if key is not None and await payments.by_request(key) is not None:
-            return
+            return False
         raise
     invoice.amount_paid += amount
     _settle(invoice)
     await _close_links(session, organization_id, invoice)
     await session.flush()
+    return True
 
 
 async def refund(
@@ -535,14 +537,14 @@ async def refund(
     invoice_id: uuid.UUID,
     body: RefundIn,
     key: str | None,
-) -> None:
+) -> bool:
     if role != OWNER:
         raise PermissionDenied("Only the clinic admin can give money back.")
     found = await _locked(session, organization_id, invoice_id)
     invoice = found.invoice
     payments = PaymentRepository(session, organization_id)
     if key is not None and await payments.by_request(key) is not None:
-        return
+        return False
     if invoice.status == billing.VOID:
         raise Voided
     held = invoice.amount_paid - invoice.refunded_amount
@@ -581,6 +583,7 @@ async def refund(
     if live is not None:
         live.status = billing.LINK_CANCELLED
     await session.flush()
+    return True
 
 
 def _why_not_voidable(invoice: Invoice) -> str | None:

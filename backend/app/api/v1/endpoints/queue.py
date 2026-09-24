@@ -11,7 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound
 from app.models import Organization
 from app.schemas.appointment import AppointmentDetail
@@ -54,6 +54,13 @@ async def _entry(
     return shown
 
 
+def _named(entry: QueueEntryOut) -> str:
+    return (
+        f"{entry.patient.full_name} ({entry.patient.patient_number}), "
+        f"token {entry.token} for {entry.doctor.display_name}"
+    )
+
+
 def _without_bills(day: QueueDay) -> QueueDay:
     """The day as somebody who does not read bills sees it."""
     for lane in day.lanes:
@@ -89,6 +96,7 @@ async def check_in(
     session: DbSession,
     appointment_id: uuid.UUID,
     body: CheckIn,
+    trail: Trail,
     caller: Caller = Depends(requires("queue:checkin")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> QueueEntryOut:
@@ -103,13 +111,16 @@ async def check_in(
         appointment_id=appointment_id,
         priority=body.priority,
     )
-    return await _entry(session, organization_id, clinic, reach, entry.id, caller)
+    found = await _entry(session, organization_id, clinic, reach, entry.id, caller)
+    await trail("visit.checked_in", "visit", found.patient.id, _named(found))
+    return found
 
 
 @router.post("/queue/walk-in", status_code=201)
 async def walk_in(
     session: DbSession,
     body: WalkIn,
+    trail: Trail,
     caller: Caller = Depends(requires("queue:checkin")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> QueueEntryOut:
@@ -123,7 +134,9 @@ async def walk_in(
         actor_id=caller.user_id,
         body=body,
     )
-    return await _entry(session, organization_id, clinic, reach, entry.id, caller)
+    found = await _entry(session, organization_id, clinic, reach, entry.id, caller)
+    await trail("visit.walked_in", "visit", found.patient.id, _named(found))
+    return found
 
 
 @router.get("/queue/{entry_id}")
@@ -224,6 +237,7 @@ async def recall(
 async def mark_gone(
     session: DbSession,
     entry_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("queue:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> QueueEntryOut:
@@ -236,7 +250,9 @@ async def mark_gone(
         actor_id=caller.user_id,
         entry_id=entry_id,
     )
-    return await _entry(session, organization_id, clinic, reach, entry_id, caller)
+    found = await _entry(session, organization_id, clinic, reach, entry_id, caller)
+    await trail("visit.no_show", "visit", found.patient.id, _named(found))
+    return found
 
 
 @router.patch("/queue/{entry_id}")
@@ -263,6 +279,7 @@ async def set_priority(
 async def undo_check_in(
     session: DbSession,
     entry_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("queue:checkin")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AppointmentDetail | None:
@@ -270,6 +287,7 @@ async def undo_check_in(
     it stands again, or nothing for a walk-in, who had none."""
     clinic = await _clinic(session, organization_id)
     reach = await _reach(session, organization_id, caller)
+    taken_back = await _entry(session, organization_id, clinic, reach, entry_id, caller)
     appointment_id = await service.undo(
         session,
         organization_id=organization_id,
@@ -277,6 +295,7 @@ async def undo_check_in(
         actor_id=caller.user_id,
         entry_id=entry_id,
     )
+    await trail("visit.check_in_undone", "visit", taken_back.patient.id, _named(taken_back))
     if appointment_id is None:
         return None
     found = await appointments.detail(

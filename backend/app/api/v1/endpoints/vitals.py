@@ -7,11 +7,12 @@ import uuid
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound, ValidationFailed
 from app.models import Organization
+from app.models.vitals import MEASURES
 from app.schemas.vitals import Readings, Removed, VitalsOut, VitalsPage, VitalsTaken
-from app.services import appointments
+from app.services import appointments, events
 from app.services import vitals as service
 from app.services.appointments import Reach
 
@@ -90,6 +91,7 @@ async def list_vitals(
 async def take_vitals(
     session: DbSession,
     body: VitalsTaken,
+    trail: Trail,
     caller: Caller = Depends(requires("vitals:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> VitalsOut:
@@ -102,7 +104,15 @@ async def take_vitals(
         entry_id=body.queue_entry_id,
         readings=body,
     )
-    return await _answer(session, organization_id, caller, vitals_id)
+    found = await _answer(session, organization_id, caller, vitals_id)
+    await trail(
+        "vitals.taken",
+        "vitals",
+        found.patient_id,
+        await events.patient_named(session, organization_id, found.patient_id),
+        {name: value for name, value in events.snapshot(found, MEASURES).items() if value},
+    )
+    return found
 
 
 @router.get("/vitals/{vitals_id}")
@@ -120,10 +130,12 @@ async def correct_vitals(
     session: DbSession,
     vitals_id: uuid.UUID,
     body: Readings,
+    trail: Trail,
     caller: Caller = Depends(requires("vitals:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> VitalsOut:
     """Replaces the whole set. A reading left out is cleared."""
+    before = await _answer(session, organization_id, caller, vitals_id)
     await service.change(
         session,
         organization_id=organization_id,
@@ -133,22 +145,42 @@ async def correct_vitals(
         vitals_id=vitals_id,
         readings=body,
     )
-    return await _answer(session, organization_id, caller, vitals_id)
+    after = await _answer(session, organization_id, caller, vitals_id)
+    moved = events.difference(
+        events.snapshot(before, MEASURES), events.snapshot(after, MEASURES)
+    )
+    if moved:
+        await trail(
+            "vitals.corrected",
+            "vitals",
+            after.patient_id,
+            await events.patient_named(session, organization_id, after.patient_id),
+            moved,
+        )
+    return after
 
 
 @router.delete("/vitals/{vitals_id}")
 async def remove_vitals(
     session: DbSession,
     vitals_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("vitals:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
     """For a set taken for the wrong person, on the day only."""
+    removed = await _answer(session, organization_id, caller, vitals_id)
     await service.remove(
         session,
         organization_id=organization_id,
         clinic=await _clinic(session, organization_id),
         reach=await _reach(session, organization_id, caller),
         vitals_id=vitals_id,
+    )
+    await trail(
+        "vitals.removed",
+        "vitals",
+        removed.patient_id,
+        await events.patient_named(session, organization_id, removed.patient_id),
     )
     return Removed()

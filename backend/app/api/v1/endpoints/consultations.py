@@ -12,7 +12,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound
 from app.models import Organization
 from app.schemas.consultation import (
@@ -27,6 +27,13 @@ from app.services import appointments
 from app.services import consultations as service
 
 router = APIRouter(tags=["consultations"])
+
+
+def _named(found: ConsultationDetail) -> str:
+    return (
+        f"{found.patient.full_name} ({found.patient.patient_number}) "
+        f"with {found.doctor.display_name}, {found.visit_date.day} {found.visit_date:%b}"
+    )
 
 
 async def _clinic(session: AsyncSession, organization_id: uuid.UUID) -> Organization:
@@ -92,6 +99,7 @@ async def open_consultation(
     session: DbSession,
     body: ConsultationOpen,
     response: Response,
+    trail: Trail,
     caller: Caller = Depends(requires("consultation:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ConsultationDetail:
@@ -105,9 +113,12 @@ async def open_consultation(
         actor_id=caller.user_id,
         entry_id=body.queue_entry_id,
     )
-    if not made:
+    found = await _detail(session, organization_id, caller, reach, consultation.id)
+    if made:
+        await trail("consultation.started", "consultation", found.id, _named(found))
+    else:
         response.status_code = 200
-    return await _detail(session, organization_id, caller, reach, consultation.id)
+    return found
 
 
 @router.get("/consultations/{consultation_id}")
@@ -146,6 +157,7 @@ async def finish_consultation(
     session: DbSession,
     consultation_id: uuid.UUID,
     body: ConsultationFinish,
+    trail: Trail,
     caller: Caller = Depends(requires("consultation:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ConsultationDetail:
@@ -158,7 +170,16 @@ async def finish_consultation(
         consultation_id=consultation_id,
         version=body.version,
     )
-    return await _detail(session, organization_id, caller, reach, consultation_id)
+    found = await _detail(session, organization_id, caller, reach, consultation_id)
+    issued = [each.number for each in found.prescriptions if each.status == "issued"]
+    await trail(
+        "consultation.completed",
+        "consultation",
+        found.id,
+        _named(found),
+        {"prescription": issued[0]} if issued else None,
+    )
+    return found
 
 
 @router.post("/consultations/{consultation_id}/addenda", status_code=201)
@@ -166,6 +187,7 @@ async def add_addendum(
     session: DbSession,
     consultation_id: uuid.UUID,
     body: AddendumWrite,
+    trail: Trail,
     caller: Caller = Depends(requires("consultation:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ConsultationDetail:
@@ -178,4 +200,6 @@ async def add_addendum(
         consultation_id=consultation_id,
         body=body.body,
     )
-    return await _detail(session, organization_id, caller, reach, consultation_id)
+    found = await _detail(session, organization_id, caller, reach, consultation_id)
+    await trail("consultation.addendum_added", "consultation", found.id, _named(found))
+    return found

@@ -9,9 +9,11 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Header, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, current_tenant, requires
+from app.api.deps import Caller, DbSession, Trail, current_tenant, requires
 from app.core.exceptions import NotFound, ValidationFailed
+from app.core.permissions import OWNER
 from app.models import Organization
+from app.models import notification as kinds
 from app.schemas.billing import (
     DaySummary,
     InvoiceChange,
@@ -29,13 +31,20 @@ from app.schemas.billing import (
     VoidIn,
 )
 from app.services import billing as service
-from app.services import payment_links
+from app.services import events, payment_links
 from app.services.billing_pdf import render
 from app.services.doctors import clinic_today, clinic_zone
 
 router = APIRouter(tags=["billing"])
 
 RequestKey = Header(default=None, alias="Idempotency-Key", max_length=100)
+
+
+def _named(invoice: InvoiceOut) -> str:
+    return (
+        f"{invoice.invoice_number or 'Draft bill'} for "
+        f"{invoice.patient.full_name} ({invoice.patient.patient_number})"
+    )
 
 
 async def _clinic(session: AsyncSession, organization_id: uuid.UUID) -> Organization:
@@ -163,6 +172,7 @@ async def raise_invoice(
     session: DbSession,
     body: InvoiceIn,
     response: Response,
+    trail: Trail,
     key: str | None = RequestKey,
     caller: Caller = Depends(requires("billing:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
@@ -177,9 +187,18 @@ async def raise_invoice(
         body=body,
         key=service.request_key(key),
     )
-    if not made:
+    found = await _answer(session, organization_id, caller, invoice_id)
+    if made:
+        await trail(
+            "invoice.raised",
+            "invoice",
+            found.id,
+            _named(found),
+            {"total": found.total, "issued": found.status != "draft"},
+        )
+    else:
         response.status_code = 200
-    return await _answer(session, organization_id, caller, invoice_id)
+    return found
 
 
 @router.get("/invoices/{invoice_id}")
@@ -197,25 +216,41 @@ async def change_invoice(
     session: DbSession,
     invoice_id: uuid.UUID,
     body: InvoiceChange,
+    trail: Trail,
     caller: Caller = Depends(requires("billing:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
     """Drafts only. An issued bill is voided and raised again instead."""
+    before = await _answer(session, organization_id, caller, invoice_id)
     await service.change(
         session, organization_id=organization_id, invoice_id=invoice_id, body=body
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    after = await _answer(session, organization_id, caller, invoice_id)
+    shown = ("total", "discount_amount", "discount_reason", "notes", "headline", "lines")
+    moved = events.difference(events.snapshot(before, shown), events.snapshot(after, shown))
+    if moved:
+        await trail("invoice.changed", "invoice", after.id, _named(after), moved)
+    return after
 
 
 @router.delete("/invoices/{invoice_id}")
 async def discard_invoice(
     session: DbSession,
     invoice_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("billing:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> Removed:
     """Drafts only, since they have no number and have taken nothing."""
+    discarded = await _answer(session, organization_id, caller, invoice_id)
     await service.discard(session, organization_id=organization_id, invoice_id=invoice_id)
+    await trail(
+        "invoice.discarded",
+        "invoice",
+        None,
+        _named(discarded),
+        {"total": discarded.total},
+    )
     return Removed()
 
 
@@ -223,6 +258,7 @@ async def discard_invoice(
 async def issue_invoice(
     session: DbSession,
     invoice_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("billing:create")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
@@ -233,7 +269,9 @@ async def issue_invoice(
         actor_id=caller.user_id,
         invoice_id=invoice_id,
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    found = await _answer(session, organization_id, caller, invoice_id)
+    await trail("invoice.issued", "invoice", found.id, _named(found), {"total": found.total})
+    return found
 
 
 @router.post("/invoices/{invoice_id}/void")
@@ -241,6 +279,7 @@ async def void_invoice(
     session: DbSession,
     invoice_id: uuid.UUID,
     body: VoidIn,
+    trail: Trail,
     caller: Caller = Depends(requires("billing:update")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
@@ -252,7 +291,25 @@ async def void_invoice(
         invoice_id=invoice_id,
         reason=body.reason,
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    found = await _answer(session, organization_id, caller, invoice_id)
+    await trail(
+        "invoice.voided",
+        "invoice",
+        found.id,
+        _named(found),
+        {"total": found.total, "reason": body.reason},
+    )
+    actor = await trail.actor()
+    await trail.tell(
+        await events.in_role(session, organization_id, OWNER),
+        events.Notice(
+            kind=kinds.BILL_VOIDED,
+            title=f"{actor.name} voided {found.invoice_number or 'a bill'}",
+            body=f"{found.patient.full_name}, {service.rupees(found.total)}. {body.reason}",
+            link=f"/billing/{found.id}",
+        ),
+    )
+    return found
 
 
 @router.post("/invoices/{invoice_id}/payments", status_code=201)
@@ -260,12 +317,14 @@ async def take_payment(
     session: DbSession,
     invoice_id: uuid.UUID,
     body: PaymentIn,
+    trail: Trail,
     key: str | None = RequestKey,
     caller: Caller = Depends(requires("payment:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
     """Part of what is owed, or all of it. Taking money on a draft issues it."""
-    await service.pay(
+    before = await _answer(session, organization_id, caller, invoice_id)
+    taken = await service.pay(
         session,
         organization_id=organization_id,
         clinic=await _clinic(session, organization_id),
@@ -275,7 +334,21 @@ async def take_payment(
         body=body,
         key=service.request_key(key),
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    found = await _answer(session, organization_id, caller, invoice_id)
+    if taken:
+        await trail(
+            "payment.taken",
+            "invoice",
+            found.id,
+            _named(found),
+            {
+                "amount": body.amount,
+                "method": body.method,
+                "balance": found.balance,
+                "issued": before.status == "draft" or None,
+            },
+        )
+    return found
 
 
 @router.post("/invoices/{invoice_id}/refunds", status_code=201)
@@ -283,12 +356,13 @@ async def give_back(
     session: DbSession,
     invoice_id: uuid.UUID,
     body: RefundIn,
+    trail: Trail,
     key: str | None = RequestKey,
     caller: Caller = Depends(requires("payment:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
     """The clinic admin only, and never more than was taken."""
-    await service.refund(
+    given = await service.refund(
         session,
         organization_id=organization_id,
         role=caller.role,
@@ -297,7 +371,16 @@ async def give_back(
         body=body,
         key=service.request_key(key),
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    found = await _answer(session, organization_id, caller, invoice_id)
+    if given:
+        await trail(
+            "payment.refunded",
+            "invoice",
+            found.id,
+            _named(found),
+            {"amount": body.amount, "method": body.method, "reason": body.reason},
+        )
+    return found
 
 
 @router.post("/invoices/{invoice_id}/payment-link", status_code=201)
@@ -305,6 +388,7 @@ async def send_payment_link(
     session: DbSession,
     invoice_id: uuid.UUID,
     body: LinkIn,
+    trail: Trail,
     caller: Caller = Depends(requires("payment:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> LinkMade:
@@ -322,13 +406,22 @@ async def send_payment_link(
         send_it=body.send,
         to=body.email,
     )
-    return LinkMade.model_validate(made)
+    link = LinkMade.model_validate(made)
+    await trail(
+        "payment_link.raised",
+        "invoice",
+        invoice_id,
+        _named(await _answer(session, organization_id, caller, invoice_id)),
+        {"amount": link.amount, "emailed_to": link.sent_to if link.sent else None},
+    )
+    return link
 
 
 @router.delete("/invoices/{invoice_id}/payment-link")
 async def cancel_payment_link(
     session: DbSession,
     invoice_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("payment:record")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> InvoiceOut:
@@ -336,7 +429,9 @@ async def cancel_payment_link(
     await payment_links.cancel_link(
         session, organization_id=organization_id, invoice_id=invoice_id
     )
-    return await _answer(session, organization_id, caller, invoice_id)
+    found = await _answer(session, organization_id, caller, invoice_id)
+    await trail("payment_link.cancelled", "invoice", found.id, _named(found))
+    return found
 
 
 @router.get("/invoices/{invoice_id}/pdf")

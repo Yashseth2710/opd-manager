@@ -10,13 +10,24 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, Request, Response
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import Caller, DbSession, client_ip, current_caller, current_tenant, requires
+from app.api.deps import (
+    Caller,
+    DbSession,
+    Trail,
+    client_ip,
+    current_caller,
+    current_tenant,
+    requires,
+)
 from app.api.v1.endpoints.auth import session_payload, set_session_cookies
 from app.core.config import get_settings
 from app.core.exceptions import NotFound, SessionExpired
-from app.models import Organization
+from app.core.permissions import OWNER
+from app.models import Organization, Role, User, UserRole
+from app.models import notification as kinds
 from app.repositories.staff import InvitationRepository, StaffRepository
 from app.repositories.users import UserRepository
 from app.schemas.auth import AcknowledgedOut, SessionOut
@@ -35,6 +46,7 @@ from app.schemas.clinic import (
 )
 from app.services import auth as auth_service
 from app.services import clinic as service
+from app.services import events
 
 router = APIRouter(tags=["clinic"])
 
@@ -44,6 +56,19 @@ async def _clinic(session: AsyncSession, organization_id: uuid.UUID) -> Organiza
     if found is None:
         raise SessionExpired
     return found
+
+
+async def _role_of(session: AsyncSession, user_id: uuid.UUID) -> str | None:
+    found = await session.execute(
+        select(Role.name)
+        .join(UserRole, UserRole.role_id == Role.id)
+        .where(UserRole.user_id == user_id)
+    )
+    return found.scalars().first()
+
+
+def _person(user: User) -> str:
+    return f"{user.full_name} ({user.email})"
 
 
 def _settings_out(clinic: Organization) -> ClinicSettingsOut:
@@ -64,11 +89,18 @@ async def read_clinic(
 async def update_clinic(
     session: DbSession,
     body: ClinicUpdate,
+    trail: Trail,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ClinicOut:
     clinic = await _clinic(session, organization_id)
-    return ClinicOut.model_validate(await service.update_clinic(session, clinic, body))
+    fields = body.model_dump(exclude_unset=True)
+    before = events.snapshot(ClinicOut.model_validate(clinic), fields)
+    after = ClinicOut.model_validate(await service.update_clinic(session, clinic, body))
+    moved = events.difference(before, events.snapshot(after, fields))
+    if moved:
+        await trail("clinic.details_changed", "clinic", after.id, after.name, moved)
+    return after
 
 
 @router.get("/clinic/settings")
@@ -83,23 +115,33 @@ async def read_settings(
 async def update_settings(
     session: DbSession,
     body: ClinicSettingsUpdate,
+    trail: Trail,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ClinicSettingsOut:
     clinic = await _clinic(session, organization_id)
-    return _settings_out(await service.update_settings(session, clinic, body))
+    fields = body.model_dump(exclude_unset=True)
+    before = events.snapshot(_settings_out(clinic), fields)
+    after = _settings_out(await service.update_settings(session, clinic, body))
+    moved = events.difference(before, events.snapshot(after, fields))
+    if moved:
+        await trail("clinic.settings_changed", "clinic", clinic.id, clinic.name, moved)
+    return after
 
 
 @router.post("/clinic/complete-setup")
 async def complete_setup(
     session: DbSession,
+    trail: Trail,
     _: Caller = Depends(requires("settings:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> ClinicOut:
     """Opens the clinic for business. Refuses while the details it cannot
     operate without are still missing."""
     clinic = await _clinic(session, organization_id)
-    return ClinicOut.model_validate(await service.finish_setup(session, clinic))
+    opened = ClinicOut.model_validate(await service.finish_setup(session, clinic))
+    await trail("clinic.opened", "clinic", opened.id, opened.name)
+    return opened
 
 
 @router.get("/clinic/roles")
@@ -141,6 +183,7 @@ async def change_role(
     session: DbSession,
     member_id: uuid.UUID,
     body: ChangeRoleRequest,
+    trail: Trail,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AcknowledgedOut:
@@ -148,9 +191,27 @@ async def change_role(
     if actor is None:
         raise SessionExpired
     clinic = await _clinic(session, organization_id)
-    await service.change_role(
+    was = await _role_of(session, member_id)
+    member = await service.change_role(
         session, clinic=clinic, actor=actor, member_id=member_id, role_slug=body.role_slug
     )
+    now = await _role_of(session, member_id)
+    if was != now:
+        await trail(
+            "staff.role_changed", "staff", member.id, _person(member), {"role": [was, now]}
+        )
+        await trail.tell(
+            [member.id],
+            events.Notice(
+                kind=kinds.ROLE_CHANGED,
+                title=f"{actor.full_name} made you {(now or 'a member of staff').lower()}",
+                body=(
+                    f"You were {(was or 'without a role').lower()}. "
+                    "Sign out and back in to see everything the new role opens."
+                ),
+                link=None,
+            ),
+        )
     return AcknowledgedOut()
 
 
@@ -158,6 +219,7 @@ async def change_role(
 async def suspend_member(
     session: DbSession,
     member_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AcknowledgedOut:
@@ -165,9 +227,10 @@ async def suspend_member(
     if actor is None:
         raise SessionExpired
     clinic = await _clinic(session, organization_id)
-    await service.set_member_status(
+    member = await service.set_member_status(
         session, clinic=clinic, actor=actor, member_id=member_id, active=False
     )
+    await trail("staff.suspended", "staff", member.id, _person(member))
     return AcknowledgedOut()
 
 
@@ -175,6 +238,7 @@ async def suspend_member(
 async def restore_member(
     session: DbSession,
     member_id: uuid.UUID,
+    trail: Trail,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AcknowledgedOut:
@@ -182,9 +246,10 @@ async def restore_member(
     if actor is None:
         raise SessionExpired
     clinic = await _clinic(session, organization_id)
-    await service.set_member_status(
+    member = await service.set_member_status(
         session, clinic=clinic, actor=actor, member_id=member_id, active=True
     )
+    await trail("staff.restored", "staff", member.id, _person(member))
     return AcknowledgedOut()
 
 
@@ -212,6 +277,7 @@ async def list_invitations(
 async def send_invitation(
     session: DbSession,
     body: InviteRequest,
+    trail: Trail,
     caller: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AcknowledgedOut:
@@ -229,6 +295,14 @@ async def send_invitation(
         last_name=body.last_name,
         role_slug=body.role_slug,
     )
+    named = f"{body.first_name} {body.last_name or ''}".strip()
+    await trail(
+        "staff.invited",
+        "invitation",
+        None,
+        f"{named} ({body.email})",
+        {"role": body.role_slug},
+    )
     # Reports whether a provider exists, not whether this one was delivered,
     # so the answer is the same for every address.
     return AcknowledgedOut(email_configured=get_settings().email_configured)
@@ -238,11 +312,15 @@ async def send_invitation(
 async def revoke_invitation(
     session: DbSession,
     invitation_id: uuid.UUID,
+    trail: Trail,
     _: Caller = Depends(requires("staff:manage")),
     organization_id: uuid.UUID = Depends(current_tenant),
 ) -> AcknowledgedOut:
     clinic = await _clinic(session, organization_id)
+    invitation = await InvitationRepository(session, organization_id).get(invitation_id)
     await service.revoke(session, clinic, invitation_id)
+    if invitation is not None:
+        await trail("staff.invitation_withdrawn", "invitation", None, invitation.email)
     return AcknowledgedOut()
 
 
@@ -285,6 +363,37 @@ async def accept_invitation(
     """
     user = await service.accept(
         session, token=body.token, password=body.password, client_ip=client_ip(request)
+    )
+    organization_id = user.organization_id
+    if organization_id is None:
+        raise SessionExpired
+    role = await _role_of(session, user.id)
+    await events.record(
+        session,
+        organization_id=organization_id,
+        actor=events.Actor(
+            id=user.id,
+            name=user.full_name,
+            ip=client_ip(request),
+            agent=request.headers.get("user-agent"),
+        ),
+        action="staff.joined",
+        resource_type="staff",
+        resource_id=user.id,
+        label=_person(user),
+        changes={"role": role},
+    )
+    await events.tell(
+        session,
+        organization_id=organization_id,
+        users=await events.in_role(session, organization_id, OWNER),
+        notice=events.Notice(
+            kind=kinds.STAFF_JOINED,
+            title=f"{user.full_name} joined as {(role or 'staff').lower()}",
+            body=f"They accepted the invitation sent to {user.email}.",
+            link="/staff",
+        ),
+        besides=user.id,
     )
     signed_in = await auth_service.start_session(session, user)
     set_session_cookies(response, signed_in)
