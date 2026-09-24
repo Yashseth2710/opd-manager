@@ -256,6 +256,43 @@
   animation: token-called 900ms var(--ease-out-quint) 1;
 }
 
+/* A new notice arriving: one swing of the bell, pivoting where it hangs. */
+@keyframes bell-ringing {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(16deg);
+  }
+  35% {
+    transform: rotate(-13deg);
+  }
+  55% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+}
+
+.bell-ringing {
+  transform-origin: 50% 2px;
+  animation: bell-ringing 900ms ease-out 1;
+}
+
+@keyframes notice-panel {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+}
+
+.notice-panel {
+  transform-origin: top left;
+  animation: notice-panel 160ms var(--ease-out-quint);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

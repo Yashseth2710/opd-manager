@@ -11,6 +11,7 @@ import {
   Loader2,
   NotebookPen,
   ReceiptIndianRupee,
+  ScrollText,
   Settings,
   Stethoscope,
   UserRound,
@@ -21,6 +22,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SessionEnded } from "@/components/auth/session-ended";
 import { SignOutButton } from "@/components/auth/sign-out";
+import { Bell } from "@/components/notifications/bell";
 import { currentSession, type Session } from "@/lib/auth";
 
 /**
@@ -57,6 +59,7 @@ const DESTINATIONS: Destination[] = [
   { href: "/billing", label: "Billing", icon: ReceiptIndianRupee, permission: "billing:read" },
   { href: "/reports", label: "Reports", icon: ChartColumn, permission: "reports:read" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
+  { href: "/audit", label: "Audit log", icon: ScrollText, permission: "audit:read" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];
 
@@ -88,11 +91,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[15rem_1fr]">
       <nav className="flex flex-col gap-1 bg-[var(--rail)] px-3 py-4 text-[var(--rail-text)] lg:min-h-screen lg:px-4 lg:py-6">
-        <div className="flex min-w-0 items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2">
           <ClinicMark session={data} />
-          {/* The rail's footer is desktop only, so a phone needs its own. */}
-          <div className="lg:hidden">
-            <SignOutButton subdued compact />
+          <div className="flex shrink-0 items-center gap-1">
+            {data.organization && <Bell />}
+            {/* The rail's footer is desktop only, so a phone needs its own. */}
+            <div className="lg:hidden">
+              <SignOutButton subdued compact />
+            </div>
           </div>
         </div>
 
