@@ -60,6 +60,16 @@ password reset, confirmation and invitation links are written to the API's log
 instead of being sent, and new accounts are created already confirmed so the
 application stays usable.
 
+Online payment is optional too. Leave `RAZORPAY_KEY_ID` and
+`RAZORPAY_KEY_SECRET` blank and the desk still takes cash, UPI and cards by
+hand; the option to send a patient a link is simply not offered. Test keys come
+from the [Razorpay](https://dashboard.razorpay.com) dashboard with no paperwork.
+For the webhook, put the same value in `RAZORPAY_WEBHOOK_SECRET` and on the
+webhook itself, pointed at `/api/v1/pay/webhook/razorpay` and subscribed to
+`payment.captured` and `order.paid`. Without a public address to reach it on,
+the patient's own browser still reports the payment and the bill still settles;
+the webhook is what covers a patient who pays and closes the tab.
+
 ### Tests
 
 The API suite drops every table it touches, so it refuses to run unless
@@ -75,10 +85,20 @@ a confirmation step it cannot read would stop it at the first screen. It also
 invites a doctor to one of them and follows the link the API writes to its
 log, so the API's output has to go to a file the suite is told about.
 
+The online payment tests drive the real order call, both signature checks and
+the webhook, but not Razorpay's own checkout window, which belongs to somebody
+else. They run against the stand-in in `scripts/dev/fake_gateway.py`, so the
+API and the suite both need pointing at it and both need the same key values.
+
 ```
-cd backend && python -m uvicorn app.main:app --port 8000 > api.log 2>&1
+python scripts/dev/fake_gateway.py --port 8081
+cd backend && RAZORPAY_KEY_ID=rzp_test_local RAZORPAY_KEY_SECRET=local-secret \
+  RAZORPAY_WEBHOOK_SECRET=local-webhook RAZORPAY_API_URL=http://127.0.0.1:8081 \
+  python -m uvicorn app.main:app --port 8000 > api.log 2>&1
 cd frontend && npx playwright install chromium   # once
-E2E_API_LOG=../backend/api.log npm run e2e
+E2E_API_LOG=../backend/api.log RAZORPAY_KEY_SECRET=local-secret \
+  RAZORPAY_WEBHOOK_SECRET=local-webhook RAZORPAY_API_URL=http://127.0.0.1:8081 \
+  npm run e2e
 ```
 
 ## Status

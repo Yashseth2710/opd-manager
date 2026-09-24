@@ -96,6 +96,8 @@ The most important control in the system.
 
 **Cross-tenant reads return 404.** A 403 is an admission that the record exists. Given an ID, an attacker could map another clinic's patient volume from the difference between 403 and 404.
 
+**The one unscoped lookup is the payment link**, because the patient opening it carries no token to take a clinic from. The row is found by the hash of the token and the clinic is read off the row; every query after that is scoped to it as usual. A token reaches exactly one bill at one clinic, and no part of the request can widen that.
+
 **Row-level security** is planned for the hardening pass as defence in depth. The schema carries `organization_id` on every tenant table from the start so enabling it is configuration rather than redesign.
 
 ### Required tests
@@ -112,6 +114,10 @@ Doctor        → GET /platform/organizations          → 403
 Doctor        → DELETE /staff/{id}                   → 403
 Clinic admin  → GET /platform/metrics                → 403
 Suspended org user → any request                     → 403
+Staff         → POST /invoices/{id}/payment-link     → 403
+No session    → GET /pay/{made-up token}             → 404
+Checkout report signed with the wrong key            → 400
+Webhook with a signature over different bytes        → 400
 ```
 
 Every new tenant-owned resource adds its own row to this list.
@@ -138,6 +144,19 @@ The riskiest surface in the application.
 - Only whoever uploaded a file, or the clinic admin, can rename, refile or remove it. Removing deletes the file from the store before the caller is told it is gone.
 - SVG is not accepted. SVG is executable.
 
+## Taking money online
+
+The patient paying a bill has no account, so the link is the credential.
+
+- The token is 32 random bytes, hashed with SHA-256 before it is stored. Only the hash is kept, so a dump of the table opens nothing. It is why the desk sees an address once, at the moment it is raised, and raises a fresh one rather than reading the old one back.
+- A link reaches one bill, expires after three days, and can be called off from the desk. One open link per bill by unique index, so there is never a second address in circulation.
+- What the link shows is the clinic, the bill number, the amount, and the name on the bill. No phone number, no address, nothing clinical. A forwarded link leaks no more than the paper bill it replaces.
+- **Nothing the browser says is taken as payment.** The checkout's handshake is signed with the API secret, which refuses a forged one, but it only proves the report came from the checkout. The gateway is asked what it did with the payment before a rupee is recorded, and a payment that names an order other than this link's is refused.
+- The webhook is verified with HMAC-SHA256 over the exact bytes Razorpay sent, against a secret shared only with their dashboard. The handler reads the raw body for that reason: verifying a parsed and re-encoded copy would accept a body that had been altered. With no webhook secret set, webhooks are refused rather than trusted.
+- The gateway's payment id is the idempotency key, so the browser and the webhook reporting the same payment write one row between them, settled by a unique index rather than by timing.
+- Card details never reach this application or the clinic. The checkout collects them on Razorpay's own page; what comes back is an identifier.
+- Keys are split the way they are meant to be: the key id is public and goes to the browser, the secret and the webhook secret stay on the server and are never returned by any endpoint.
+
 ## Rate limiting
 
 Redis-backed, since serverless instances share nothing in memory.
@@ -149,6 +168,7 @@ Redis-backed, since serverless instances share nothing in memory.
 | Registration | 3 per hour per IP |
 | Search | 30 per minute per user |
 | File upload | 60 per hour per user |
+| Opening or paying a bill from a link | 120 per hour per IP |
 | General API | 300 per minute per user |
 
 Exceeding a limit returns `429` with `Retry-After`.
@@ -184,6 +204,8 @@ Each entry holds actor, action, resource, a diff, timestamp, IP and user agent. 
 ## What this build does not claim
 
 This is a portfolio MVP running on free infrastructure with synthetic data.
+
+Online payment runs on Razorpay's test keys. No real money moves, and nothing here has been through the verification a live account needs. Card details never touch this application, which keeps it out of PCI scope, but that is a consequence of using a hosted checkout rather than a claim about anything this build has been assessed for.
 
 It has not been assessed against the DPDP Act, HIPAA, GDPR or any other regime. There is no encryption at rest beyond what Neon provides by default, no key management, no documented retention or deletion policy, no backup and restore procedure, no disaster recovery plan, no penetration test, and no signed processing agreements with any subprocessor.
 

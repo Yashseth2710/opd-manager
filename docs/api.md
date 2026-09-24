@@ -94,6 +94,9 @@ DOC_*         NOT_FOUND, ALREADY_UPLOADED, NOT_UPLOADER
 BILLING_*     INVOICE_NOT_FOUND, ALREADY_PAID, ALREADY_BILLED, INVALID_TOTAL,
               PAYMENT_EXCEEDS_BALANCE, REFUND_EXCEEDS_PAID, INVOICE_VOIDED,
               LOCKED, REFUNDED, HAS_PAYMENTS
+PAYMENT_*     LINK_NOT_FOUND, LINK_CLOSED, LINK_NOTHING_OWED,
+              CHECKOUT_REJECTED
+PAYMENTS_*    NOT_CONFIGURED, GATEWAY_FAILED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED, UPLOAD_INTERRUPTED,
               MISSING
 PLAN_*        LIMIT_REACHED, FEATURE_NOT_AVAILABLE
@@ -250,6 +253,12 @@ billing       GET    /invoices?show= | ?patient_id= | ?q= | ?from=&to=
               GET    /invoices/{id}/pdf
               POST   /invoices/{id}/payments
               POST   /invoices/{id}/refunds
+              POST   /invoices/{id}/payment-link
+              DELETE /invoices/{id}/payment-link
+
+paying        GET    /pay/{token}
+              POST   /pay/{token}/confirm
+              POST   /pay/webhook/razorpay
 
 reports       GET    /reports/revenue
               GET    /reports/patients
@@ -350,6 +359,18 @@ JSON numbers become doubles in JavaScript, and a rounding error in a bill is not
 Endpoints that move money accept an `Idempotency-Key` header, 8 to 64 letters, digits, dashes or underscores. The key is kept on the row it made, under a unique index, rather than in a cache that could forget it: the same key again answers with the bill the first request made, `200` rather than `201`, or leaves a payment already taken as it was. Two requests with one key arriving together are settled by the index.
 
 Applies to raising a bill, taking a payment and giving money back. Check-in and walk-ins need no key: a patient can only hold one live place in the queue, which the database enforces, so a retried check-in is refused with the token the first one was given rather than handing out a second.
+
+Online payments are keyed differently, because the key cannot come from the desk. Razorpay's own payment id is the key, prefixed `rzp-`, on the same unique index. The patient's browser and Razorpay's webhook both report the same payment, so both arrive carrying the same key and only one of them writes a row.
+
+## Paying without an account
+
+`/pay/*` is the only part of the surface that answers a caller with no session, because the patient paying a bill has never had one and never will. The link stands in for a session: an unguessable token, hashed in the table the way every other emailed link is, good for one bill, for as long as that bill is open, and revocable from the desk.
+
+What it hands back is deliberately thin — the clinic, the bill number, the amount, and the name on the bill. No phone number, no address, nothing clinical. Somebody who finds a forwarded link learns only what they would learn from the paper bill it replaces.
+
+`POST /pay/{token}/confirm` carries what the checkout reports. It is signed with the API secret, which is how a made-up one is refused, but the signature only proves the report came from the checkout — the gateway is asked what actually happened before a rupee is recorded. `POST /pay/webhook/razorpay` says the same thing independently and is admitted only with Razorpay's signature over the exact bytes they sent, which is why that handler reads the raw body. Whichever arrives first records the money.
+
+Money that arrives with nowhere to go — the desk took cash while the patient was paying — is not discarded. It is written down against the link as an excess for the desk to give back, because it is real money the clinic is holding.
 
 ## Authentication
 

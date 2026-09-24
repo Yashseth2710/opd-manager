@@ -45,7 +45,8 @@ organizations ──┬── users ──── user_roles ──── roles �
                 │                  └── follow_ups
                 │
                 ├── invoices ──┬── invoice_items
-                │              └── payments
+                │              ├── payments
+                │              └── payment_links
                 │
                 ├── notifications
                 ├── notification_preferences
@@ -369,9 +370,29 @@ One live bill per visit, so two desks billing the same patient at once make one 
 
 ### payments
 
-`invoice_id`, `kind` (`payment` / `refund`), `amount`, `method` (`cash` / `upi` / `card` / `bank_transfer` / `cheque` / `other`), `reference`, `note`, `received_at`, `received_by_id`, `request_key`.
+`invoice_id`, `kind` (`payment` / `refund`), `amount`, `method` (`cash` / `upi` / `card` / `bank_transfer` / `cheque` / `other`), `channel` (`desk` / `online`), `reference`, `note`, `received_at`, `received_by_id`, `request_key`.
 
 Partial payments are the normal case. The bill's row is locked, the payment inserted and `amount_paid` moved in one transaction, so two desks taking the last of a bill at once cannot both take it. Payments are never edited or removed; money given back is a `refund` row with its reason in `note`, which the database requires.
+
+`channel` says whether somebody at the desk handled the money. A payment that came from a link carries `online`, the gateway's payment id in `reference`, and no `received_by_id`, because nobody received it. The day's takings separate the two, so the figure the desk counts against the drawer is the one it is actually responsible for.
+
+### payment_links
+
+`invoice_id`, `token_hash`, `provider`, `order_id`, `gateway_payment_id`, `amount`, `excess_amount`, `currency`, `status` (`open` / `paid` / `cancelled` / `expired`), `expires_at`, `sent_to`, `sent_at`, `opened_at`, `paid_at`, `payment_id`, `created_by_id`.
+
+A link is raised against what a bill still owes and is what stands in for a session when the patient opens it. Only the hash is kept, as with invitations and password resets, so a dump of this table cannot be used to open anybody's bill — which is also why raising a second link is the only way to see an address again, rather than reading the first one back.
+
+```
+UNIQUE (token_hash)
+UNIQUE (invoice_id) WHERE status = 'open'
+UNIQUE (organization_id, gateway_payment_id) WHERE gateway_payment_id IS NOT NULL
+```
+
+One open link per bill, so there is never a second address in circulation that would also take money, and one row per gateway payment, so the patient's browser and the webhook reporting the same payment cannot both bank it.
+
+Expiry is read rather than swept: an open link past `expires_at` reads as expired and is written back the next time anybody touches it. A cron job to close links nobody used would be a moving part earning nothing.
+
+`excess_amount` is money that arrived with nowhere to go, because the desk settled the bill while the patient was paying. The bill cannot hold it — `amount_paid <= total` is a constraint — so it is recorded here and shown on the bill for somebody to give back, rather than quietly lost.
 
 ## Platform
 
