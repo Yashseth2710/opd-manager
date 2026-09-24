@@ -400,7 +400,7 @@ Expiry is read rather than swept: an open link past `expires_at` reads as expire
 
 `organization_id`, `actor_id`, `actor_name` (denormalised — the log must still read correctly after a user is deactivated), `action`, `resource_type`, `resource_id`, `resource_label`, `changes` (JSONB), `ip_address`, `user_agent`, `created_at`.
 
-Append-only. No `UPDATE` or `DELETE` path exists in the application, and the database role used by the API is granted `INSERT` and `SELECT` only.
+Append-only. No `UPDATE` or `DELETE` path exists in the application, and a trigger refuses both at the database: every `UPDATE`, and every `DELETE` other than the cascade from the clinic being removed. `actor_id` carries no foreign key, since `actor_name` is what the log reads from.
 
 ```
 INDEX (organization_id, created_at DESC)
@@ -415,9 +415,14 @@ Plans carry limits as JSONB — `max_doctors`, `max_staff`, `max_patients`, `max
 
 ### notifications, notification_preferences
 
-`user_id`, `type`, `title`, `body`, `link`, `channel`, `read_at`, `sent_at`.
+`notifications`: `user_id`, `kind`, `title`, `body`, `link`, `channel`, `read_at`, `sent_at`, `created_at`. Every notice is kept in the app; `channel` is `email` when it was also emailed, and `sent_at` says whether the provider took it. SMS and WhatsApp would be further values of the same column.
 
-The channel column exists from the start so email, SMS and WhatsApp can be added without a migration. The initial build delivers in-app only.
+`notification_preferences`: `user_id`, `kind`, `email`, unique on `(user_id, kind)`. Only a kind somebody has changed has a row; everything else is in-app only.
+
+```
+INDEX (user_id, created_at DESC)
+INDEX (user_id) WHERE read_at IS NULL
+```
 
 ## Indexing
 

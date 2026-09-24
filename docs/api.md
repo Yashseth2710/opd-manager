@@ -264,8 +264,12 @@ reports       GET    /reports/summary
               GET    /reports/day-book.csv
 
 misc          GET    /search?q=
-              GET    /notifications
+              GET    /notifications?show=&before=
+              GET    /notifications/unread
+              POST   /notifications/{id}/read
               POST   /notifications/read-all
+              GET    /notifications/preferences
+              PUT    /notifications/preferences
               GET    /audit-logs
               GET    /dashboard/summary
               GET    /subscription
@@ -344,6 +348,12 @@ Lab work is part of the patient's record, so anyone holding `lab:read` reads eve
 `GET /reports/summary` is the same figures over a stretch of days rather than one. `range` takes `today`, `week`, `month`, `this_month`, `last_month`, or `custom` with `from` and `to`; days are the clinic's own, not the server's, and a stretch longer than a year is `422` on `to`. It answers with the days one by one, including the ones nothing happened on, the takings by method, each doctor's line, the hours people arrive at, the tests ordered most, and what the bills were for. `before` is the stretch of the same length immediately before, so a figure can be read against something. `outstanding` deliberately ignores the dates: money owed since March is still owed in September.
 
 The day's takings on the billing page and the figures here are worked out by one function, so a Tuesday read from either place reports the same numbers. `GET /reports/day-book.csv` is the payments behind them, one to a line, as a file for a spreadsheet: a cell that begins with `=`, `+`, `-` or `@` is written with a leading apostrophe, because a patient called `=cmd` is a patient and not a formula.
+
+Every route that changes something writes an entry into the audit log in the same transaction as the change, so an entry exists exactly when the change does and a refused request leaves none. A retry that the idempotency key turns into a no-op writes nothing either. `GET /audit-logs` reads it newest first, 50 to a page and never more than 100, narrowed by `area` (`patients`, `appointments`, `clinical`, `billing`, `people`, `clinic`, `sign_in`), `actor_id`, `resource_id`, `from` and `to` in the clinic's own days, and `q` against the person's name and the record's. `resource_id` is the id of the page the record opens on, which for an allergy, a document, vital signs or a visit is the patient. It needs `audit:read`, which only the clinic admin holds. Each entry carries the actor by name, since the name must still read correctly after an account is suspended, and `changes` is either `{"field": [before, after]}` for an edit or a few facts about the action. An online payment has no actor id and reads as the patient.
+
+Notices are always somebody's own. `GET /notifications` is the caller's, newest first, twenty at a time, with `before` set to the last id of one page to fetch the next; `more` says whether there is one. `GET /notifications/unread` is one number, for the bell to ask for every half minute. Another person's notice reads as `404`, whatever the caller's role, and `read-all` only ever touches the caller's own. A doctor hears about bookings, moves and cancellations in their list and about results for tests they ordered; whoever reads bills hears about money paid from a link; the clinic admin hears about voided bills and staff joining; anybody hears about their own role changing and their own account being locked. Nobody hears about what they did themselves, and a suspended account hears nothing.
+
+`GET /notifications/preferences` lists only the kinds that can ever reach the caller, each with whether it is also emailed, and `email_available` says whether the clinic has a mail provider at all. `PUT` with `{kind, email}` changes one; a kind that cannot reach the caller is `422`. Email is off until each person turns it on, and goes out only after the change it is about has been saved.
 
 Reports need `reports:read`, which the clinic admin and doctors hold and the desk does not. A doctor's report is their own work — their patients, the bills raised against them, the tests they ordered — narrowed the same way their day and their queue are, and an account with no profile linked reads as `unlinked` with nothing in it.
 

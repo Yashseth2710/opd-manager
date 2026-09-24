@@ -205,9 +205,21 @@ Analytics events record that a consultation was completed, never what it contain
 
 ## Audit trail
 
-Append-only. Recorded for patient create, update and archive; appointment create, cancel and reschedule; consultation and prescription creation; invoice creation and voiding; payment recording; staff and doctor changes; permission changes; settings changes; and login failures.
+Append-only. Recorded for patients, their allergies and documents; appointments and check-ins; consultations, prescriptions, vital signs and lab orders; bills, payments, refunds and payment links; doctors, their hours and leave; staff, invitations and role changes; clinic details and settings; and sign-in failures and lockouts. Reading a record is not recorded.
 
-Each entry holds actor, action, resource, a diff, timestamp, IP and user agent. Actor name is denormalised so the log stays readable after a user is removed. The application exposes no update or delete path, and the API's database role holds only `INSERT` and `SELECT` on the table.
+Each entry holds actor, action, resource, what changed, timestamp, IP and user agent. Actor name is denormalised so the log stays readable after an account is suspended. An entry is written in the same transaction as the change it describes, so a change that fails leaves no entry behind and an entry never describes a change that did not happen.
+
+The application has no path that updates or deletes an entry, and the database refuses to as well: a trigger on `audit_logs` rejects every `UPDATE`, and every `DELETE` except the one that cascades from the clinic itself being removed. The trigger holds whichever role connects, which a grant on the API's role would not.
+
+A failed sign-in ends in an error, which rolls the request back, so the attempt and the lockout are written in a transaction of their own. They are recorded only against an account that exists, in that account's clinic; an address with no account behind it writes nothing, so the log cannot be used to learn which addresses are real. The IP address is the first hop in `X-Forwarded-For`, which the caller can set, and is kept as a lead rather than as proof.
+
+Payment links are working credentials and are never written into the log; the entry for one records the amount and where it was emailed.
+
+## Notifications
+
+A notice belongs to one account and is read only by it. The list, the count and marking read are all filtered to the caller's own account and clinic, and someone else's notice reads as `404`. Recipients are worked out from the change itself and then filtered again to active accounts at the same clinic, so a suspended account or one elsewhere receives nothing whatever the rule produced.
+
+Email is off by default and turned on per person, per kind. An emailed notice carries what the notice says, which can include a patient's name and the name of a test, which is why nobody receives one without asking. It is sent only after the transaction commits, so a request that fails sends nothing, and a provider that is down costs the email and not the request.
 
 ## What this build does not claim
 

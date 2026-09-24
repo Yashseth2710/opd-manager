@@ -58,7 +58,8 @@ database and cache are answering.
 Email is optional. With `BREVO_API_KEY` and `RESEND_API_KEY` both left blank,
 password reset, confirmation and invitation links are written to the API's log
 instead of being sent, and new accounts are created already confirmed so the
-application stays usable.
+application stays usable. Notices somebody has asked to get by email go to the
+same log, and still show in the app.
 
 Online payment is optional too. Leave `RAZORPAY_KEY_ID` and
 `RAZORPAY_KEY_SECRET` blank and the desk still takes cash, UPI and cards by
