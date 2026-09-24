@@ -118,7 +118,12 @@ export default function DashboardPage() {
             {today.data.view === "doctor" ? (
               <DoctorDay today={today.data} mayBook={may("appointment:create")} />
             ) : (
-              <ClinicDay today={today.data} mayBook={may("appointment:create")} />
+              <ClinicDay
+                today={today.data}
+                mayBook={may("appointment:create")}
+                seesMoney={may("billing:read")}
+                seesReports={may("reports:read")}
+              />
             )}
           </>
         )}

@@ -12,6 +12,7 @@ import {
   Quiet,
   Shown,
 } from "@/components/dashboard/parts";
+import { Takings } from "@/components/dashboard/takings";
 import { Token } from "@/components/queue/token";
 import { ReadingsLine } from "@/components/vitals/readings";
 import { LONG_WAIT_MINUTES, type DayLane, type Today } from "@/lib/dashboard";
@@ -19,13 +20,25 @@ import { readableTime } from "@/lib/doctors";
 import { calledBy, spokenMinutes } from "@/lib/queue";
 
 /** The whole clinic's day, for the desk, the administrator and the staff. */
-export function ClinicDay({ today, mayBook }: { today: Today; mayBook: boolean }) {
+export function ClinicDay({
+  today,
+  mayBook,
+  seesMoney,
+  seesReports,
+}: {
+  today: Today;
+  mayBook: boolean;
+  seesMoney: boolean;
+  seesReports: boolean;
+}) {
   const open = today.lanes.filter((lane) => !lane.closed);
   const away = today.lanes.filter((lane) => lane.closed);
 
   return (
     <div className="flex flex-col gap-6">
       <Figures figures={clinicFigures(today.counts)} />
+
+      {seesMoney && <Takings seesReports={seesReports} />}
 
       <Panel id="doctors-today" title="Doctors today" more={{ href: "/queue", label: "Queue" }}>
         {today.lanes.length === 0 ? (

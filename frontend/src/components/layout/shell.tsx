@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CalendarDays,
+  ChartColumn,
   FlaskConical,
   LayoutDashboard,
   ListOrdered,
@@ -54,6 +55,7 @@ const DESTINATIONS: Destination[] = [
   },
   { href: "/lab", label: "Lab", icon: FlaskConical, permission: "lab:read" },
   { href: "/billing", label: "Billing", icon: ReceiptIndianRupee, permission: "billing:read" },
+  { href: "/reports", label: "Reports", icon: ChartColumn, permission: "reports:read" },
   { href: "/staff", label: "Staff", icon: Users, permission: "staff:manage" },
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];
