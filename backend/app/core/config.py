@@ -76,6 +76,29 @@ class Settings(BaseSettings):
     blob_api_url: str = "https://vercel.com/api/blob"
     local_files_dir: Path = ROOT / ".files"
 
+    # Razorpay, for a patient paying a bill from their phone. Test keys are
+    # issued without paperwork, so development and the browser suite run on
+    # them; live keys wait until the business is verified.
+    razorpay_key_id: str = Field(default="")
+    razorpay_key_secret: str = Field(default="")
+    # Shared with the webhook in the Razorpay dashboard. Without it a webhook
+    # cannot be told from anything else that found the URL, so it is refused.
+    razorpay_webhook_secret: str = Field(default="")
+    razorpay_api_url: str = "https://api.razorpay.com/v1"
+    # How long a link the desk sends is good for. Long enough to be paid after
+    # the patient gets home, short enough that a forwarded one goes stale.
+    payment_link_hours: int = 72
+
+    @property
+    def online_payments(self) -> bool:
+        """Whether a bill can be paid online at all. With no keys the desk
+        still takes money by hand and the link is simply not offered."""
+        return bool(self.razorpay_key_id and self.razorpay_key_secret)
+
+    @property
+    def razorpay_test_mode(self) -> bool:
+        return self.razorpay_key_id.startswith("rzp_test")
+
     @property
     def storage(self) -> Literal["blob", "local", "none"]:
         if self.blob_read_write_token:

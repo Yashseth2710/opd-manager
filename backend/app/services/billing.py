@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import AppError, NotFound, PermissionDenied, ValidationFailed
 from app.core.permissions import OWNER
+from app.core.razorpay import configured as online_payments
 from app.models import (
     Appointment,
     Invoice,
@@ -37,6 +38,7 @@ from app.models import (
     Patient,
     PatientAllergy,
     Payment,
+    PaymentLink,
     QueueEntry,
     User,
     billing,
@@ -45,7 +47,12 @@ from app.models import (
 )
 from app.models.appointment import FOLLOW_UP
 from app.models.counter import INVOICE
-from app.repositories.billing import Billed, InvoiceRepository, PaymentRepository
+from app.repositories.billing import (
+    Billed,
+    InvoiceRepository,
+    PaymentLinkRepository,
+    PaymentRepository,
+)
 from app.repositories.counters import next_in_sequence
 from app.repositories.patients import PatientRepository
 from app.repositories.queue import Placed, QueueRepository
@@ -231,6 +238,22 @@ def _figure(
     invoice.tax_amount = tax
     invoice.total = taxable + tax
     invoice.balance = invoice.total - invoice.amount_paid
+
+
+async def _close_links(
+    session: AsyncSession, organization_id: uuid.UUID, invoice: Invoice
+) -> None:
+    """Takes any open link out of circulation once the bill stops owing.
+
+    Left alone it would keep saying the patient owes money they have already
+    handed over at the desk, and the panel would sit there waiting for a
+    payment that is never coming.
+    """
+    if invoice.balance > 0 and invoice.status != billing.VOID:
+        return
+    live = await PaymentLinkRepository(session, organization_id).open_for_invoice(invoice.id)
+    if live is not None:
+        live.status = billing.LINK_CANCELLED
 
 
 def _settle(invoice: Invoice) -> None:
@@ -498,6 +521,7 @@ async def pay(
         raise
     invoice.amount_paid += amount
     _settle(invoice)
+    await _close_links(session, organization_id, invoice)
     await session.flush()
 
 
@@ -550,6 +574,11 @@ async def refund(
     )
     invoice.refunded_amount += amount
     _settle(invoice)
+    # A bill that has given money back takes no more, whatever anybody holds
+    # a link for.
+    live = await PaymentLinkRepository(session, organization_id).open_for_invoice(invoice.id)
+    if live is not None:
+        live.status = billing.LINK_CANCELLED
     await session.flush()
 
 
@@ -584,6 +613,7 @@ async def void(
     invoice.voided_at = dt.datetime.now(dt.UTC)
     invoice.voided_by_id = actor_id
     invoice.void_reason = reason
+    await _close_links(session, organization_id, invoice)
     await session.flush()
 
 
@@ -764,6 +794,31 @@ def _listed(found: Billed, today: dt.date) -> dict[str, Any]:
     }
 
 
+def link_status(link: PaymentLink) -> str:
+    """A link nobody used quietly goes stale. Rather than a job sweeping the
+    table, it reads as expired and is written back the next time it is used."""
+    if link.status == billing.LINK_OPEN and link.expires_at <= dt.datetime.now(dt.UTC):
+        return billing.LINK_EXPIRED
+    return link.status
+
+
+def link_ref(link: PaymentLink, by_name: str | None = None) -> dict[str, Any]:
+    return {
+        "id": link.id,
+        "status": link_status(link),
+        "amount": link.amount,
+        "excess_amount": link.excess_amount,
+        "currency": link.currency,
+        "expires_at": link.expires_at,
+        "sent_to": link.sent_to,
+        "sent_at": link.sent_at,
+        "opened_at": link.opened_at,
+        "paid_at": link.paid_at,
+        "created_at": link.created_at,
+        "created_by": by_name,
+    }
+
+
 async def _names(session: AsyncSession, ids: set[uuid.UUID | None]) -> dict[uuid.UUID, str]:
     wanted = {each for each in ids if each is not None}
     if not wanted:
@@ -787,8 +842,15 @@ async def detail(
     invoice = found.invoice
     today = clinic_today(clinic)
     payments = await PaymentRepository(session, organization_id).for_invoice(invoice.id)
+    link = await PaymentLinkRepository(session, organization_id).latest_for_invoice(invoice.id)
     names = await _names(
-        session, {invoice.created_by_id, invoice.issued_by_id, invoice.voided_by_id}
+        session,
+        {
+            invoice.created_by_id,
+            invoice.issued_by_id,
+            invoice.voided_by_id,
+            link.created_by_id if link else None,
+        },
     )
 
     visit = None
@@ -822,6 +884,7 @@ async def detail(
                 "kind": payment.kind,
                 "amount": payment.amount,
                 "method": payment.method,
+                "channel": payment.channel,
                 "reference": payment.reference,
                 "note": payment.note,
                 "received_at": payment.received_at,
@@ -847,6 +910,19 @@ async def detail(
         "void_blocked": _why_not_voidable(invoice)
         if "billing:update" in permissions and issued
         else None,
+        "payment_link": link_ref(
+            link, names.get(link.created_by_id) if link.created_by_id else None
+        )
+        if link
+        else None,
+        "can_send_link": (
+            online_payments()
+            and "payment:record" in permissions
+            and status in billing.OWED
+            and invoice.refunded_amount == 0
+            and invoice.balance > 0
+        ),
+        "online_payments": online_payments(),
     }
 
 
@@ -906,7 +982,8 @@ async def summary(
     since, until = _day_bounds(clinic, day)
     rows = await PaymentRepository(session, organization_id).by_method(since, until)
     methods: dict[str, dict[str, Any]] = {}
-    for method, kind, amount, count in rows:
+    online = ZERO
+    for method, kind, channel, amount, count in rows:
         entry = methods.setdefault(
             method,
             {"method": method, "received": ZERO, "refunded": ZERO, "net": ZERO, "count": 0},
@@ -916,6 +993,8 @@ async def summary(
         else:
             entry["received"] += amount
             entry["count"] += count
+            if channel == billing.ONLINE:
+                online += amount
         entry["net"] = entry["received"] - entry["refunded"]
     ordered = [methods[method] for method in billing.METHODS if method in methods]
 
@@ -931,6 +1010,8 @@ async def summary(
         "received": received,
         "refunded": refunded,
         "net": received - refunded,
+        # Of what came in, the part nobody at the desk had to handle.
+        "online": online,
         "bills_issued": issued_count,
         "billed": billed,
         "outstanding": owed,

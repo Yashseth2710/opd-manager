@@ -19,6 +19,8 @@ InvoiceStatus = Literal["draft", "unpaid", "partly_paid", "paid", "refunded", "v
 ItemType = Literal["consultation", "procedure", "lab", "medicine", "other"]
 Method = Literal["cash", "upi", "card", "bank_transfer", "cheque", "other"]
 Kind = Literal["payment", "refund"]
+Channel = Literal["desk", "online"]
+LinkStatus = Literal["open", "paid", "cancelled", "expired"]
 
 # More lines than this on one visit's bill is a slip somewhere.
 MAX_LINES = 50
@@ -100,6 +102,7 @@ class PaymentOut(BaseModel):
     kind: Kind
     amount: Rupees
     method: Method
+    channel: Channel
     reference: str | None
     note: str | None
     received_at: dt.datetime
@@ -111,6 +114,41 @@ class VisitRef(BaseModel):
     date: dt.date
     token: int
     consultation_id: uuid.UUID | None
+
+
+class LinkIn(_Trimmed):
+    """Raising a link, and sending it on if there is an address to send to."""
+
+    send: bool = False
+    # Where to send it. Left out, the patient's own address is used.
+    email: str | None = Field(default=None, max_length=255)
+
+
+class LinkOut(BaseModel):
+    id: uuid.UUID
+    status: LinkStatus
+    amount: Rupees
+    # Paid through the link but with nothing left on the bill to put it
+    # against, because the desk took the money first.
+    excess_amount: Rupees
+    currency: str
+    expires_at: dt.datetime
+    sent_to: str | None
+    sent_at: dt.datetime | None
+    opened_at: dt.datetime | None
+    paid_at: dt.datetime | None
+    created_at: dt.datetime
+    created_by: str | None
+
+
+class LinkMade(LinkOut):
+    """The one answer that carries the address itself. Only the hash is kept,
+    so asking again raises a new link rather than showing this one twice."""
+
+    url: str
+    # Whether the email actually went. False says so plainly rather than
+    # leaving the desk to assume it did.
+    sent: bool
 
 
 class Totals(BaseModel):
@@ -155,6 +193,12 @@ class InvoiceOut(InvoiceListed):
     can_void: bool
     # Why the bill cannot be voided, when it is issued and cannot.
     void_blocked: str | None
+    # The most recent link raised against this bill, whatever became of it.
+    payment_link: LinkOut | None
+    can_send_link: bool
+    # Whether the clinic can take money online at all. Without it the option
+    # is not offered rather than offered and then refused.
+    online_payments: bool
 
 
 class InvoicePage(BaseModel):
@@ -182,6 +226,9 @@ class DaySummary(BaseModel):
     received: Rupees
     refunded: Rupees
     net: Rupees
+    # Of what came in, the part that was paid from a link rather than handed
+    # over at the desk.
+    online: Rupees
     bills_issued: int
     billed: Rupees
     # Across every day, still owed on bills already issued.
@@ -236,3 +283,40 @@ class PastLine(BaseModel):
 
 class Removed(BaseModel):
     removed: bool = True
+
+
+# --- What the patient sees ----------------------------------------------------------
+#
+# Opened without signing in, from a link. It says only what somebody holding
+# the link already has to be told to pay: the clinic, the bill number, and
+# what is owed. No address, no phone number, and nothing clinical.
+
+
+class PayView(BaseModel):
+    clinic: str
+    clinic_phone: str | None
+    # Enough for the patient to know the bill is theirs, and no more.
+    patient_name: str
+    invoice_number: str | None
+    issued_on: dt.date | None
+    amount: Rupees
+    currency: str
+    status: LinkStatus
+    expires_at: dt.datetime
+    paid_at: dt.datetime | None
+    # What the checkout on the page needs. Both are meant to be public.
+    key_id: str | None
+    order_id: str | None
+
+
+class CheckoutIn(_Trimmed):
+    """What the checkout hands back to the page once a payment goes through.
+
+    It is checked against the gateway before anything is recorded, so a made
+    up one gets nowhere; it is here so the patient sees the bill marked paid
+    without waiting for the webhook.
+    """
+
+    razorpay_payment_id: str = Field(min_length=1, max_length=64)
+    razorpay_order_id: str = Field(min_length=1, max_length=64)
+    razorpay_signature: str = Field(min_length=1, max_length=128)

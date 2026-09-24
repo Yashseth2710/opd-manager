@@ -18,6 +18,8 @@ from app.schemas.billing import (
     InvoiceIn,
     InvoiceOut,
     InvoicePage,
+    LinkIn,
+    LinkMade,
     PastLine,
     PaymentIn,
     RefundIn,
@@ -27,6 +29,7 @@ from app.schemas.billing import (
     VoidIn,
 )
 from app.services import billing as service
+from app.services import payment_links
 from app.services.billing_pdf import render
 from app.services.doctors import clinic_today, clinic_zone
 
@@ -293,6 +296,45 @@ async def give_back(
         invoice_id=invoice_id,
         body=body,
         key=service.request_key(key),
+    )
+    return await _answer(session, organization_id, caller, invoice_id)
+
+
+@router.post("/invoices/{invoice_id}/payment-link", status_code=201)
+async def send_payment_link(
+    session: DbSession,
+    invoice_id: uuid.UUID,
+    body: LinkIn,
+    caller: Caller = Depends(requires("payment:record")),
+    organization_id: uuid.UUID = Depends(current_tenant),
+) -> LinkMade:
+    """A link the patient pays from, for what is still owed.
+
+    The address comes back once and is not kept, so asking again raises a
+    fresh link and takes the previous one out of circulation.
+    """
+    made = await payment_links.raise_link(
+        session,
+        organization_id=organization_id,
+        clinic=await _clinic(session, organization_id),
+        actor_id=caller.user_id,
+        invoice_id=invoice_id,
+        send_it=body.send,
+        to=body.email,
+    )
+    return LinkMade.model_validate(made)
+
+
+@router.delete("/invoices/{invoice_id}/payment-link")
+async def cancel_payment_link(
+    session: DbSession,
+    invoice_id: uuid.UUID,
+    caller: Caller = Depends(requires("payment:record")),
+    organization_id: uuid.UUID = Depends(current_tenant),
+) -> InvoiceOut:
+    """Stops the open link working. Money already paid through it stays."""
+    await payment_links.cancel_link(
+        session, organization_id=organization_id, invoice_id=invoice_id
     )
     return await _answer(session, organization_id, caller, invoice_id)
 

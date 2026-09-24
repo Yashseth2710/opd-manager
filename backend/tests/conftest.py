@@ -208,6 +208,10 @@ def _refuse_to_run_against_anything_real() -> None:
         raise RuntimeError(
             "Blank BLOB_READ_WRITE_TOKEN for the suite, or it uploads to a real store."
         )
+    if settings.online_payments:
+        # Even test keys open real orders on a real account. The tests that
+        # need a gateway stand one up for themselves.
+        raise RuntimeError("Blank RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET for the suite.")
 
 
 @pytest_asyncio.fixture(scope="session")

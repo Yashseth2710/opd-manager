@@ -8,6 +8,10 @@ raising another, never by editing the one that was handed over.
 
 Money only moves forward. A payment is never edited or removed; money given
 back is a refund, recorded beside it.
+
+Money arrives one of two ways: over the counter, or from a link the patient
+was sent and paid from their phone. Both end up as the same payment row, so
+the bill reads the same however it was settled.
 """
 
 from __future__ import annotations
@@ -47,6 +51,20 @@ PAYMENT = "payment"
 REFUND = "refund"
 KINDS = (PAYMENT, REFUND)
 METHODS = ("cash", "upi", "card", "bank_transfer", "cheque", "other")
+
+# Where the money was handed over: at the desk, or by the patient from a link
+# they were sent. The day's takings read very differently for the two.
+DESK = "desk"
+ONLINE = "online"
+CHANNELS = (DESK, ONLINE)
+
+# A link the patient opens to pay. Open until it is paid, called off by the
+# desk, or left long enough to go stale.
+LINK_OPEN = "open"
+LINK_PAID = "paid"
+LINK_CANCELLED = "cancelled"
+LINK_EXPIRED = "expired"
+LINK_STATUSES = (LINK_OPEN, LINK_PAID, LINK_CANCELLED, LINK_EXPIRED)
 
 
 def _listed(values: tuple[str, ...]) -> str:
@@ -203,6 +221,7 @@ class Payment(TenantRow):
     __table_args__ = (
         CheckConstraint(f"kind IN ({_listed(KINDS)})", name="ck_payment_kind"),
         CheckConstraint(f"method IN ({_listed(METHODS)})", name="ck_payment_method"),
+        CheckConstraint(f"channel IN ({_listed(CHANNELS)})", name="ck_payment_channel"),
         CheckConstraint("amount > 0", name="ck_payment_amount"),
         CheckConstraint(
             "kind <> 'refund' OR note IS NOT NULL", name="ck_payment_refund_reason"
@@ -224,6 +243,7 @@ class Payment(TenantRow):
     kind: Mapped[str] = mapped_column(String(8), nullable=False, default=PAYMENT)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     method: Mapped[str] = mapped_column(String(16), nullable=False)
+    channel: Mapped[str] = mapped_column(String(8), nullable=False, default=DESK)
     # The UPI or card reference, or the cheque number.
     reference: Mapped[str | None] = mapped_column(String(60))
     # Why, for a refund. Anything worth saying, for a payment.
@@ -233,3 +253,86 @@ class Payment(TenantRow):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
     )
     request_key: Mapped[str | None] = mapped_column(String(64))
+
+
+class PaymentLink(TimestampMixin, TenantRow):
+    """A bill the patient can settle themselves, from wherever they are.
+
+    The desk raises one against what is still owed and sends it on. What comes
+    back is the gateway's word that the money moved, and that is what writes
+    the payment; the patient's browser is never believed on its own.
+    """
+
+    __tablename__ = "payment_links"
+    __table_args__ = (
+        CheckConstraint(f"status IN ({_listed(LINK_STATUSES)})", name="ck_payment_link_status"),
+        CheckConstraint("amount > 0", name="ck_payment_link_amount"),
+        CheckConstraint("excess_amount >= 0", name="ck_payment_link_excess"),
+        CheckConstraint(
+            "(status = 'paid') = (paid_at IS NOT NULL)", name="ck_payment_link_paid"
+        ),
+        # The link in the URL is looked up by its hash, and no two rows can
+        # share one.
+        Index("uq_payment_link_token", "token_hash", unique=True),
+        # One live link per bill, so a patient who was sent two cannot pay
+        # twice over and there is one thing for the desk to call off.
+        Index(
+            "uq_payment_link_open",
+            "invoice_id",
+            unique=True,
+            postgresql_where=text("status = 'open'"),
+        ),
+        # The gateway may say the same payment happened more than once: the
+        # browser comes back with it and the webhook arrives separately.
+        Index(
+            "uq_payment_link_gateway",
+            "organization_id",
+            "gateway_payment_id",
+            unique=True,
+            postgresql_where=text("gateway_payment_id IS NOT NULL"),
+        ),
+        Index("ix_payment_link_order", "order_id"),
+        Index("ix_payment_link_invoice", "invoice_id", "created_at"),
+    )
+
+    invoice_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="CASCADE"), nullable=False
+    )
+    # Only the hash, as with every other link that is emailed out: a dump of
+    # this table cannot be used to open anybody's bill.
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    provider: Mapped[str] = mapped_column(String(16), nullable=False, default="razorpay")
+    # What the gateway calls the sum it is expecting.
+    order_id: Mapped[str | None] = mapped_column(String(64))
+    gateway_payment_id: Mapped[str | None] = mapped_column(String(64))
+
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    # Money that arrived through this link but had nowhere to go on the bill,
+    # because it was settled at the desk in the meantime. It is real money the
+    # clinic is holding, so it is written down rather than quietly dropped.
+    excess_amount: Mapped[Decimal] = mapped_column(
+        Numeric(12, 2), nullable=False, default=Decimal("0.00")
+    )
+    currency: Mapped[str] = mapped_column(String(3), nullable=False, default="INR")
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default=LINK_OPEN)
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    # Who it went to, if it was emailed rather than read off the screen.
+    sent_to: Mapped[str | None] = mapped_column(String(255))
+    sent_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # First time the patient opened it, which tells the desk whether chasing
+    # them is worth it.
+    opened_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    paid_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # The row written when the money landed.
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")
+    )
+
+    created_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    def is_open(self, now: dt.datetime) -> bool:
+        return self.status == LINK_OPEN and self.expires_at > now

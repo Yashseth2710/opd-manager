@@ -9,8 +9,18 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import Select, delete, func, or_, select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Doctor, Invoice, InvoiceItem, Patient, Payment, User, billing
+from app.models import (
+    Doctor,
+    Invoice,
+    InvoiceItem,
+    Patient,
+    Payment,
+    PaymentLink,
+    User,
+    billing,
+)
 from app.repositories.appointments import allergy_count
 from app.repositories.base import TenantScopedRepository
 from app.repositories.prescriptions import _as_typed
@@ -258,12 +268,67 @@ class PaymentRepository(TenantScopedRepository[Payment]):
 
     async def by_method(
         self, since: dt.datetime, until: dt.datetime
-    ) -> list[tuple[str, str, Decimal, int]]:
+    ) -> list[tuple[str, str, str, Decimal, int]]:
         result = await self.session.execute(
-            select(Payment.method, Payment.kind, func.sum(Payment.amount), func.count())
+            select(
+                Payment.method,
+                Payment.kind,
+                Payment.channel,
+                func.sum(Payment.amount),
+                func.count(),
+            )
             .where(Payment.organization_id == self.organization_id)
             .where(Payment.received_at >= since)
             .where(Payment.received_at < until)
-            .group_by(Payment.method, Payment.kind)
+            .group_by(Payment.method, Payment.kind, Payment.channel)
         )
-        return [(row[0], row[1], Decimal(row[2]), int(row[3])) for row in result.all()]
+        return [(row[0], row[1], row[2], Decimal(row[3]), int(row[4])) for row in result.all()]
+
+
+class PaymentLinkRepository(TenantScopedRepository[PaymentLink]):
+    model = PaymentLink
+
+    async def open_for_invoice(self, invoice_id: uuid.UUID) -> PaymentLink | None:
+        result = await self.session.execute(
+            self.query()
+            .where(PaymentLink.invoice_id == invoice_id)
+            .where(PaymentLink.status == billing.LINK_OPEN)
+        )
+        return result.scalar_one_or_none()
+
+    async def latest_for_invoice(self, invoice_id: uuid.UUID) -> PaymentLink | None:
+        result = await self.session.execute(
+            self.query()
+            .where(PaymentLink.invoice_id == invoice_id)
+            .order_by(PaymentLink.created_at.desc(), PaymentLink.id.desc())
+            .limit(1)
+        )
+        return result.scalars().first()
+
+    async def by_gateway_payment(self, payment_id: str) -> PaymentLink | None:
+        result = await self.session.execute(
+            self.query().where(PaymentLink.gateway_payment_id == payment_id)
+        )
+        return result.scalar_one_or_none()
+
+
+# Whoever opens a payment link has no session and so no clinic. These two
+# find the row from what the URL or the gateway carries, and the clinic comes
+# off the row itself; every read after that is scoped to it as usual.
+
+
+async def link_by_token(session: AsyncSession, token_hash: str) -> PaymentLink | None:
+    result = await session.execute(
+        select(PaymentLink).where(PaymentLink.token_hash == token_hash)
+    )
+    return result.scalar_one_or_none()
+
+
+async def link_by_order(session: AsyncSession, order_id: str) -> PaymentLink | None:
+    result = await session.execute(
+        select(PaymentLink)
+        .where(PaymentLink.order_id == order_id)
+        .order_by(PaymentLink.created_at.desc())
+        .limit(1)
+    )
+    return result.scalars().first()

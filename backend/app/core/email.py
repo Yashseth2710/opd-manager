@@ -222,6 +222,25 @@ def reset_message(*, to: str, name: str, url: str) -> Message:
     )
 
 
+def payment_link_message(
+    *, to: str, name: str, clinic: str, amount: str, number: str, until: str, url: str
+) -> Message:
+    greeting = f"Hello, {name}" if name else "Hello"
+    return Message(
+        to=to,
+        subject=f"Your bill from {clinic}, {amount}",
+        heading=greeting,
+        body=(
+            f"{clinic} has sent you bill {number} for {amount}. "
+            f"You can pay it by UPI or card from this link until {until}. "
+            "If you have already paid at the clinic, nothing more is owed and "
+            "the link will say so."
+        ),
+        action_label=f"Pay {amount}",
+        action_url=url,
+    )
+
+
 def invitation_message(
     *, to: str, name: str, clinic: str, role: str, inviter: str, url: str
 ) -> Message:

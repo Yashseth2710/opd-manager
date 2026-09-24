@@ -29,6 +29,9 @@ VERIFY_PER_ADDRESS = Limit(attempts=3, seconds=60 * 60)
 REGISTER_PER_IP = Limit(attempts=5, seconds=60 * 60)
 # A report photographed page by page is a dozen uploads in a minute.
 UPLOAD_PER_USER = Limit(attempts=60, seconds=60 * 60)
+# Opening a bill to pay it. The link itself is unguessable, so this is only
+# there to stop somebody hammering the endpoint with tokens they made up.
+PAY_PER_IP = Limit(attempts=120, seconds=60 * 60)
 
 
 async def check(bucket: str, identifier: str, limit: Limit) -> None:
