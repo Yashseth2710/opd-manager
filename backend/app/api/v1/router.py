@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     pay,
     prescriptions,
     queue,
+    reports,
     vitals,
 )
 
@@ -34,3 +35,4 @@ router.include_router(documents.router)
 router.include_router(billing.router)
 router.include_router(pay.router)
 router.include_router(dashboard.router)
+router.include_router(reports.router)

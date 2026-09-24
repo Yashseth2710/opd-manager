@@ -266,24 +266,6 @@ class PaymentRepository(TenantScopedRepository[Payment]):
         result = await self.session.execute(self.query().where(Payment.request_key == key))
         return result.scalar_one_or_none()
 
-    async def by_method(
-        self, since: dt.datetime, until: dt.datetime
-    ) -> list[tuple[str, str, str, Decimal, int]]:
-        result = await self.session.execute(
-            select(
-                Payment.method,
-                Payment.kind,
-                Payment.channel,
-                func.sum(Payment.amount),
-                func.count(),
-            )
-            .where(Payment.organization_id == self.organization_id)
-            .where(Payment.received_at >= since)
-            .where(Payment.received_at < until)
-            .group_by(Payment.method, Payment.kind, Payment.channel)
-        )
-        return [(row[0], row[1], row[2], Decimal(row[3]), int(row[4])) for row in result.all()]
-
 
 class PaymentLinkRepository(TenantScopedRepository[PaymentLink]):
     model = PaymentLink

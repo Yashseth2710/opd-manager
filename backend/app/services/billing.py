@@ -64,6 +64,7 @@ from app.schemas.billing import (
     PaymentIn,
     RefundIn,
 )
+from app.services import reports
 from app.services.doctors import clinic_today, clinic_zone, effective_fee
 from app.services.patients import PatientArchived, PatientNotFound
 from app.services.queue import doctor_ref, patient_ref
@@ -979,44 +980,13 @@ async def listed(
 async def summary(
     session: AsyncSession, *, organization_id: uuid.UUID, clinic: Organization, day: dt.date
 ) -> dict[str, Any]:
+    """The day's takings. The figures come from the same place the reports
+    page reads, so the two cannot quietly disagree about a Tuesday."""
     since, until = _day_bounds(clinic, day)
-    rows = await PaymentRepository(session, organization_id).by_method(since, until)
-    methods: dict[str, dict[str, Any]] = {}
-    online = ZERO
-    for method, kind, channel, amount, count in rows:
-        entry = methods.setdefault(
-            method,
-            {"method": method, "received": ZERO, "refunded": ZERO, "net": ZERO, "count": 0},
-        )
-        if kind == billing.REFUND:
-            entry["refunded"] += amount
-        else:
-            entry["received"] += amount
-            entry["count"] += count
-            if channel == billing.ONLINE:
-                online += amount
-        entry["net"] = entry["received"] - entry["refunded"]
-    ordered = [methods[method] for method in billing.METHODS if method in methods]
-
-    repository = InvoiceRepository(session, organization_id)
-    issued_count, billed = await repository.issued_between(since, until)
-    owed_count, owed = await repository.outstanding()
-    received = sum((each["received"] for each in ordered), ZERO)
-    refunded = sum((each["refunded"] for each in ordered), ZERO)
-    return {
-        "date": day,
-        "currency": clinic.currency,
-        "methods": ordered,
-        "received": received,
-        "refunded": refunded,
-        "net": received - refunded,
-        # Of what came in, the part nobody at the desk had to handle.
-        "online": online,
-        "bills_issued": issued_count,
-        "billed": billed,
-        "outstanding": owed,
-        "outstanding_bills": owed_count,
-    }
+    money = await reports.takings(
+        session, organization_id=organization_id, since=since, until=until
+    )
+    return {"date": day, "currency": clinic.currency, **money}
 
 
 async def unbilled(
