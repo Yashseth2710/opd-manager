@@ -90,10 +90,12 @@ test.describe("for the desk", () => {
     await page.goto("/reports");
     await page.getByRole("button", { name: "Choose dates" }).click();
 
-    const today = new Date();
+    // The clinic's today, which is not the runner's for part of every evening.
+    const asked = await page.request.get("/api/v1/reports/summary?range=today");
+    const today = new Date(`${(await asked.json()).data.span.last_day}T00:00:00Z`);
     const iso = (day: Date) => day.toISOString().slice(0, 10);
     const week = new Date(today);
-    week.setDate(week.getDate() - 6);
+    week.setUTCDate(week.getUTCDate() - 6);
 
     const from = page.getByRole("textbox", { name: "From", exact: true });
     const to = page.getByRole("textbox", { name: "To", exact: true });
