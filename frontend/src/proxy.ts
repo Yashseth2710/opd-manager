@@ -13,8 +13,9 @@ const SESSION_MARKER = "opd_session";
 
 const SIGNED_OUT_ONLY = ["/login", "/register", "/forgot-password", "/reset-password"];
 
-// Open on purpose: whoever follows an invitation link has no account yet.
-const ALWAYS_OPEN = ["/join", "/verify-email"];
+// Open on purpose: whoever follows an invitation link has no account yet,
+// and a patient paying a bill never will have one.
+const ALWAYS_OPEN = ["/join", "/verify-email", "/pay"];
 const SIGNED_IN_ONLY = [
   "/dashboard",
   "/onboarding",

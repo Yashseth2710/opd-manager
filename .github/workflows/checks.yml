@@ -202,6 +202,13 @@ jobs:
       # With no email provider the API logs the links it would have sent,
       # and the doctor the browser tests sign in as joins through one.
       E2E_API_LOG: ${{ github.workspace }}/backend/api.log
+      # Online payment, against the stand-in gateway rather than Razorpay.
+      # Everything above it is the real path: the order call, both signature
+      # checks and the webhook. These are not credentials to anything.
+      RAZORPAY_KEY_ID: rzp_test_continuous_integration
+      RAZORPAY_KEY_SECRET: only-for-continuous-integration
+      RAZORPAY_WEBHOOK_SECRET: only-for-continuous-integration-webhook
+      RAZORPAY_API_URL: http://127.0.0.1:8081
       CI: "true"
 
     steps:
@@ -260,6 +267,14 @@ jobs:
       - name: Build the schema
         working-directory: backend
         run: alembic upgrade head
+
+      - name: Start the stand-in payment gateway
+        run: |
+          nohup python scripts/dev/fake_gateway.py --port 8081 > gateway.log 2>&1 &
+          for _ in $(seq 1 30); do
+            curl -s -o /dev/null http://127.0.0.1:8081/payments/none && break
+            sleep 1
+          done
 
       - name: Start the API
         working-directory: backend

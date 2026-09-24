@@ -335,6 +335,12 @@ function Counted({
           {summary.bills_issued > 0 && <Amount value={summary.billed} currency={money} />}
           {summary.bills_issued > 0 && "."}
         </p>
+        {summary.online !== "0.00" && (
+          <p className="text-[14px] text-[var(--text-muted)]">
+            <Amount value={summary.online} currency={money} /> of that was paid online, so
+            nobody at the desk handled it.
+          </p>
+        )}
         {summary.outstanding_bills > 0 && (
           <button
             type="button"

@@ -5,6 +5,9 @@ export type InvoiceStatus = "draft" | "unpaid" | "partly_paid" | "paid" | "refun
 export type ItemType = "consultation" | "procedure" | "lab" | "medicine" | "other";
 export type Method = "cash" | "upi" | "card" | "bank_transfer" | "cheque" | "other";
 export type BillShow = "to_collect" | "drafts" | "paid" | "void" | "all";
+/** Whether the money was handed over at the desk or paid from a link. */
+export type Channel = "desk" | "online";
+export type LinkStatus = "open" | "paid" | "cancelled" | "expired";
 
 export const MAX_LINES = 50;
 
@@ -43,11 +46,31 @@ export type Payment = {
   kind: "payment" | "refund";
   amount: string;
   method: Method;
+  channel: Channel;
   reference: string | null;
   note: string | null;
   received_at: string;
   received_by: string | null;
 };
+
+export type PaymentLink = {
+  id: string;
+  status: LinkStatus;
+  amount: string;
+  /** Paid through the link with nothing left on the bill to put it against. */
+  excess_amount: string;
+  currency: string;
+  expires_at: string;
+  sent_to: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  paid_at: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+/** Only the answer that raises a link carries its address; it is not kept. */
+export type LinkMade = PaymentLink & { url: string; sent: boolean };
 
 export type Visit = {
   queue_entry_id: string;
@@ -73,6 +96,9 @@ export type Invoice = InvoiceListed & {
   can_refund: boolean;
   can_void: boolean;
   void_blocked: string | null;
+  payment_link: PaymentLink | null;
+  can_send_link: boolean;
+  online_payments: boolean;
 };
 
 export type InvoicePage = {
@@ -98,6 +124,8 @@ export type DaySummary = {
   received: string;
   refunded: string;
   net: string;
+  /** Of what came in, the part paid from a link rather than at the desk. */
+  online: string;
   bills_issued: number;
   billed: string;
   outstanding: string;
@@ -234,6 +262,12 @@ export const giveBack = (
     headers: keyed(key),
   });
 
+export const sendPaymentLink = (id: string, body: { send: boolean; email: string | null }) =>
+  post<LinkMade>(`/invoices/${id}/payment-link`, body);
+
+export const cancelPaymentLink = (id: string) =>
+  request<Invoice>(`/invoices/${id}/payment-link`, { method: "DELETE" });
+
 /** Opened in a new tab, where the browser's own viewer prints it. */
 export const billPdfHref = (id: string) => `/api/v1/invoices/${id}/pdf`;
 
@@ -253,6 +287,24 @@ export const STATUS_TONE: Record<InvoiceStatus, string> = {
   paid: "var(--color-state-completed)",
   refunded: "var(--color-state-cancelled)",
   void: "var(--color-state-cancelled)",
+};
+
+/** For the badge beside the heading, where there is room for one word. */
+export const LINK_WORDS: Record<LinkStatus, string> = {
+  open: "Waiting",
+  paid: "Paid",
+  // Either the desk called it off, or the bill stopped owing anything and
+  // the link closed itself. "Closed" covers both without claiming which.
+  cancelled: "Closed",
+  expired: "Expired",
+};
+
+/** For a sentence, where "was expired" would read like nobody wrote it. */
+export const LINK_SAID: Record<LinkStatus, string> = {
+  open: "is waiting to be paid",
+  paid: "was paid",
+  cancelled: "was closed",
+  expired: "expired",
 };
 
 export const METHOD_WORDS: Record<Method, string> = {

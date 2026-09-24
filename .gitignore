@@ -9,6 +9,7 @@ yarn-error.log*
 .pnpm-debug.log*
 # Where the API's output goes when the browser suite runs against it.
 backend/api.log
+backend/api.err.log
 
 # Next.js
 .next/

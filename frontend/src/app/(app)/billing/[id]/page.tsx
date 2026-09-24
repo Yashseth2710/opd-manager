@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { BillEditor } from "@/components/billing/editor";
 import { GiveBack, TakePayment, VoidBill } from "@/components/billing/money";
+import { PayOnline } from "@/components/billing/online";
 import { ACCENT_BUTTON, Amount, BillStatus, QUIET_BUTTON } from "@/components/billing/parts";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -182,6 +183,7 @@ function IssuedBill({ bill }: { bill: Invoice }) {
               <TakePayment key={bill.balance} bill={bill} />
             </div>
           )}
+          <PayOnline bill={bill} />
           {settled && (
             <div className="flex items-start gap-3 rounded-[var(--radius-panel)] bg-[color-mix(in_srgb,var(--color-state-completed)_10%,transparent)] px-4 py-4">
               <CircleCheck
@@ -401,7 +403,12 @@ function Paper({ bill }: { bill: Invoice }) {
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-4"
                 >
                   <span className="min-w-0">
-                    {back ? "Given back" : "Received"}, {METHOD_WORDS[payment.method]}
+                    {back
+                      ? "Given back"
+                      : payment.channel === "online"
+                        ? "Paid online"
+                        : "Received"}
+                    , {METHOD_WORDS[payment.method]}
                     {payment.reference && (
                       <span className="font-mono text-[13px] text-[var(--text-muted)]">
                         {" "}

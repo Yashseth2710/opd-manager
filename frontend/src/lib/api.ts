@@ -58,7 +58,15 @@ export function refreshOnce(): Promise<boolean> {
   return refreshing;
 }
 
-const NEVER_RETRIED = ["/auth/login", "/auth/refresh", "/auth/logout", "/auth/register"];
+// The auth endpoints answer 401 as their normal refusal, and /pay is opened
+// by a patient who has no session to refresh in the first place.
+const NEVER_RETRIED = [
+  "/auth/login",
+  "/auth/refresh",
+  "/auth/logout",
+  "/auth/register",
+  "/pay/",
+];
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
