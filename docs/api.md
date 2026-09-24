@@ -260,11 +260,8 @@ paying        GET    /pay/{token}
               POST   /pay/{token}/confirm
               POST   /pay/webhook/razorpay
 
-reports       GET    /reports/revenue
-              GET    /reports/patients
-              GET    /reports/appointments
-              GET    /reports/doctors
-              GET    /reports/{name}/export
+reports       GET    /reports/summary
+              GET    /reports/day-book.csv
 
 misc          GET    /search?q=
               GET    /notifications
@@ -343,6 +340,12 @@ Lab work is part of the patient's record, so anyone holding `lab:read` reads eve
 `POST /invoices/{id}/payments` takes part of what is owed or all of it, and issues a draft first if it has to. More than the balance is `422 BILLING_PAYMENT_EXCEEDS_BALANCE`, with the balance in the sentence; a paid bill is `409 BILLING_ALREADY_PAID`. `POST /invoices/{id}/refunds` gives money back with a reason, never more than was taken, and only the clinic admin makes it. After a refund the bill takes no more payments, `409 BILLING_REFUNDED`.
 
 `GET /invoices/summary` is the day's takings at the clinic by how they were paid, net of refunds, with the bills issued that day and what is still owed across every day. `GET /invoices/unbilled` lists patients seen that day with no live bill. `GET /invoices/{id}/pdf` is the bill as printed, which doubles as the receipt; a draft has none. Doctors and the staff role have no part in billing, and the queue leaves a visit's bill off for anyone who cannot read bills.
+
+`GET /reports/summary` is the same figures over a stretch of days rather than one. `range` takes `today`, `week`, `month`, `this_month`, `last_month`, or `custom` with `from` and `to`; days are the clinic's own, not the server's, and a stretch longer than a year is `422` on `to`. It answers with the days one by one, including the ones nothing happened on, the takings by method, each doctor's line, the hours people arrive at, the tests ordered most, and what the bills were for. `before` is the stretch of the same length immediately before, so a figure can be read against something. `outstanding` deliberately ignores the dates: money owed since March is still owed in September.
+
+The day's takings on the billing page and the figures here are worked out by one function, so a Tuesday read from either place reports the same numbers. `GET /reports/day-book.csv` is the payments behind them, one to a line, as a file for a spreadsheet: a cell that begins with `=`, `+`, `-` or `@` is written with a leading apostrophe, because a patient called `=cmd` is a patient and not a formula.
+
+Reports need `reports:read`, which the clinic admin and doctors hold and the desk does not. A doctor's report is their own work — their patients, the bills raised against them, the tests they ordered — narrowed the same way their day and their queue are, and an account with no profile linked reads as `unlinked` with nothing in it.
 
 A caller with the doctor role sees only the appointments of the doctor profile linked to their account. Anything else reads as 404, a booking into another doctor's list is refused on `doctor_id`, and an account with no profile linked sees an empty day with `unlinked: true`. The queue is narrowed the same way, and checking patients in is left to the desk. `GET /consultations` is too: a doctor's list is their own notes whatever filter they send.
 

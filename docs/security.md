@@ -157,6 +157,14 @@ The patient paying a bill has no account, so the link is the credential.
 - Card details never reach this application or the clinic. The checkout collects them on Razorpay's own page; what comes back is an identifier.
 - Keys are split the way they are meant to be: the key id is public and goes to the browser, the secret and the webhook secret stay on the server and are never returned by any endpoint.
 
+## Reports and the day book
+
+Reports read across bills, visits and lab orders at once, which means the queries reach several tables rather than one. They do not go through the tenant-scoped repository base that makes forgetting the organisation impossible, so every query in `repositories/reports.py` filters on it by hand and the tests check that a second clinic's figures come back at nil. A doctor's report is narrowed to the doctor profile linked to their account, the same narrowing the day's queue uses; an account with no profile gets an empty report rather than the clinic's.
+
+The day book is a CSV, and a CSV is a program as far as Excel and Sheets are concerned. A cell beginning with `=`, `+`, `-` or `@` is written with a leading apostrophe, so a patient registered as `=cmd|'/c calc'!A0` opens as text. The file is sent as an attachment with `Cache-Control: private, no-store`, and it carries only the clinic's own payments — names, bill numbers and amounts, no clinical detail.
+
+The stretch asked for is capped at a year. Left open, a request for a decade would be a cheap way to make the database do expensive work from a single session.
+
 ## Rate limiting
 
 Redis-backed, since serverless instances share nothing in memory.

@@ -23,7 +23,7 @@ Registration → Appointment → Check-in → Queue → Consultation
 
 ## Stack
 
-**Frontend** — Next.js, TypeScript, Tailwind, shadcn/ui, TanStack Query & Table, React Hook Form, Zod, Recharts
+**Frontend** — Next.js, TypeScript, Tailwind, TanStack Query, Zod, Playwright
 
 **Backend** — FastAPI, Pydantic, SQLAlchemy 2.x, Alembic
 
