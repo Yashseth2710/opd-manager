@@ -126,7 +126,7 @@ export function Leaves({
               name="starts_on"
               type="date"
               value={draft.starts_on}
-              onChange={(value) => setDraft({ ...draft, starts_on: value })}
+              onChange={(value) => setDraft((was) => ({ ...was, starts_on: value }))}
               error={fields.starts_on}
             />
             <Box
@@ -134,7 +134,7 @@ export function Leaves({
               name="ends_on"
               type="date"
               value={draft.ends_on}
-              onChange={(value) => setDraft({ ...draft, ends_on: value })}
+              onChange={(value) => setDraft((was) => ({ ...was, ends_on: value }))}
               error={fields.ends_on}
               hint="Leave empty for a single day."
             />
@@ -143,7 +143,7 @@ export function Leaves({
               name="start_time"
               type="time"
               value={draft.start_time}
-              onChange={(value) => setDraft({ ...draft, start_time: value })}
+              onChange={(value) => setDraft((was) => ({ ...was, start_time: value }))}
               error={fields.start_time}
               hint="Both times empty means whole days."
             />
@@ -152,7 +152,7 @@ export function Leaves({
               name="end_time"
               type="time"
               value={draft.end_time}
-              onChange={(value) => setDraft({ ...draft, end_time: value })}
+              onChange={(value) => setDraft((was) => ({ ...was, end_time: value }))}
               error={fields.end_time}
             />
           </div>
@@ -162,7 +162,7 @@ export function Leaves({
               label="Reason"
               name="reason"
               value={draft.reason}
-              onChange={(value) => setDraft({ ...draft, reason: value })}
+              onChange={(value) => setDraft((was) => ({ ...was, reason: value }))}
               error={fields.reason}
               placeholder="Conference, family wedding"
             />
