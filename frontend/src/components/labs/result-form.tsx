@@ -5,7 +5,6 @@ import { Info, Loader2, Plus, X } from "lucide-react";
 import { useId, useState } from "react";
 import { Judged } from "@/components/labs/parts";
 import { ApiFailure } from "@/lib/api";
-import { todayISO } from "@/lib/doctors";
 import {
   judge,
   MAX_VALUES,
@@ -14,7 +13,6 @@ import {
   type LabResult,
   type ResultValue,
 } from "@/lib/labs";
-import { localDay } from "@/lib/prescriptions";
 
 type Line = {
   key: string;
@@ -100,7 +98,7 @@ export function ResultForm({
 }) {
   const id = useId();
   const [lines, setLines] = useState<Line[]>(() => linesOf(order));
-  const [reportedOn, setReportedOn] = useState(order.reported_on ?? todayISO());
+  const [reportedOn, setReportedOn] = useState(order.reported_on ?? order.clinic_today);
   const [labName, setLabName] = useState(order.lab_name ?? "");
   const [findings, setFindings] = useState(order.findings ?? "");
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -108,8 +106,8 @@ export function ResultForm({
   // The line just added, which takes the cursor.
   const [added, setAdded] = useState<string | null>(null);
 
-  const earliest = localDay(order.ordered_at);
-  const today = todayISO();
+  const earliest = order.ordered_on;
+  const today = order.clinic_today;
   // A listed test with no values, such as a scan or an ECG, is only words.
   // One the doctor typed in may be either, so it gets both.
   const wordsOnly =

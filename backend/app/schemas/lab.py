@@ -130,6 +130,8 @@ class LabOrderOut(LabOrderListed):
     # or their sex is not recorded, and the lab's own will be on the report.
     ranges_left_out: bool
     visit_date: dt.date
+    ordered_on: dt.date
+    clinic_today: dt.date
     visit_open: bool
     can_enter: bool
     can_review: bool

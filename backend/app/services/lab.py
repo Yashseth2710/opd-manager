@@ -555,6 +555,11 @@ async def detail(
         "template": template,
         "ranges_left_out": left_out,
         "visit_date": found.visit.started_at.astimezone(clinic_zone(clinic)).date(),
+        # The clinic's days, not the browser's, bound the date a report can
+        # carry. A device on a different day would otherwise offer a default
+        # the server then refuses.
+        "ordered_on": _ordered_on(order, clinic),
+        "clinic_today": today,
         "visit_open": found.visit.is_draft,
         "can_enter": may_update and covered and _why_not_enterable(order) is None,
         "can_review": may_create and _is_orderer(reach, order) and order.status == lab.RESULTED,

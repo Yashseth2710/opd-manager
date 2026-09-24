@@ -68,6 +68,8 @@ export type LabOrder = LabOrderListed & {
   template: Omit<ResultValue, "value">[];
   ranges_left_out: boolean;
   visit_date: string;
+  ordered_on: string;
+  clinic_today: string;
   visit_open: boolean;
   can_enter: boolean;
   can_review: boolean;
