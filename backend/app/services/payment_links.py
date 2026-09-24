@@ -25,9 +25,9 @@ from typing import Any
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import email as mail
 from app.core import razorpay
 from app.core.config import get_settings
-from app.core.email import Message, payment_link_message, send
 from app.core.exceptions import AppError, NotFound, ValidationFailed
 from app.core.security import hash_token, new_opaque_token
 from app.models import Invoice, Organization, Payment, PaymentLink, User, billing
@@ -195,7 +195,7 @@ def when_words(moment: dt.datetime) -> str:
 async def _email(
     link: PaymentLink, clinic: Organization, found: Billed, url: str, to: str
 ) -> bool:
-    message: Message = payment_link_message(
+    message = mail.payment_link_message(
         to=to,
         name=found.patient.first_name,
         clinic=clinic.name,
@@ -204,7 +204,7 @@ async def _email(
         until=when_words(link.expires_at.astimezone(clinic_zone(clinic))),
         url=url,
     )
-    delivery = await send(message)
+    delivery = await mail.send(message)
     return delivery.sent
 
 

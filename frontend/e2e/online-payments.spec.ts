@@ -136,7 +136,7 @@ test("a patient pays from their phone and the bill settles itself", async ({
 
   // And at the desk, without anybody there touching anything.
   await page.reload();
-  await expect(page.getByText("Paid", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Paid");
   await expect(page.getByRole("article")).toContainText("Paid online, UPI");
   await expect(page.getByRole("region", { name: "Pay from a phone" })).toContainText(
     "paid online",
@@ -176,7 +176,7 @@ test("the gateway's own word settles a bill nobody came back to", async ({
   expect(told.ok(), await told.text()).toBeTruthy();
 
   await page.reload();
-  await expect(page.getByText("Paid", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Paid");
   await expect(page.getByRole("article")).toContainText("Paid online, Card");
 });
 
