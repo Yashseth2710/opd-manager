@@ -23,6 +23,7 @@ import { usePathname } from "next/navigation";
 import { SessionEnded } from "@/components/auth/session-ended";
 import { SignOutButton } from "@/components/auth/sign-out";
 import { Bell } from "@/components/notifications/bell";
+import { FinderProvider, SearchTrigger } from "@/components/search/finder";
 import { currentSession, type Session } from "@/lib/auth";
 
 /**
@@ -88,44 +89,62 @@ export function Shell({ children }: { children: React.ReactNode }) {
     (item) => !item.permission || data.permissions.includes(item.permission),
   );
 
+  const pages = [
+    ...allowed.flatMap((item) => (item.href ? [{ label: item.label, href: item.href }] : [])),
+    { label: "Notifications", href: "/notifications" },
+  ];
+
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[15rem_1fr]">
-      <nav className="flex flex-col gap-1 bg-[var(--rail)] px-3 py-4 text-[var(--rail-text)] lg:min-h-screen lg:px-4 lg:py-6">
-        <div className="flex min-w-0 items-center justify-between gap-2">
-          <ClinicMark session={data} />
-          <div className="flex shrink-0 items-center gap-1">
-            {data.organization && <Bell />}
-            {/* The rail's footer is desktop only, so a phone needs its own. */}
-            <div className="lg:hidden">
-              <SignOutButton subdued compact />
+    <FinderProvider session={data} pages={pages}>
+      <div className="min-h-screen lg:grid lg:grid-cols-[15rem_1fr]">
+        <nav className="flex flex-col gap-1 bg-[var(--rail)] px-3 py-4 text-[var(--rail-text)] lg:min-h-screen lg:px-4 lg:py-6">
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <ClinicMark session={data} />
+            <div className="flex shrink-0 items-center gap-1">
+              {data.organization && (
+                <div className="lg:hidden">
+                  <SearchTrigger compact />
+                </div>
+              )}
+              {data.organization && <Bell />}
+              {/* The rail's footer is desktop only, so a phone needs its own. */}
+              <div className="lg:hidden">
+                <SignOutButton subdued compact />
+              </div>
             </div>
           </div>
-        </div>
 
-        <ul className="mt-6 flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
-          {allowed.map((item) => (
-            <li key={item.label}>
-              <RailLink
-                item={item}
-                active={Boolean(item.href) && pathname.startsWith(item.href!)}
-              />
-            </li>
-          ))}
-        </ul>
+          {data.organization && (
+            <div className="mt-5 hidden lg:block">
+              <SearchTrigger />
+            </div>
+          )}
 
-        <div className="mt-auto hidden pt-6 lg:block">
-          <p className="mb-3 px-2.5 text-[13px] leading-snug">
-            {data.user.first_name} {data.user.last_name}
-            <span className="mt-0.5 block text-[12px] text-[var(--color-ink-300)] capitalize">
-              {data.role.replace("-", " ")}
-            </span>
-          </p>
-          <SignOutButton subdued />
-        </div>
-      </nav>
+          <ul className="mt-6 flex gap-1 overflow-x-auto lg:mt-4 lg:flex-col lg:overflow-visible">
+            {allowed.map((item) => (
+              <li key={item.label}>
+                <RailLink
+                  item={item}
+                  active={Boolean(item.href) && pathname.startsWith(item.href!)}
+                />
+              </li>
+            ))}
+          </ul>
 
-      <main className="min-w-0">{children}</main>
-    </div>
+          <div className="mt-auto hidden pt-6 lg:block">
+            <p className="mb-3 px-2.5 text-[13px] leading-snug">
+              {data.user.first_name} {data.user.last_name}
+              <span className="mt-0.5 block text-[12px] text-[var(--color-ink-300)] capitalize">
+                {data.role.replace("-", " ")}
+              </span>
+            </p>
+            <SignOutButton subdued />
+          </div>
+        </nav>
+
+        <main className="min-w-0">{children}</main>
+      </div>
+    </FinderProvider>
   );
 }
 

@@ -5,6 +5,7 @@ import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "@/lib/auth";
+import { forgetEveryone } from "@/lib/search";
 
 export function SignOutButton({
   subdued,
@@ -25,6 +26,7 @@ export function SignOutButton({
     } finally {
       // Whatever the server said, this browser is done with the session.
       queries.clear();
+      forgetEveryone();
       router.replace("/login");
     }
   }

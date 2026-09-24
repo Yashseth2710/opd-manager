@@ -293,6 +293,38 @@
   animation: notice-panel 160ms var(--ease-out-quint);
 }
 
+@keyframes finder-veil {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes finder-panel {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.99);
+  }
+}
+
+.finder-veil {
+  animation: finder-veil 140ms ease-out;
+}
+
+.finder-panel {
+  animation: finder-panel 180ms var(--ease-out-quint);
+}
+
+/* A row somebody was sent to, lit for a moment so the eye finds it. */
+@keyframes arrived {
+  from {
+    background-color: var(--accent-wash);
+  }
+}
+
+.arrived {
+  animation: arrived 2.4s ease-in 400ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

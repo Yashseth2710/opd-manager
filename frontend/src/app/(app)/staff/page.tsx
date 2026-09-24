@@ -2,7 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, MailCheck, UserPlus, X } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Field, Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
@@ -24,7 +25,9 @@ import {
 export default function StaffPage() {
   return (
     <Permitted permission="staff:manage">
-      <StaffScreen />
+      <Suspense>
+        <StaffScreen />
+      </Suspense>
     </Permitted>
   );
 }
@@ -40,6 +43,15 @@ function StaffScreen() {
     retry: false,
   });
   const roles = useQuery({ queryKey: ["roles"], queryFn: getRoles, retry: false });
+
+  // Somebody picked from the search box arrives as ?member=, and is brought
+  // into view once the list is there to scroll to.
+  const arrived = useSearchParams().get("member");
+  const loaded = Boolean(staff.data);
+  useEffect(() => {
+    if (!arrived || !loaded) return;
+    document.getElementById(`member-${arrived}`)?.scrollIntoView({ block: "center" });
+  }, [arrived, loaded]);
 
   // Awaited by whoever calls it. Both lists below are drawn from these
   // queries, so a suspended member goes on looking active, and a sent
@@ -90,6 +102,7 @@ function StaffScreen() {
           <MemberRow
             key={member.id}
             member={member}
+            arrived={member.id === arrived}
             roles={roles.data ?? []}
             onChanged={refresh}
           />
@@ -115,10 +128,12 @@ function StaffScreen() {
 
 function MemberRow({
   member,
+  arrived,
   roles,
   onChanged,
 }: {
   member: StaffMember;
+  arrived: boolean;
   roles: Role[];
   onChanged: () => Promise<unknown>;
 }) {
@@ -147,7 +162,12 @@ function MemberRow({
   });
 
   return (
-    <li className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+    <li
+      id={`member-${member.id}`}
+      className={`flex flex-col gap-3 px-5 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 ${
+        arrived ? "arrived" : ""
+      }`}
+    >
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-2 text-[15px] font-medium">
           <span className="truncate">
