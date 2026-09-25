@@ -5,7 +5,7 @@ import { Search, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Page } from "@/components/layout/shell";
 import { Empty, Failed, Loading, StatusBadge } from "@/components/platform/parts";
 import { sinceThen } from "@/lib/notifications";
@@ -72,9 +72,15 @@ function Clinics() {
     setTyped(query);
   }
 
+  // Set the moment somebody opens a row. A search still waiting to be
+  // applied would otherwise land while the next page loads and put them
+  // back on the list they had just left.
+  const leaving = useRef(false);
+
   useEffect(() => {
     if (typed === query) return;
     const timer = setTimeout(() => {
+      if (leaving.current) return;
       const next = new URLSearchParams(params);
       if (typed.trim()) next.set("q", typed.trim());
       else next.delete("q");
@@ -254,7 +260,18 @@ function Clinics() {
               <span>Last sign-in</span>
               <span>Status</span>
             </div>
-            <ul className="divide-y divide-[var(--border)]">
+            <ul
+              className="divide-y divide-[var(--border)]"
+              onClickCapture={(event) => {
+                const plain =
+                  event.button === 0 &&
+                  !event.metaKey &&
+                  !event.ctrlKey &&
+                  !event.shiftKey &&
+                  !event.altKey;
+                if (plain) leaving.current = true;
+              }}
+            >
               {clinics.data.items.map((clinic) => (
                 <Row key={clinic.id} clinic={clinic} />
               ))}

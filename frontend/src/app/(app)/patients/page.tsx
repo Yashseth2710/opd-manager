@@ -5,7 +5,7 @@ import { Loader2, Search, TriangleAlert, UserPlus, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
 import { currentSession } from "@/lib/auth";
@@ -76,9 +76,15 @@ function Register() {
     setTyped(query);
   }
 
+  // Set the moment somebody opens a row. A search still waiting to be
+  // applied would otherwise land while the next page loads and put them
+  // back on the list they had just left.
+  const leaving = useRef(false);
+
   useEffect(() => {
     if (typed === query) return;
     const timer = setTimeout(() => {
+      if (leaving.current) return;
       const next = new URLSearchParams(params);
       if (typed.trim()) next.set("q", typed.trim());
       else next.delete("q");
@@ -214,7 +220,18 @@ function Register() {
         )
       ) : (
         <>
-          <ul className="divide-y divide-[var(--border)] overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--surface)]">
+          <ul
+            className="divide-y divide-[var(--border)] overflow-hidden rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--surface)]"
+            onClickCapture={(event) => {
+              const plain =
+                event.button === 0 &&
+                !event.metaKey &&
+                !event.ctrlKey &&
+                !event.shiftKey &&
+                !event.altKey;
+              if (plain) leaving.current = true;
+            }}
+          >
             {patients.data.items.map((patient) => (
               <PatientRow key={patient.id} patient={patient} />
             ))}
