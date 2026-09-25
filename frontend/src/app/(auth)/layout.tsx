@@ -1,4 +1,5 @@
 import { Wordmark } from "@/components/brand/mark";
+import { ThemeMenu } from "@/components/layout/theme-switch";
 
 /**
  * A reception counter rather than a floating card: the clinic's side on the
@@ -9,7 +10,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[minmax(0,26rem)_1fr]">
       <aside className="flex flex-col justify-between border-b border-[var(--border)] bg-[var(--rail)] px-6 py-6 text-[var(--rail-text)] lg:border-r lg:border-b-0 lg:px-10 lg:py-12">
-        <Wordmark />
+        <div className="flex items-center justify-between gap-3">
+          <Wordmark />
+          <ThemeMenu />
+        </div>
 
         <div className="hidden lg:block">
           <p className="max-w-[24ch] text-[28px] leading-[1.25] font-semibold tracking-tight text-white">

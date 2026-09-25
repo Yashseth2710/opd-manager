@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/*
+  Dark follows the choice made in the app when there is one, and the device
+  when there is not, the same rule the colour tokens below follow.
+*/
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -312,6 +327,11 @@
 
 .finder-panel {
   animation: finder-panel 180ms var(--ease-out-quint);
+}
+
+.theme-menu {
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+  animation: notice-panel 140ms var(--ease-out-quint);
 }
 
 /* A row somebody was sent to, lit for a moment so the eye finds it. */
