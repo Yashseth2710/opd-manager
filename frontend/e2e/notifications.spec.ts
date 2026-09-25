@@ -2,6 +2,41 @@ import { addPatient, expect, nextWeekday, test } from "./fixtures";
 import { DOCTOR_STATE, SHARED_STATE } from "./state";
 import { asTheDesk, profile } from "./visits";
 
+type Desk = Awaited<ReturnType<typeof asTheDesk>>;
+
+/** Has the desk book somebody in with the doctor, which tells the doctor. */
+async function bookWithTheDoctor(desk: Desk, lastName: string, reason: string) {
+  const made = await desk.post("/api/v1/patients", {
+    data: {
+      first_name: "Tara",
+      last_name: lastName,
+      phone: `9${Date.now()}`.slice(0, 10),
+      gender: "female",
+      date_of_birth: "1990-05-06",
+      confirm_duplicate: true,
+    },
+  });
+  expect(made.ok(), await made.text()).toBeTruthy();
+  const patient = (await made.json()).data;
+
+  // Other tests book the same doctor, so take whichever time is still free.
+  const day = nextWeekday(4);
+  const free = (
+    await (await desk.get(`/api/v1/doctors/${profile().id}/availability?date=${day}`)).json()
+  ).data.slots.find((slot: { state: string }) => slot.state === "free");
+  const booked = await desk.post("/api/v1/appointments", {
+    data: {
+      patient_id: patient.id,
+      doctor_id: profile().id,
+      date: day,
+      start_time: free.start_time.slice(0, 5),
+      reason,
+    },
+  });
+  expect(booked.ok(), await booked.text()).toBeTruthy();
+  return (await booked.json()).data;
+}
+
 /** What reaches whom, seen from the bell and the page behind it. */
 test.describe("the doctor hears", () => {
   test.use({ storageState: DOCTOR_STATE });
@@ -13,35 +48,7 @@ test.describe("the doctor hears", () => {
     tag,
   }) => {
     const desk = await asTheDesk(playwright, baseURL);
-    const made = await desk.post("/api/v1/patients", {
-      data: {
-        first_name: "Tara",
-        last_name: `Bell${tag}`,
-        phone: `9${Date.now()}`.slice(0, 10),
-        gender: "female",
-        date_of_birth: "1990-05-06",
-        confirm_duplicate: true,
-      },
-    });
-    expect(made.ok(), await made.text()).toBeTruthy();
-    const patient = (await made.json()).data;
-
-    // Other tests book the same doctor, so take whichever time is still free.
-    const day = nextWeekday(4);
-    const free = (
-      await (await desk.get(`/api/v1/doctors/${profile().id}/availability?date=${day}`)).json()
-    ).data.slots.find((slot: { state: string }) => slot.state === "free");
-    const booked = await desk.post("/api/v1/appointments", {
-      data: {
-        patient_id: patient.id,
-        doctor_id: profile().id,
-        date: day,
-        start_time: free.start_time.slice(0, 5),
-        reason: `Knee pain ${tag}`,
-      },
-    });
-    expect(booked.ok(), await booked.text()).toBeTruthy();
-    const appointment = (await booked.json()).data;
+    const appointment = await bookWithTheDoctor(desk, `Bell${tag}`, `Knee pain ${tag}`);
 
     await page.goto("/dashboard");
     await page.getByRole("button", { name: /^Notifications, \d+ unread$/ }).click();
@@ -76,7 +83,14 @@ test.describe("the doctor hears", () => {
 
   test("the full list, all marked read, and the choices a doctor is offered", async ({
     page,
+    playwright,
+    baseURL,
+    tag,
   }) => {
+    const desk = await asTheDesk(playwright, baseURL);
+    await bookWithTheDoctor(desk, `Read${tag}`, `Follow-up ${tag}`);
+    await desk.dispose();
+
     await page.goto("/notifications");
     await expect(page.getByRole("heading", { level: 1 })).toHaveText("Notifications");
 
@@ -86,8 +100,23 @@ test.describe("the doctor hears", () => {
     // Money that comes in online is for whoever reads bills, not a doctor.
     await expect(email.getByRole("switch", { name: /Online payments/ })).toHaveCount(0);
 
-    const markAll = page.getByRole("button", { name: "Mark all read" });
-    if (await markAll.isVisible()) await markAll.click();
+    // Opening unread while the change is still on its way reads the list from
+    // before it. That answer arriving after the change has landed used to be
+    // the one kept, so the page went on showing everything as unread.
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    await page.route("**/api/v1/notifications/read-all", async (route) => {
+      await wait(1000);
+      await route.continue();
+    });
+    let first = true;
+    await page.route("**/api/v1/notifications?show=unread*", async (route) => {
+      if (!first) return route.continue();
+      first = false;
+      const before = await route.fetch();
+      await wait(4000);
+      await route.fulfill({ response: before });
+    });
+    await page.getByRole("button", { name: "Mark all read" }).click();
     await page.getByRole("tab", { name: /Unread/ }).click();
     await expect(page.getByText("You are all caught up")).toBeVisible();
     await expect(

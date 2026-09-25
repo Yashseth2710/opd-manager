@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import {
   markRead,
+  refreshNotices,
   sinceThen,
   TONE,
   type Notice,
@@ -57,7 +58,7 @@ export function useMarkRead() {
         },
       );
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notices"] }),
+    onSettled: () => refreshNotices(queryClient),
   });
 }
 

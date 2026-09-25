@@ -12,6 +12,7 @@ import {
   getPreferences,
   listNotices,
   markAllRead,
+  refreshNotices,
   type Preference,
   type Preferences,
 } from "@/lib/notifications";
@@ -33,7 +34,7 @@ export default function NotificationsPage() {
 
   const allRead = useMutation({
     mutationFn: markAllRead,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notices"] }),
+    onSettled: () => refreshNotices(queryClient),
   });
 
   const items = notices.data?.pages.flatMap((page) => page.items) ?? [];

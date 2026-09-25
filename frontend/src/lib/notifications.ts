@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { request } from "@/lib/api";
 
 export type NoticeKind =
@@ -46,6 +47,18 @@ export const markRead = (id: string) =>
 
 export const markAllRead = () =>
   request<{ unread: number }>("/notifications/read-all", { method: "POST" });
+
+/**
+ * Asks for every list again once something was marked read.
+ *
+ * A list first opened while the change was still on its way is read before
+ * it lands, and a plain refresh hands that same answer back rather than
+ * asking again. So whatever is still on its way is dropped first.
+ */
+export async function refreshNotices(queries: QueryClient) {
+  await queries.cancelQueries({ queryKey: ["notices"] });
+  await queries.invalidateQueries({ queryKey: ["notices"] });
+}
 
 export const getPreferences = () => request<Preferences>("/notifications/preferences");
 

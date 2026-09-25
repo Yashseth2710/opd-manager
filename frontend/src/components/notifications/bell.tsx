@@ -6,7 +6,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 import { NoticeRow } from "@/components/notifications/parts";
-import { countUnread, listNotices, markAllRead } from "@/lib/notifications";
+import { countUnread, listNotices, markAllRead, refreshNotices } from "@/lib/notifications";
 
 const SHOWN = 6;
 
@@ -43,7 +43,7 @@ export function Bell() {
 
   const allRead = useMutation({
     mutationFn: markAllRead,
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ["notices"] }),
+    onSettled: () => refreshNotices(queryClient),
   });
 
   // One swing when something new arrives, never on the first count.
