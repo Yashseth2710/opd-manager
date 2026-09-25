@@ -119,7 +119,7 @@ E2E_API_LOG=../backend/api.log RAZORPAY_KEY_SECRET=local-secret \
 
 ## Status
 
-Early development. Architecture and conventions are documented in [`docs/`](docs/); implementation follows the build order described there.
+Running at [opdmanager.vercel.app](https://opdmanager.vercel.app), as a single Vercel project: the web app and the API are two services of it, with everything under `/api` sent to the API. Online payments are still on Razorpay's test keys. Architecture and conventions are documented in [`docs/`](docs/).
 
 ## Credits
 
