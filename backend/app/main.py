@@ -45,6 +45,16 @@ _PASSTHROUGH = ("/docs", "/openapi.json")
 _SLOW_SECONDS = 5.0
 
 
+def _request_id(request: Request) -> str:
+    """One id per request, made once and shared by everything that answers
+    it, so what somebody reads off their screen finds the line in the log."""
+    found = getattr(request.state, "request_id", None)
+    if found is None:
+        found = str(uuid.uuid4())
+        request.state.request_id = found
+    return str(found)
+
+
 def _error(status: int, code: str, message: str, **extra: Any) -> JSONResponse:
     return JSONResponse(
         status_code=status,
@@ -58,7 +68,7 @@ async def envelope(
 ) -> Response:
     """Tag every response with a request id, and wrap successful JSON bodies
     as {"success": true, "data": ...} so the client parses one shape."""
-    request_id = str(uuid.uuid4())
+    request_id = _request_id(request)
     started = time.perf_counter()
     response = await call_next(request)
     response.headers["X-Request-Id"] = request_id
@@ -116,6 +126,66 @@ async def envelope(
     return rebuilt
 
 
+_CHANGES = {"POST", "PUT", "PATCH", "DELETE"}
+
+# Called by Razorpay's servers, which send no Origin and are proven by the
+# signature on the body instead.
+_ORIGINLESS = ("/api/v1/pay/webhook/razorpay",)
+
+_HARDENING = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+}
+
+
+@app.middleware("http")
+async def guard(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
+    """Refuses a change sent from another site's page, and sets the headers
+    every answer carries.
+
+    A browser always says where a request came from when it sends one that
+    changes something. Session cookies are SameSite=Lax, which already keeps
+    them off another site's form posts; this closes the rest, including a
+    sibling subdomain that Lax would count as the same site. A request with
+    no Origin at all is not from a browser page, and has to carry a session
+    or a signature on its own merits.
+    """
+    origin = request.headers.get("origin")
+    if (
+        origin is not None
+        and request.method in _CHANGES
+        and not request.url.path.startswith(_ORIGINLESS)
+        and origin.lower() not in settings.origins
+    ):
+        logger.warning("refused a %s from origin %s", request.method, origin[:100])
+        response: Response = _error(
+            403,
+            "ORIGIN_REFUSED",
+            "That request came from a page this application does not trust.",
+        )
+    else:
+        response = await call_next(request)
+
+    for header, value in _HARDENING.items():
+        response.headers.setdefault(header, value)
+    if settings.environment in {"preview", "production"}:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+        )
+    # Records of real people should not sit in a shared machine's cache, or
+    # in anything between the clinic and the API.
+    response.headers.setdefault("Cache-Control", "no-store")
+    if response.headers.get("content-type", "").startswith("application/json"):
+        response.headers.setdefault(
+            "Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'"
+        )
+    return response
+
+
 @app.exception_handler(AppError)
 async def handle_app_error(_: Request, exc: AppError) -> JSONResponse:
     extra: dict[str, Any] = {}
@@ -167,8 +237,18 @@ async def handle_http_error(_: Request, exc: StarletteHTTPException) -> JSONResp
 
 @app.exception_handler(Exception)
 async def handle_unexpected(request: Request, exc: Exception) -> JSONResponse:
-    logger.exception("unhandled error on %s %s", request.method, request.url.path)
-    return _error(500, "INTERNAL_ERROR", "Something went wrong on our side.")
+    request_id = _request_id(request)
+    logger.exception(
+        "unhandled error on %s %s, request %s", request.method, request.url.path, request_id
+    )
+    response = _error(
+        500,
+        "INTERNAL_ERROR",
+        "Something went wrong on our side.",
+        request_id=request_id,
+    )
+    response.headers["X-Request-Id"] = request_id
+    return response
 
 
 app.include_router(v1)

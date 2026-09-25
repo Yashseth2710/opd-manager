@@ -59,8 +59,11 @@ class Settings(BaseSettings):
     upstash_redis_rest_url: str = Field(default="")
     upstash_redis_rest_token: str = Field(default="")
 
-    # Where the links in outgoing email point.
+    # Where the links in outgoing email point, and the one origin a browser
+    # may send a change from. Others can be added, comma separated, for a
+    # deployment reached under more than one address.
     app_url: str = "http://localhost:3000"
+    trusted_origins: str = Field(default="")
 
     # Brevo verifies a single sender address rather than a whole domain, so
     # mail reaches any recipient without owning one. Resend needs a verified
@@ -104,6 +107,16 @@ class Settings(BaseSettings):
         if self.blob_read_write_token:
             return "blob"
         return "local" if self.environment == "development" else "none"
+
+    @property
+    def origins(self) -> frozenset[str]:
+        """Scheme, host and port only, the way a browser writes Origin."""
+        found = set()
+        for url in [self.app_url, *self.trusted_origins.split(",")]:
+            parts = urlsplit(url.strip())
+            if parts.scheme and parts.netloc:
+                found.add(f"{parts.scheme}://{parts.netloc}".lower())
+        return frozenset(found)
 
     @property
     def email_configured(self) -> bool:
