@@ -71,6 +71,19 @@ webhook itself, pointed at `/api/v1/pay/webhook/razorpay` and subscribed to
 the patient's own browser still reports the payment and the bill still settles;
 the webhook is what covers a patient who pays and closes the tab.
 
+### Platform administration
+
+Clinics register themselves, but a platform administrator can only be made
+from the server. The account belongs to no clinic and cannot open any clinic's
+records; it signs in at the same page and lands on `/admin`.
+
+```
+cd backend && python -m app.platform_admin --email you@example.org --first Asha --last Rao
+```
+
+The password is asked for twice, or read from `PLATFORM_ADMIN_PASSWORD` where
+nobody is there to type it.
+
 ### Tests
 
 The API suite drops every table it touches, so it refuses to run unless
@@ -84,7 +97,9 @@ The browser suite drives the running application, so it needs both halves up
 and an API with no email provider configured — it sets up its own clinics, and
 a confirmation step it cannot read would stop it at the first screen. It also
 invites a doctor to one of them and follows the link the API writes to its
-log, so the API's output has to go to a file the suite is told about.
+log, so the API's output has to go to a file the suite is told about. It makes
+its own platform administrator with the command above, run from `backend/`
+with `python` (or whatever `E2E_PYTHON` names), against the same database.
 
 The online payment tests drive the real order call, both signature checks and
 the webhook, but not Razorpay's own checkout window, which belongs to somebody

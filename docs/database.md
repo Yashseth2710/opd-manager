@@ -53,7 +53,6 @@ organizations ──┬── users ──── user_roles ──── roles �
                 ├── audit_logs
                 ├── tenant_counters
                 └── organization_subscriptions ──── subscription_plans
-                                                 └── usage_records
 ```
 
 `subscription_plans`, `permissions` and `diagnoses` are platform-level — shared across clinics and carrying no `organization_id`.
@@ -407,11 +406,13 @@ INDEX (organization_id, created_at DESC)
 INDEX (organization_id, resource_type, resource_id)
 ```
 
-### subscription_plans, organization_subscriptions, usage_records
+### subscription_plans, organization_subscriptions
 
-Plans carry limits as JSONB — `max_doctors`, `max_staff`, `max_patients`, `max_appointments_per_month`, `max_storage_mb` — plus a feature flag set. Limits are data, so adding a plan does not mean touching application code.
+Plans carry limits as JSONB — `max_doctors`, `max_staff`, `max_patients`, `max_appointments_per_month`, `max_storage_mb` — where a missing or null limit is no limit. Limits are data, so changing what a plan allows does not mean touching application code. `price_monthly` is shown to clinics and never charged.
 
-`usage_records` holds monthly counters per organisation, incremented on write and read by the entitlement check. Every limit check goes through one module; plan names never appear in feature code.
+`organization_subscriptions` holds one row per clinic: the plan chosen for it and, while it is trying one, `trial_ends_at`. Once that passes the clinic is held to Starter until a plan is chosen. A clinic with no row is held to Starter too.
+
+Usage is counted when it is checked rather than kept as running totals, so it can never drift from the rows it describes: active doctors, active accounts plus open invitations, patients not archived, bookings made since the start of the clinic's month, and the size of its files. Every limit check goes through one module, which locks the clinic's row first when there is a cap to respect, so two desks adding the last allowed patient at once take turns. Plan names never appear in feature code.
 
 ### notifications, notification_preferences
 

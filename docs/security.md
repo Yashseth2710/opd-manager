@@ -82,7 +82,11 @@ The boundaries that get tested explicitly:
 
 ### Super admin boundaries
 
-Super admins administer the platform, not clinics. They can list organisations, see counts, suspend and reactivate, and read platform metrics. They cannot read patients, consultations, prescriptions or clinical documents through any route.
+Super admins administer the platform, not clinics. They can list organisations, see counts, suspend and reactivate, move a clinic between plans, change what a plan allows, and read platform metrics. They cannot read patients, consultations, prescriptions or clinical documents through any route.
+
+That is held in three places rather than one. A platform account is made only from the server's command line, carries no organisation, and is given `platform:manage` and nothing else, so every clinic route refuses it before a query runs. The platform's routes check both the permission and the missing organisation, so a clinic role could not reach them even if one were somehow given the permission. And the queries behind the platform screens live in one repository that selects clinics, plans and counts, never a row a patient is on. The command refuses an address any account already uses, so signing in never has to choose between the platform and somebody's clinic.
+
+Suspending a clinic is read from the clinic's row on every request, not from the token, so it takes effect on the next request rather than when the last token runs out. Every session its people hold is ended too, and signing in is refused until it is reactivated. Whatever the platform does to a clinic is written into that clinic's own audit log, with the reason and the name of whoever did it.
 
 Support access to a clinic's data is not implemented. If it is added later it needs consent, a time limit, and an audit entry the clinic can see — so it is out of the initial build rather than approximated badly.
 
@@ -137,7 +141,7 @@ The riskiest surface in the application.
 - Extension checked against an allowlist: `pdf`, `jpg`, `jpeg`, `jfif`, `png`, `webp`, and `heic` or `heif` only so they can be refused with a reason.
 - Content type determined by reading magic bytes: a PDF, or a JPEG, PNG or WebP image. The client's `Content-Type` is recorded and ignored, and the file is always served back with the type its bytes gave and `nosniff`.
 - HEIC is refused even though it is a real image. No browser but Safari can show it, and a record nobody at the desk can open is not a record.
-- Size capped at 4 MB per file, because a Vercel function refuses a larger body before the API sees it. The body is read no further than the limit. The web app makes a large photo smaller before sending it; a PDF it cannot, so one over the limit is refused with what to do instead. Storage per clinic is not counted yet; that arrives with plans.
+- Size capped at 4 MB per file, because a Vercel function refuses a larger body before the API sees it. The body is read no further than the limit. The web app makes a large photo smaller before sending it; a PDF it cannot, so one over the limit is refused with what to do instead. Files count against the clinic's plan by their size, and one that would take it past its allowance is refused before it is stored.
 - Stored filenames are generated. The original is kept as metadata and never used as a path.
 - Upload requires `document:upload` **and** the target patient must resolve inside the caller's organisation. A visit or a lab order named alongside it must be that patient's.
 - Files live in a private Vercel Blob store, which answers nobody without the store's token. The API fetches the file for a caller it has checked and sends it on; the store's address never reaches the browser, and no blob is listable.

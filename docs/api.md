@@ -99,7 +99,9 @@ PAYMENT_*     LINK_NOT_FOUND, LINK_CLOSED, LINK_NOTHING_OWED,
 PAYMENTS_*    NOT_CONFIGURED, GATEWAY_FAILED
 FILE_*        TOO_LARGE, UNSUPPORTED_TYPE, UPLOAD_FAILED, UPLOAD_INTERRUPTED,
               MISSING
-PLAN_*        LIMIT_REACHED, FEATURE_NOT_AVAILABLE
+PLAN_*        LIMIT_REACHED
+CLINIC_*      SUSPENDED
+PLATFORM_*    CLINIC_NOT_FOUND, PLAN_NOT_FOUND
 VALIDATION_ERROR, RATE_LIMITED, INTERNAL_ERROR
 ```
 
@@ -272,13 +274,17 @@ misc          GET    /search?q=
               PUT    /notifications/preferences
               GET    /audit-logs
               GET    /dashboard/summary
-              GET    /subscription
+              GET    /clinic/plan
               GET    /health
 
 platform      GET    /platform/metrics
               GET    /platform/organizations
+              GET    /platform/organizations/{id}
               POST   /platform/organizations/{id}/suspend
+              POST   /platform/organizations/{id}/reactivate
+              PUT    /platform/organizations/{id}/plan
               GET    /platform/plans
+              PATCH  /platform/plans/{id}
 ```
 
 ## Lists
@@ -298,6 +304,12 @@ Standard query parameters across every collection:
 Search is debounced at 300ms client-side and always executed server-side. No endpoint returns an unbounded collection.
 
 `GET /search?q=` is the search box in the rail, and answers with up to five of each kind of record at once: `patients`, `appointments`, `bills`, `doctors` and `staff`. A kind is searched only when the caller holds the permission its own pages need (`patient:read`, `appointment:read`, `billing:read`, `doctor:read`, `staff:manage`), and `searched` lists the kinds that were, so an empty answer can say where it looked. Patients match the way the register matches them, misspelt names included, and a patient's bills and bookings are found through the same match. Bookings are the ones still ahead, from the start of the clinic's day, and a doctor only ever gets their own. Runs of spaces are squeezed, a term shorter than two characters finds nothing, and one longer than 100 is `422`. The box waits 160ms after the last key before asking, and nothing it reads is written to the audit log.
+
+The `/platform` routes belong to platform accounts, which have no clinic and are made only by `python -m app.platform_admin` on the server. They need `platform:manage` and no organisation on the token, so no clinic role can reach them, and a platform account gets `403` from every clinic route. `GET /platform/organizations` lists clinics newest first, 25 to a page and never more than 100, narrowed by `status`, `plan_id` (the plan a clinic is held to right now) and `q` against the clinic's name, its web address and its administrators' email; `sort` takes `-created_at`, `created_at` or `name`. Each row carries the clinic's own details, who runs it, its plan and counts of doctors, staff, patients and this month's bookings, and nothing else. `POST .../suspend` needs a `reason` of 3 to 300 characters, which is written into the clinic's own audit log with the name of whoever suspended it; `reactivate` returns the clinic to running, or to setting up if it never finished. `PUT .../plan` puts a clinic on a plan for good and ends any trial. `PATCH /platform/plans/{id}` replaces a plan's limits whole, so a limit left out or `null` is no limit, and zero is `422`.
+
+A new clinic tries the Group plan for 30 days, then falls to Starter unless a plan was chosen for it. `GET /clinic/plan` tells the clinic admin where the clinic stands. Adding a doctor, a member of staff (an invitation counts from the moment it is sent), a patient, a booking or a file past what the plan allows is `403 PLAN_LIMIT_REACHED`, with a message that says which limit and what to do about it. Bringing back an archived patient, a stood-down doctor or a suspended colleague counts the same as adding one. Nothing already there is ever taken away.
+
+While a clinic is suspended every clinic route answers `403 CLINIC_SUSPENDED` from the very next request, signing in is refused the same way, and every session its people held is ended. Its payment links read as withdrawn, though a payment already under way is still recorded when the gateway reports it.
 
 `GET /doctors/specialities` is the one collection with no paging, because it returns the distinct specialities a single clinic offers and that is a list of a dozen at most. It exists so the filter on the list is built from what a clinic actually does rather than from a fixed set every clinic has to pick the wrong answer from. It takes the same `status` as `/doctors` and defaults to the same value, so the two always agree — a clinic whose only orthopaedist has been stood down is not offering orthopaedics, and a filter that can only come back empty is worse than no filter.
 
