@@ -86,6 +86,23 @@ export const saveSettings = (changes: Partial<ClinicSettings>) =>
 
 export const completeSetup = () => post<Clinic>("/clinic/complete-setup", {});
 
+export type ClinicPlan = {
+  name: string;
+  description: string;
+  price_monthly: string;
+  on_trial: boolean;
+  trial_ends_at: string | null;
+  trial_over: boolean;
+  trying_name: string | null;
+  after_trial_name: string;
+  usage: Record<
+    "doctors" | "staff" | "patients" | "appointments_this_month" | "storage_mb",
+    { used: number; limit: number | null }
+  >;
+};
+
+export const getPlan = () => request<ClinicPlan>("/clinic/plan");
+
 export const getRoles = () => request<Role[]>("/clinic/roles");
 
 export const getStaff = () => request<StaffMember[]>("/staff");

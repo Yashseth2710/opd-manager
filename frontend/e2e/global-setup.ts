@@ -1,4 +1,5 @@
 import { request, type FullConfig } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { MORNINGS } from "./fixtures";
@@ -8,7 +9,9 @@ import {
   DOCTOR_STATE,
   EMPTY_STATE,
   PASSWORD,
+  PLATFORM_STATE,
   SHARED_STATE,
+  SPARE_CLINIC,
 } from "./state";
 
 /**
@@ -140,6 +143,31 @@ async function joinAsDoctor(baseURL: string): Promise<string> {
   return email;
 }
 
+/**
+ * A platform administrator, made the only way one can be: with the command
+ * the server runs, since nothing in the application makes one.
+ */
+async function platformAdmin(baseURL: string): Promise<string> {
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+  const email = `ops.${stamp}@opd-platform.org`;
+  execFileSync(
+    process.env.E2E_PYTHON ?? "python",
+    ["-m", "app.platform_admin", "--email", email, "--first", "Asha", "--last", "Rao"],
+    {
+      cwd: "../backend",
+      env: { ...process.env, PLATFORM_ADMIN_PASSWORD: PASSWORD },
+      stdio: "pipe",
+    },
+  );
+  const api = await request.newContext({ baseURL });
+  const signed = await api.post("/api/v1/auth/login", { data: { email, password: PASSWORD } });
+  if (!signed.ok())
+    throw new Error(`The platform account could not sign in: ${await signed.text()}`);
+  await writeFile(PLATFORM_STATE, JSON.stringify(await api.storageState(), null, 2));
+  await api.dispose();
+  return email;
+}
+
 export default async function globalSetup(config: FullConfig) {
   const baseURL = config.projects[0]?.use.baseURL ?? "http://localhost:3000";
   const accounts = {
@@ -147,5 +175,8 @@ export default async function globalSetup(config: FullConfig) {
     [EMPTY_STATE]: await register(baseURL, EMPTY_STATE),
   };
   accounts[DOCTOR_STATE] = await joinAsDoctor(baseURL);
+  accounts[PLATFORM_STATE] = await platformAdmin(baseURL);
+  const spare = await register(baseURL, SPARE_CLINIC);
+  await writeFile(`${SPARE_CLINIC}.email`, spare);
   await writeFile(ACCOUNTS, JSON.stringify(accounts, null, 2));
 }

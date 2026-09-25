@@ -119,6 +119,9 @@ const DID: Record<string, string> = {
   "clinic.details_changed": "changed the details of",
   "clinic.settings_changed": "changed the settings of",
   "clinic.opened": "finished setting up",
+  "platform.suspended": "suspended",
+  "platform.reactivated": "reactivated",
+  "platform.plan_changed": "changed the plan of",
   "signin.failed": "got the password wrong for",
   "signin.locked": "locked the account of",
 };

@@ -6,11 +6,15 @@ import { useState } from "react";
 import { Field, Problem } from "@/components/auth/form";
 import { Permitted } from "@/components/layout/permitted";
 import { Page } from "@/components/layout/shell";
+import { Meter } from "@/components/platform/parts";
 import { ApiFailure } from "@/lib/api";
 import { financialYear } from "@/lib/billing";
+import { currentSession } from "@/lib/auth";
+import { MEASURES } from "@/lib/platform";
 import {
   completeSetup,
   getClinic,
+  getPlan,
   getSettings,
   saveClinic,
   saveSettings,
@@ -71,6 +75,7 @@ function SettingsScreen() {
         <ClinicDetails clinic={clinic.data} />
         <FeesAndTiming settings={settings.data} currency={clinic.data.currency} />
         <Bills settings={settings.data} />
+        <PlanSection />
       </div>
     </Page>
   );
@@ -394,6 +399,62 @@ function Bills({ settings }: { settings: ClinicSettings }) {
         </div>
         <SaveRow busy={save.isPending} saved={saved} />
       </form>
+    </Section>
+  );
+}
+
+function PlanSection() {
+  const session = useQuery({ queryKey: ["session"], queryFn: currentSession, retry: false });
+  const allowed = session.data?.permissions.includes("subscription:manage") ?? false;
+  const plan = useQuery({ queryKey: ["clinic-plan"], queryFn: getPlan, enabled: allowed });
+
+  if (!allowed) return null;
+
+  let blurb = "What the clinic's plan allows, and how much of it is in use.";
+  if (plan.data?.on_trial && plan.data.trial_ends_at) {
+    const ends = new Date(plan.data.trial_ends_at).toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "long",
+    });
+    blurb = `You are trying ${plan.data.trying_name} until ${ends}. After that the clinic moves to ${plan.data.after_trial_name}, unless a plan has been chosen for it.`;
+  } else if (plan.data?.trial_over) {
+    blurb = `The trial has ended, so the clinic is on ${plan.data.name}.`;
+  }
+
+  return (
+    <Section title="Plan" blurb={blurb}>
+      {plan.isPending ? (
+        <div className="flex items-center gap-2 text-[14px] text-[var(--text-muted)]">
+          <Loader2 className="size-4 animate-spin" />
+          Reading the plan…
+        </div>
+      ) : plan.isError ? (
+        <Problem>The plan did not load. Refresh the page to try again.</Problem>
+      ) : (
+        <div className="rounded-[var(--radius-panel)] border border-[var(--border)] bg-[var(--surface)] px-5 py-5">
+          <p className="text-[16px] font-semibold">
+            {plan.data.name}
+            <span className="ml-2 text-[14px] font-normal text-[var(--text-muted)]">
+              {plan.data.description}
+            </span>
+          </p>
+          <div className="mt-4 flex flex-col gap-4">
+            {MEASURES.map((measure) => (
+              <Meter
+                key={measure.key}
+                label={measure.label}
+                used={plan.data.usage[measure.key].used}
+                limit={plan.data.usage[measure.key].limit}
+                unit={measure.unit}
+                fullNote="Full. Nothing more of this can be added until there is room."
+              />
+            ))}
+          </div>
+          <p className="mt-5 border-t border-[var(--border)] pt-3 text-[13px] text-[var(--text-muted)]">
+            Plans are changed by the OPD Manager team. Nothing is charged in this build.
+          </p>
+        </div>
+      )}
     </Section>
   );
 }

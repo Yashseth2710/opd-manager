@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   CalendarDays,
@@ -19,11 +19,14 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SessionEnded } from "@/components/auth/session-ended";
 import { SignOutButton } from "@/components/auth/sign-out";
 import { Bell } from "@/components/notifications/bell";
+import { ThemeMenu } from "@/components/layout/theme-switch";
 import { FinderProvider, SearchTrigger } from "@/components/search/finder";
+import { ApiFailure } from "@/lib/api";
 import { currentSession, type Session } from "@/lib/auth";
 
 /**
@@ -64,15 +67,61 @@ const DESTINATIONS: Destination[] = [
   { href: "/settings", label: "Settings", icon: Settings, permission: "settings:manage" },
 ];
 
+const SUSPENDED =
+  "Nobody at the clinic can use OPD Manager until it is restored. Everything the clinic has recorded is kept exactly as it was. Its administrator can ask for it to be restored.";
+
+function suspendedBy(error: unknown) {
+  return error instanceof ApiFailure && error.code === "CLINIC_SUSPENDED";
+}
+
+/**
+ * Whether anything this page asked for was refused because the clinic was
+ * suspended. The API says so on the next request after it happens, from
+ * whichever screen someone is on, and every screen should stop the same way.
+ */
+function useSuspension(): boolean {
+  const queries = useQueryClient();
+  const [suspended, setSuspended] = useState(false);
+  useEffect(() => {
+    const heard = queries.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "error") {
+        if (suspendedBy(event.action.error)) setSuspended(true);
+      }
+    });
+    const tried = queries.getMutationCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "error") {
+        if (suspendedBy(event.action.error)) setSuspended(true);
+      }
+    });
+    return () => {
+      heard();
+      tried();
+    };
+  }, [queries]);
+  return suspended;
+}
+
 export function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data, isPending, isError } = useQuery({
+  const router = useRouter();
+  const suspended = useSuspension();
+  const { data, isPending, isError, error } = useQuery({
     queryKey: ["session"],
     queryFn: currentSession,
     retry: false,
   });
+  const platform = Boolean(data && !data.organization);
 
-  if (isPending) {
+  // A platform account has no clinic to show. Its own pages live elsewhere.
+  useEffect(() => {
+    if (platform) router.replace("/admin" as Route);
+  }, [platform, router]);
+
+  if (suspended || suspendedBy(error)) {
+    return <SessionEnded heading="This clinic has been suspended" message={SUSPENDED} />;
+  }
+
+  if (isPending || platform) {
     return (
       <div className="flex min-h-screen items-center justify-center gap-3 text-[var(--text-muted)]">
         <Loader2 className="size-5 animate-spin" />
@@ -107,6 +156,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </div>
               )}
               {data.organization && <Bell />}
+              <div className="lg:hidden">
+                <ThemeMenu />
+              </div>
               {/* The rail's footer is desktop only, so a phone needs its own. */}
               <div className="lg:hidden">
                 <SignOutButton subdued compact />
@@ -115,8 +167,11 @@ export function Shell({ children }: { children: React.ReactNode }) {
           </div>
 
           {data.organization && (
-            <div className="mt-5 hidden lg:block">
-              <SearchTrigger />
+            <div className="mt-5 hidden items-center gap-1 lg:flex">
+              <div className="min-w-0 flex-1">
+                <SearchTrigger />
+              </div>
+              <ThemeMenu />
             </div>
           )}
 
@@ -200,6 +255,7 @@ export function Page({
   blurb,
   action,
   back,
+  wide,
   children,
 }: {
   title: string;
@@ -207,10 +263,12 @@ export function Page({
   action?: React.ReactNode;
   /** Sits above the heading, where somebody looks for the way out. */
   back?: { href: Route; label: string };
+  /** For a table that needs the room more than the eye needs a short line. */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-10 lg:py-14">
+    <div className={`mx-auto w-full ${wide ? "max-w-6xl" : "max-w-4xl"} px-6 py-10 lg:py-14`}>
       {back && (
         <Link
           href={back.href}

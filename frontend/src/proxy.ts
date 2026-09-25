@@ -32,6 +32,7 @@ const SIGNED_IN_ONLY = [
   "/reports",
   "/notifications",
   "/audit",
+  "/admin",
 ];
 
 export function proxy(request: NextRequest) {

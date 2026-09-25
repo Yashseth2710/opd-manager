@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { Aside, Field, Heading, Problem, Submit } from "@/components/auth/form";
 import { ApiFailure } from "@/lib/api";
-import { describeWait, signIn, type ClinicChoice } from "@/lib/auth";
+import { describeWait, signIn, type ClinicChoice, type Session } from "@/lib/auth";
 
 export default function LoginPage() {
   return (
@@ -44,10 +44,7 @@ function SignInForm() {
       // someone to another site straight after they sign in.
       const safeNext =
         next && next.startsWith("/") && !next.startsWith("//") ? (next as Route) : null;
-      router.replace(
-        safeNext ??
-          (session.organization?.onboarding_completed_at ? "/dashboard" : "/settings"),
-      );
+      router.replace(safeNext ?? landing(session));
     } catch (error) {
       if (!(error instanceof ApiFailure)) throw error;
       setProblem(explain(error, setChoices, setClinic));
@@ -158,6 +155,12 @@ function SignInForm() {
       </Aside>
     </>
   );
+}
+
+/** A platform account has no clinic to open, only the platform's own pages. */
+function landing(session: Session): Route {
+  if (!session.organization) return "/admin" as Route;
+  return session.organization.onboarding_completed_at ? "/dashboard" : "/settings";
 }
 
 function explain(
