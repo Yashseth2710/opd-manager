@@ -32,6 +32,7 @@ from app.core.exceptions import AppError, NotFound, ValidationFailed
 from app.core.security import hash_token, new_opaque_token
 from app.models import Invoice, Organization, Payment, PaymentLink, User, billing
 from app.models import notification as kinds
+from app.models.organization import SUSPENDED
 from app.repositories.billing import (
     Billed,
     InvoiceRepository,
@@ -268,6 +269,11 @@ async def view(session: AsyncSession, *, token: str) -> dict[str, Any]:
         status = billing.LINK_CANCELLED
     await session.flush()
 
+    # A suspended clinic takes no new money. The link reads as withdrawn
+    # without being closed, so it works again if the clinic comes back, and
+    # a payment already under way is still recorded when it lands.
+    if status == billing.LINK_OPEN and clinic.status == SUSPENDED:
+        status = billing.LINK_CANCELLED
     live = status == billing.LINK_OPEN
     return {
         "clinic": clinic.name,

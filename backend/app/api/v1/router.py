@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     notifications,
     patients,
     pay,
+    platform,
     prescriptions,
     queue,
     reports,
@@ -42,3 +43,4 @@ router.include_router(reports.router)
 router.include_router(notifications.router)
 router.include_router(audit.router)
 router.include_router(search.router)
+router.include_router(platform.router)

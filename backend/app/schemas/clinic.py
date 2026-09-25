@@ -172,3 +172,23 @@ class AcceptInvitation(_Trimmed):
 
 class ChangeRoleRequest(_Trimmed):
     role_slug: str = Field(min_length=1, max_length=48)
+
+
+class PlanMeasure(BaseModel):
+    used: int
+    limit: int | None
+
+
+class ClinicPlanOut(BaseModel):
+    """The clinic's plan as its administrator sees it: what it allows, how
+    much is used, and when a trial ends and what follows it."""
+
+    name: str
+    description: str
+    price_monthly: Decimal
+    on_trial: bool
+    trial_ends_at: dt.datetime | None
+    trial_over: bool
+    trying_name: str | None
+    after_trial_name: str
+    usage: dict[str, PlanMeasure]

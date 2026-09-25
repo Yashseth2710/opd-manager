@@ -23,6 +23,7 @@ from app.core.exceptions import (
     AccountSuspended,
     AlreadyExists,
     AppError,
+    ClinicSuspended,
     EmailNotVerified,
     InvalidCredentials,
     TokenInvalid,
@@ -39,8 +40,9 @@ from app.core.security import (
 from app.db.session import get_factory
 from app.models import Organization, User, UserRole
 from app.models import notification as kinds
+from app.models.organization import SUSPENDED
 from app.repositories.users import OrganizationRepository, UserRepository, seed_roles
-from app.services import events, sessions
+from app.services import events, plans, sessions
 
 logger = logging.getLogger("opd.auth")
 
@@ -196,6 +198,7 @@ async def register(
     roles = await seed_roles(session, organization.id)
     session.add(UserRole(user_id=user.id, role_id=roles[OWNER].id))
     await session.flush()
+    await plans.start_trial(session, organization.id)
 
     if verification_required:
         return Registration(
@@ -341,6 +344,10 @@ async def sign_in(
     # the session they already had.
     if user.status != "active":
         raise AccountSuspended
+
+    held_by = clinics.get(str(user.id))
+    if held_by is not None and held_by.status == SUSPENDED:
+        raise ClinicSuspended
 
     if get_settings().email_configured and not user.is_verified:
         raise EmailNotVerified

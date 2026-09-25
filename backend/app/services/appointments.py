@@ -46,6 +46,7 @@ from app.repositories.doctors import DoctorRepository, names_of
 from app.repositories.patients import PatientRepository
 from app.repositories.queue import QueueRepository
 from app.schemas.appointment import AppointmentCreate, AppointmentUpdate
+from app.services import plans
 from app.services.doctors import (
     BOOKED as SLOT_BOOKED,
 )
@@ -333,6 +334,7 @@ async def book(
 ) -> Appointment:
     patient = await registered_patient(session, organization_id, body.patient_id)
     doctor = await bookable_doctor(session, organization_id, body.doctor_id, reach)
+    await plans.check(session, organization_id, "max_appointments_per_month")
     # Before the slot is looked at, so a second desk booking it at the same
     # moment waits here and then sees this booking.
     await AppointmentRepository(session, organization_id).take_turns(doctor.id, patient.id)

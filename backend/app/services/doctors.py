@@ -32,6 +32,7 @@ from app.schemas.doctor import (
     ScheduleBlock,
     ScheduleWrite,
 )
+from app.services import plans
 
 # Guards the slot loop against a block that somehow reached the database with
 # a zero-length step. Schemas refuse it, the check constraint refuses it, and
@@ -291,6 +292,7 @@ async def add(
     user_id = await _resolve_account(
         session, organization_id=organization_id, user_id=body.user_id
     )
+    await plans.check(session, organization_id, "max_doctors")
 
     doctor = Doctor(
         user_id=user_id,
@@ -376,6 +378,8 @@ async def set_active(
     was away for six months does not mean typing the week out again.
     """
     doctor = await fetch(session, organization_id=organization_id, doctor_id=doctor_id)
+    if active and doctor.status != ACTIVE:
+        await plans.check(session, organization_id, "max_doctors")
     doctor.status = ACTIVE if active else INACTIVE
     doctor.deactivated_at = None if active else _now()
     await session.flush()

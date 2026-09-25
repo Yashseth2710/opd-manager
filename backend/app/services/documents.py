@@ -30,7 +30,7 @@ from app.models.document import LAB_REPORT
 from app.repositories.documents import DocumentRepository, Filed
 from app.repositories.patients import PatientRepository
 from app.schemas.document import MAX_BYTES, DocumentChange
-from app.services import file_checks
+from app.services import file_checks, plans
 from app.services.doctors import clinic_today, clinic_zone
 from app.services.patients import PatientArchived, PatientNotFound
 
@@ -200,6 +200,8 @@ async def upload(
         raise AlreadyUploaded(
             f"That file is already on this record, as “{already.title}”.", existing=already
         )
+
+    await plans.check(session, organization_id, "max_storage_mb", adding_bytes=len(content))
 
     pathname = (
         f"{organization_id}/{patient.id}/{uuid.uuid4().hex}.{file_checks.EXTENSION[kind]}"

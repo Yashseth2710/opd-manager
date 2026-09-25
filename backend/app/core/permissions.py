@@ -49,6 +49,10 @@ CATALOGUE: Final[dict[str, str]] = {
 
 OWNER: Final[str] = "clinic-admin"
 
+# Held only by accounts with no clinic. No clinic's role is ever given it.
+PLATFORM_ROLE: Final[str] = "platform-admin"
+PLATFORM_PERMISSION: Final[str] = "platform:manage"
+
 # The one role whose view of appointments is narrowed to its own list. The
 # matrix marks it "own", which a permission string cannot say.
 DOCTOR: Final[str] = "doctor"

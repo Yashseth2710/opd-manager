@@ -26,6 +26,11 @@ DEFAULT_SETTINGS: dict[str, Any] = {
 }
 
 
+PENDING = "pending"
+ACTIVE = "active"
+SUSPENDED = "suspended"
+
+
 class Organization(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "organizations"
 

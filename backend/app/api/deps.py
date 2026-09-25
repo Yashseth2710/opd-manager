@@ -16,10 +16,11 @@ from typing import Annotated, Any
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import PermissionDenied, SessionExpired
+from app.core.exceptions import ClinicSuspended, PermissionDenied, SessionExpired
 from app.core.security import read_access_token
 from app.db.session import get_factory
-from app.models import User
+from app.models import Organization, User
+from app.models.organization import SUSPENDED
 from app.services import events
 
 ACCESS_COOKIE = "opd_access"
@@ -125,12 +126,34 @@ async def current_caller(request: Request) -> Caller:
     )
 
 
-async def current_tenant(caller: Caller = Depends(current_caller)) -> uuid.UUID:
+async def current_tenant(
+    session: DbSession, caller: Caller = Depends(current_caller)
+) -> uuid.UUID:
     """For routes that touch clinic data. A platform account carries no
-    organisation and so has no business on these routes at all."""
+    organisation and so has no business on these routes at all.
+
+    The clinic's standing is read here, on every request, rather than left
+    to the token. A suspension has to stop the clinic now, not when the last
+    token someone holds runs out. The row lands in the session's identity
+    map, so a route that reads the clinic again gets it without a query.
+    """
     if caller.organization_id is None:
         raise PermissionDenied("This account is not attached to a clinic.")
+    clinic = await session.get(Organization, caller.organization_id)
+    if clinic is None:
+        raise SessionExpired
+    if clinic.status == SUSPENDED:
+        raise ClinicSuspended
     return caller.organization_id
+
+
+def platform_caller(caller: Caller = Depends(current_caller)) -> Caller:
+    """For the platform's own routes. Both halves are checked: the permission,
+    which no clinic role can hold, and the missing organisation, which only
+    an account made from the server's command line has."""
+    if caller.organization_id is not None or not caller.may("platform:manage"):
+        raise PermissionDenied
+    return caller
 
 
 def requires(

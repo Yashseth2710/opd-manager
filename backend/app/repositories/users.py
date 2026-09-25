@@ -10,7 +10,12 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid6 import uuid7
 
-from app.core.permissions import CATALOGUE, DEFAULT_ROLES
+from app.core.permissions import (
+    CATALOGUE,
+    DEFAULT_ROLES,
+    PLATFORM_PERMISSION,
+    PLATFORM_ROLE,
+)
 from app.models import Organization, Permission, Role, RolePermission, User, UserRole
 from app.repositories.base import UnscopedRepository
 
@@ -52,7 +57,15 @@ class UserRepository(UnscopedRepository[User]):
 
     async def permissions_for(self, user: User) -> tuple[str, list[str]]:
         """The caller's role slug and the permission strings it carries, which
-        is what the access token needs to answer questions without a query."""
+        is what the access token needs to answer questions without a query.
+
+        An account with no clinic is a platform administrator, made from the
+        server's command line and never through the application. It holds
+        the platform permission and nothing else, so no route that reads a
+        clinic's records will ever let it through.
+        """
+        if user.organization_id is None:
+            return PLATFORM_ROLE, [PLATFORM_PERMISSION]
         result = await self.session.execute(
             select(Role.slug, Permission.code)
             .join(UserRole, UserRole.role_id == Role.id)

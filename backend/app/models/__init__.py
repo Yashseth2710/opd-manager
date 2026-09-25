@@ -10,6 +10,7 @@ from app.models.lab import LabOrder, LabResultValue
 from app.models.notification import Notification, NotificationPreference
 from app.models.organization import DEFAULT_SETTINGS, Organization
 from app.models.patient import Patient, PatientAllergy
+from app.models.plan import OrganizationSubscription, SubscriptionPlan
 from app.models.prescription import Medicine, Prescription, PrescriptionItem
 from app.models.queue import QueueEntry
 from app.models.role import Permission, Role, RolePermission, UserRole
@@ -36,6 +37,7 @@ __all__ = [
     "Notification",
     "NotificationPreference",
     "Organization",
+    "OrganizationSubscription",
     "Patient",
     "PatientAllergy",
     "PatientDocument",
@@ -47,6 +49,7 @@ __all__ = [
     "QueueEntry",
     "Role",
     "RolePermission",
+    "SubscriptionPlan",
     "TenantCounter",
     "User",
     "UserRole",

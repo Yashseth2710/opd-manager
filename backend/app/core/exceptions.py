@@ -106,3 +106,15 @@ class AccountSuspended(AppError):
     code = "ACCOUNT_SUSPENDED"
     status = 403
     message = "This account has been suspended. Ask an administrator to restore it."
+
+
+class ClinicSuspended(AppError):
+    code = "CLINIC_SUSPENDED"
+    status = 403
+    message = "This clinic has been suspended. Its administrator can ask for it to be restored."
+
+
+class PlanLimitReached(AppError):
+    code = "PLAN_LIMIT_REACHED"
+    status = 403
+    message = "The clinic's plan does not allow any more of these."

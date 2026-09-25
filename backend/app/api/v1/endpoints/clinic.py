@@ -35,6 +35,7 @@ from app.schemas.clinic import (
     AcceptInvitation,
     ChangeRoleRequest,
     ClinicOut,
+    ClinicPlanOut,
     ClinicSettingsOut,
     ClinicSettingsUpdate,
     ClinicUpdate,
@@ -46,7 +47,7 @@ from app.schemas.clinic import (
 )
 from app.services import auth as auth_service
 from app.services import clinic as service
-from app.services import events
+from app.services import events, plans
 
 router = APIRouter(tags=["clinic"])
 
@@ -83,6 +84,42 @@ async def read_clinic(
     """Readable by anyone signed in. A receptionist needs the clinic's name
     and opening details to do their job."""
     return ClinicOut.model_validate(await _clinic(session, organization_id))
+
+
+@router.get("/clinic/plan")
+async def read_plan(
+    session: DbSession,
+    _: Caller = Depends(requires("subscription:manage")),
+    organization_id: uuid.UUID = Depends(current_tenant),
+) -> ClinicPlanOut:
+    clinic = await _clinic(session, organization_id)
+    held = await plans.standing(session, organization_id)
+    used = await plans.usage(session, clinic)
+    fallback = await plans.plan_named(session, plans.FALLBACK_PLAN)
+    plan = held.plan
+    return ClinicPlanOut(
+        name=plan.name,
+        description=plan.description,
+        price_monthly=plan.price_monthly,
+        on_trial=held.on_trial,
+        trial_ends_at=held.trial_ends_at,
+        trial_over=held.trial_over,
+        trying_name=held.chosen.name if held.on_trial else None,
+        after_trial_name=fallback.name,
+        usage={
+            "doctors": {"used": used["doctors"], "limit": plan.limit("max_doctors")},
+            "staff": {"used": used["staff"], "limit": plan.limit("max_staff")},
+            "patients": {"used": used["patients"], "limit": plan.limit("max_patients")},
+            "appointments_this_month": {
+                "used": used["appointments_this_month"],
+                "limit": plan.limit("max_appointments_per_month"),
+            },
+            "storage_mb": {
+                "used": -(-used["storage_mb"] // (1024 * 1024)),
+                "limit": plan.limit("max_storage_mb"),
+            },
+        },
+    )
 
 
 @router.patch("/clinic")

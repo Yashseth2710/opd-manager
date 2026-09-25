@@ -19,14 +19,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core import email as mail
 from app.core import rate_limit
 from app.core.config import get_settings
-from app.core.exceptions import AlreadyExists, AppError, NotFound, ValidationFailed
+from app.core.exceptions import (
+    AlreadyExists,
+    AppError,
+    ClinicSuspended,
+    NotFound,
+    ValidationFailed,
+)
 from app.core.permissions import OWNER
 from app.core.security import hash_password, hash_token, new_opaque_token, password_problem
 from app.models import Invitation, Organization, User
 from app.models.invitation import ACCEPTED, EXPIRY_DAYS, PENDING, REVOKED
+from app.models.organization import SUSPENDED
 from app.repositories.staff import InvitationRepository, StaffRepository, by_token_hash
 from app.repositories.users import UserRepository
 from app.schemas.clinic import Address, ClinicSettingsUpdate, ClinicUpdate
+from app.services import plans
 
 logger = logging.getLogger("opd.clinic")
 
@@ -138,6 +146,7 @@ async def invite(
     invitations = InvitationRepository(session, clinic.id)
     if await invitations.open_for(email) is not None:
         raise AlreadyExists("That person already has an invitation waiting.")
+    await plans.check(session, clinic.id, "max_staff")
 
     raw, digest = new_opaque_token()
     invitation = Invitation(
@@ -187,6 +196,8 @@ async def preview(session: AsyncSession, token: str) -> tuple[Invitation, Organi
     clinic = await session.get(Organization, invitation.organization_id)
     if clinic is None:
         raise InvitationUnusable
+    if clinic.status == SUSPENDED:
+        raise ClinicSuspended
 
     from app.models import Role
 
@@ -205,6 +216,9 @@ async def accept(session: AsyncSession, *, token: str, password: str, client_ip:
     invitation = await by_token_hash(session, hash_token(token))
     if invitation is None or not invitation.is_open:
         raise InvitationUnusable
+    clinic = await session.get(Organization, invitation.organization_id)
+    if clinic is None or clinic.status == SUSPENDED:
+        raise ClinicSuspended
 
     problem = password_problem(password, email=invitation.email)
     if problem:
@@ -297,6 +311,8 @@ async def set_member_status(
         if held <= 1 and members_role is not None and members_role.slug == OWNER:
             raise LastAdministrator
 
+    if active and member.status != "active":
+        await plans.check(session, clinic.id, "max_staff")
     member.status = "active" if active else "suspended"
     await session.flush()
     return member

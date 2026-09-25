@@ -19,6 +19,7 @@ from app.models.patient import ACTIVE, ARCHIVED, NUMBER_PREFIX, Patient, Patient
 from app.repositories.counters import next_in_sequence
 from app.repositories.patients import AllergyRepository, Listed, PatientRepository
 from app.schemas.patient import AllergyWrite, PatientCreate, PatientUpdate
+from app.services import plans
 
 # Long enough that a clinic seeing a hundred people a day never rolls over,
 # short enough to read down a phone line.
@@ -190,6 +191,7 @@ async def register(
                 describe_candidates(found, phone=body.phone, email=body.email)
             )
 
+    await plans.check(session, organization_id, "max_patients")
     patient = Patient(
         patient_number=await next_patient_number(session, organization_id),
         first_name=body.first_name,
@@ -274,6 +276,8 @@ async def set_archived(
     if patient is None:
         raise PatientNotFound
 
+    if not archived and patient.is_archived:
+        await plans.check(session, organization_id, "max_patients")
     patient.status = ARCHIVED if archived else ACTIVE
     patient.archived_at = _now() if archived else None
     await session.flush()

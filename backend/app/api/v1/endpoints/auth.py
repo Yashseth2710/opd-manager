@@ -19,8 +19,9 @@ from app.api.deps import (
     current_caller,
 )
 from app.core.config import get_settings
-from app.core.exceptions import SessionExpired
+from app.core.exceptions import ClinicSuspended, SessionExpired
 from app.core.security import mint_access_token
+from app.models.organization import SUSPENDED
 from app.repositories.users import OrganizationRepository, UserRepository
 from app.schemas.auth import (
     AcknowledgedOut,
@@ -189,6 +190,10 @@ async def refresh(
     organization = None
     if user.organization_id is not None:
         organization = await OrganizationRepository(session).get(user.organization_id)
+    if organization is not None and organization.status == SUSPENDED:
+        await sessions.revoke_family(opened.family_id)
+        _clear_session_cookies(response)
+        raise ClinicSuspended
 
     signed_in = auth.SignedIn(
         user=user,
@@ -229,6 +234,8 @@ async def me(
     organization = None
     if user.organization_id is not None:
         organization = await OrganizationRepository(session).get(user.organization_id)
+    if organization is not None and organization.status == SUSPENDED:
+        raise ClinicSuspended
 
     return SessionOut(
         user=UserOut.model_validate(user),
