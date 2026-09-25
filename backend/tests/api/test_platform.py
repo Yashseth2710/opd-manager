@@ -34,7 +34,7 @@ from tests.api.test_payment_links import (  # noqa: F401
     opened_by_patient,
     token_from,
 )
-from tests.conftest import GOOD_PASSWORD, Outbox, unique_email
+from tests.conftest import GOOD_PASSWORD, Outbox, registration, unique_email
 
 API = "/api/v1"
 AUTH = "/api/v1/auth"
@@ -668,3 +668,32 @@ class TestPaymentLinks:
         # Withdrawn for as long as the clinic is stopped, not closed for good.
         assert back["status"] == "open"
         assert back["order_id"] is not None
+
+
+class TestOneAddressOneSide:
+    async def test_a_clinic_cannot_be_registered_on_a_platform_address(
+        self, client: AsyncClient, platform_admin: str
+    ) -> None:
+        body = registration(email=platform_admin)
+
+        response = await client.post(f"{AUTH}/register", json=body)
+
+        assert response.status_code == 409
+        assert "cannot be used for a clinic account" in response.json()["error"]["message"]
+
+    async def test_nobody_is_invited_on_a_platform_address(
+        self, client: AsyncClient, platform_admin: str
+    ) -> None:
+        await sign_up(client)
+
+        response = await client.post(
+            f"{API}/staff/invitations",
+            json={
+                "email": platform_admin.upper(),
+                "first_name": "Asha",
+                "last_name": "Rao",
+                "role_slug": "receptionist",
+            },
+        )
+
+        assert response.status_code == 409

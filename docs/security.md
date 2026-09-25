@@ -201,13 +201,13 @@ Exceeding a limit returns `429` with `Retry-After`.
 
 ## Headers and transport
 
-HTTPS everywhere, HSTS, and a Content-Security-Policy without `unsafe-eval`. `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and a restrictive `Permissions-Policy`.
+HTTPS everywhere, with HSTS once deployed. The pages carry a Content-Security-Policy that loads scripts, frames and connections only from the application itself and from Razorpay's checkout; only the development server is allowed `unsafe-eval`, which it needs to reload a page as it is edited. The API answers with `default-src 'none'` on everything it sends as JSON, and `Cache-Control: no-store` on everything, so records of real people are not kept in a shared machine's cache. Both halves send `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin` and a `Permissions-Policy` that turns off the camera, microphone and location.
 
-Cookies are `SameSite=Lax`, which stops cross-site form posts from carrying credentials. State-changing requests additionally require an `Origin` matching the deployment.
+Cookies are `SameSite=Lax`, which stops cross-site form posts from carrying credentials. A request that changes something and says it came from a page is refused with `403 ORIGIN_REFUSED` unless that page is the application's own, which is `APP_URL` plus anything listed in `TRUSTED_ORIGINS`. That also closes the gap Lax leaves open to a sibling subdomain. A request with no `Origin` is not from a browser page and has to stand on its session or signature; the payment webhook is one of those.
 
 ## Error handling and logging
 
-Users see a mapped message and a request ID. They never see a stack trace, a SQL fragment, a table name, a file path or a library version. Sentry receives the detail.
+Users see a mapped message. Every response carries an `X-Request-Id`, and an unexpected failure also puts it in the body, so the id somebody reads off their screen finds the one line in the server log that has the stack trace. They never see a stack trace, a SQL fragment, a table name, a file path or a library version. Nothing is sent to an error tracker yet; the log is where the detail lives.
 
 **Never logged** — passwords, tokens, cookies, reset codes, API keys, or the content of a medical record. A patient's identifier is loggable; their diagnosis is not.
 

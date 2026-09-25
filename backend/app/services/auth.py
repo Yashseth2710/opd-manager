@@ -47,6 +47,8 @@ from app.services import events, plans, sessions
 logger = logging.getLogger("opd.auth")
 
 MAX_FAILED_ATTEMPTS = 5
+
+ADDRESS_RESERVED = "That email address cannot be used for a clinic account. Use another one."
 LOCKOUT_MINUTES = 15
 
 # Paid when no account matches, so a miss takes about as long as a hit and
@@ -165,6 +167,8 @@ async def register(
 
     organizations = OrganizationRepository(session)
     users = UserRepository(session)
+    if await users.held_by_platform(email):
+        raise AlreadyExists(ADDRESS_RESERVED)
 
     organization = Organization(
         name=clinic_name,

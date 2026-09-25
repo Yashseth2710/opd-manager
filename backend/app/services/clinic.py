@@ -142,6 +142,10 @@ async def invite(
     users = UserRepository(session)
     if await users.email_taken_in(clinic.id, email):
         raise AlreadyExists("Somebody with that email already works here.")
+    if await users.held_by_platform(email):
+        raise AlreadyExists(
+            "That email address cannot be used for a clinic account. Ask them for another one."
+        )
 
     invitations = InvitationRepository(session, clinic.id)
     if await invitations.open_for(email) is not None:
@@ -230,6 +234,8 @@ async def accept(session: AsyncSession, *, token: str, password: str, client_ip:
         invitation.accepted_at = _now()
         await session.flush()
         raise AlreadyExists("An account with that email already exists at this clinic.")
+    if await users.held_by_platform(invitation.email):
+        raise AlreadyExists("That email address cannot be used for a clinic account.")
 
     user = User(
         organization_id=invitation.organization_id,

@@ -55,6 +55,18 @@ class UserRepository(UnscopedRepository[User]):
         )
         return result.scalar_one_or_none() is not None
 
+    async def held_by_platform(self, email: str) -> bool:
+        """Whether a platform account uses this address. Nobody else may, or
+        signing in with it would have to choose between the platform and a
+        clinic, and the platform is not somewhere a clinic picks from."""
+        result = await self.session.execute(
+            select(User.id)
+            .where(User.organization_id.is_(None))
+            .where(func.lower(User.email) == email.strip().lower())
+            .limit(1)
+        )
+        return result.scalar_one_or_none() is not None
+
     async def permissions_for(self, user: User) -> tuple[str, list[str]]:
         """The caller's role slug and the permission strings it carries, which
         is what the access token needs to answer questions without a query.
